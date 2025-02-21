@@ -5,6 +5,7 @@ import Header from "./Components/Header";
 import { ThemeModeScript } from "flowbite-react";
 
 import { Anek_Bangla } from "next/font/google";
+import ThemeProvider from "./Components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +14,8 @@ const geistSans = Geist({
 
 const anekBanglaFont = Anek_Bangla({
   variable: "--font-anek-bangla",
-  subsets: ["bengali"]
-})
+  subsets: ["bengali"],
+});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -39,8 +40,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${anekBanglaFont.variable} antialiased`}
       >
-        <Header />
-        {children}
+        <ThemeProvider>
+          <Header />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,9 +1,11 @@
 "use client";
 
-import { Navbar, Button, Dropdown, DarkThemeToggle } from "flowbite-react";
+import { Navbar, Button, Dropdown, DarkThemeToggle, useThemeMode } from "flowbite-react";
 import Image from "next/image";
 
 export default function Header() {
+  const { mode, toggleMode } = useThemeMode();
+
   return (
     <Navbar fluid rounded className="anek-bangla-font">
       <Navbar.Brand href="/">
@@ -13,7 +15,7 @@ export default function Header() {
         </span>
       </Navbar.Brand>
       <div className="order-2 hidden items-center md:flex">
-        <DarkThemeToggle />
+        <DarkThemeToggle onClick={toggleMode} />
         <a
           href="#"
           className="mr-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700"
@@ -27,7 +29,7 @@ export default function Header() {
         <Navbar.Link href="#" active>
           অবতরনিকা
         </Navbar.Link>
-        <Dropdown className="mr-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700" label="প্রতিষ্ঠানসমূহ" inline>
+        <Dropdown label="প্রতিষ্ঠানসমূহ" inline>
           <Dropdown.Item href="#">About Us</Dropdown.Item>
           <Dropdown.Item href="#">Library</Dropdown.Item>
           <Dropdown.Item href="#">Resources</Dropdown.Item>
