@@ -1,10 +1,23 @@
 "use client";
 
-import { Navbar, Button, Dropdown, DarkThemeToggle, useThemeMode } from "flowbite-react";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
+import {
+  Navbar,
+  Dropdown,
+  DarkThemeToggle,
+  useThemeMode,
+} from "flowbite-react";
 import Image from "next/image";
+import { dark } from "@clerk/themes";
 
 export default function Header() {
-  const { mode, toggleMode } = useThemeMode();
+  const { toggleMode } = useThemeMode();
 
   return (
     <Navbar fluid rounded className="anek-bangla-font">
@@ -16,13 +29,17 @@ export default function Header() {
       </Navbar.Brand>
       <div className="order-2 hidden items-center md:flex">
         <DarkThemeToggle onClick={toggleMode} />
-        <a
-          href="#"
-          className="mr-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700"
-        >
-          লগ ইন করুন
-        </a>
-        <Button href="#">সাইন আপ করুন</Button>
+        <SignedIn>
+          <UserButton appearance={{ baseTheme: dark }} />
+        </SignedIn>
+        <SignedOut>
+          <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700">
+            <SignInButton />
+          </div>
+          <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700">
+            <SignUpButton />
+          </div>
+        </SignedOut>
       </div>
       <Navbar.Toggle />
       <Navbar.Collapse>

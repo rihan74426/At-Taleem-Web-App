@@ -1,10 +1,25 @@
 "use client";
 
-import { useThemeMode } from "flowbite-react";
-import { ReactNode } from "react";
+import { Flowbite, useThemeMode } from "flowbite-react";
+import { useEffect, useState } from "react";
 
-export default function ThemeProvider({ children }: { children: ReactNode }) {
-  const { mode } = useThemeMode(); // ✅ Works only inside a client component
+export default function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { computedMode } = useThemeMode();
+  const [mounted, setMounted] = useState(false);
 
-  return <div className={mode}>{children}</div>;
+  useEffect(() => {
+    setMounted(true); // Prevents SSR mismatches
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(computedMode);
+  }, [computedMode]);
+
+  if (!mounted) {
+    return <div className="opacity-0">{children}</div>; // Prevent hydration mismatch
+  }
+
+  return <Flowbite>{children}</Flowbite>;
 }
