@@ -33,10 +33,10 @@ export default function Header() {
           <UserButton appearance={{ baseTheme: dark }} />
         </SignedIn>
         <SignedOut>
-          <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700">
+          <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
             <SignInButton />
           </div>
-          <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700">
+          <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
             <SignUpButton />
           </div>
         </SignedOut>
