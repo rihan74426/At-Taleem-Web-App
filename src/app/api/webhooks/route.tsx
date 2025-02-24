@@ -64,3 +64,5 @@ export async function POST(req: Request) {
 export async function GET() {
   return new Response("Webhook endpoint active", { status: 200 });
 }
+
+console.log("Received Headers:", headers());
