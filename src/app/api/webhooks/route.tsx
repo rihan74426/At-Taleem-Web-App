@@ -60,3 +60,7 @@ export async function POST(req: Request) {
 
   return new Response("Webhook received", { status: 200 });
 }
+
+export async function GET() {
+  return new Response("Webhook endpoint active", { status: 200 });
+}
