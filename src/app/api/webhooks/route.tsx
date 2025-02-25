@@ -1,6 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
-import { WebhookEvent } from "@clerk/nextjs/server";
+import { clerkClient, WebhookEvent } from "@clerk/nextjs/server";
+import { createAndUpdateUser, deleteUser } from "@/lib/actions/user";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.SIGNING_SECRET;
@@ -53,6 +54,55 @@ export async function POST(req: Request) {
   const eventType = evt.type;
   console.log(`Received webhook with ID ${id} and event type of ${eventType}`);
   console.log("Webhook payload:", body);
+
+  if (eventType === "user.created" || eventType === "user.updated") {
+    const { id, first_name, last_name, image_url, email_addresses } = evt?.data;
+
+    // Ensure first_name and last_name are always strings
+    const safeFirstName = first_name ?? "";
+    const safeLastName = last_name ?? "";
+
+    try {
+      const user = await createAndUpdateUser(
+        id,
+        safeFirstName,
+        safeLastName,
+        image_url,
+        email_addresses
+      );
+
+      if (user && eventType === "user.created") {
+        try {
+          const clerk = await clerkClient();
+          clerk.users.updateUserMetadata(id, {
+            publicMetadata: {
+              userMongoId: user._id,
+              isAdmin: user.isAdmin,
+            },
+          });
+        } catch (error) {
+          console.error("Error updating user metadata:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error creating/updating user:", error);
+      return new Response("Error: Could not create/update user", {
+        status: 400,
+      });
+    }
+  }
+
+  if (eventType === "user.deleted") {
+    const { id } = evt?.data;
+    const safeId = id ?? "";
+
+    try {
+      await deleteUser(safeId);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return new Response("Error: Could not delete user", { status: 200 });
+    }
+  }
 
   return new Response("Webhook received", { status: 200 });
 }
