@@ -109,6 +109,7 @@ export default function CreatePostPage() {
       router.push(`/post/${data.slug}`);
     } catch (error) {
       setPublishError("Something went wrong");
+      console.log(publishError);
       console.log(error);
     }
   };
