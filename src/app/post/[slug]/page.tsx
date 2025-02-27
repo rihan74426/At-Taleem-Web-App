@@ -17,14 +17,13 @@ interface DataResponse {
   posts: Post[];
 }
 
+// Allow params to be either an object or a Promise that resolves to an object
 interface PostPageProps {
-  params: {
-    slug: string;
-  };
+  params: { slug: string } | Promise<{ slug: string }>;
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  // Await the params object (even though it’s not a promise, this satisfies Next.js)
+  // Await params in case it is a promise. If it's already an object, Promise.resolve will immediately resolve.
   const resolvedParams = await Promise.resolve(params);
   const { slug } = resolvedParams;
 
@@ -58,7 +57,6 @@ export default async function PostPage({ params }: PostPageProps) {
       </main>
     );
   }
-
   return (
     <main className="p-3 flex flex-col max-w-6xl mx-auto min-h-screen">
       <h1 className="text-3xl mt-10 p-3 text-center font-serif max-w-2xl mx-auto lg:text-4xl">
