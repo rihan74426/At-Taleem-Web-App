@@ -24,9 +24,7 @@ interface PostPageProps {
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  // No need to await params
-  const resolvedParams = await Promise.resolve(params);
-  const { slug } = resolvedParams;
+  const { slug } = params;
 
   let post: Post | null = null;
 
