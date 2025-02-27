@@ -17,13 +17,11 @@ interface DataResponse {
   posts: Post[];
 }
 
-interface PostPageProps {
-  params: {
-    slug: string;
-  };
-}
-
-export default async function PostPage({ params }: PostPageProps) {
+export default async function PostPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const { slug } = params;
 
   let post: Post | null = null;
