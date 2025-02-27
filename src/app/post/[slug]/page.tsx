@@ -17,13 +17,14 @@ interface DataResponse {
   posts: Post[];
 }
 
-// Allow params to be either an object or a Promise that resolves to an object
 interface PostPageProps {
-  params: { slug: string } | Promise<{ slug: string }>;
+  params: {
+    slug: string;
+  };
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  // Await params in case it is a promise. If it's already an object, Promise.resolve will immediately resolve.
+  // No need to await params
   const resolvedParams = await Promise.resolve(params);
   const { slug } = resolvedParams;
 
@@ -35,20 +36,16 @@ export default async function PostPage({ params }: PostPageProps) {
       body: JSON.stringify({ slug }),
       cache: "no-store",
     });
+
+    if (!result.ok) throw new Error("Failed to fetch post");
+
     const data = (await result.json()) as DataResponse;
     post = data.posts[0];
-  } catch (error: unknown) {
-    post = {
-      title: "Failed to load post",
-      category: "",
-      image: "",
-      content: "",
-      createdAt: "",
-    };
-    console.error(error);
+  } catch (error) {
+    console.error("Error fetching post:", error);
   }
 
-  if (!post || post.title === "Failed to load post") {
+  if (!post) {
     return (
       <main className="p-3 flex flex-col max-w-6xl mx-auto min-h-screen">
         <h2 className="text-3xl mt-10 p-3 text-center font-serif max-w-2xl mx-auto lg:text-4xl">
@@ -57,6 +54,7 @@ export default async function PostPage({ params }: PostPageProps) {
       </main>
     );
   }
+
   return (
     <main className="p-3 flex flex-col max-w-6xl mx-auto min-h-screen">
       <h1 className="text-3xl mt-10 p-3 text-center font-serif max-w-2xl mx-auto lg:text-4xl">
@@ -87,9 +85,6 @@ export default async function PostPage({ params }: PostPageProps) {
         className="p-3 max-w-2xl mx-auto w-full post-content"
         dangerouslySetInnerHTML={{ __html: post.content }}
       ></div>
-      {/* <div className="max-w-4xl mx-auto w-full">
-        <CallToAction />
-      </div> */}
     </main>
   );
 }
