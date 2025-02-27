@@ -39,7 +39,6 @@ export default function CreatePostPage() {
   const [publishError, setPublishError] = useState<string | null>(null);
 
   const router = useRouter();
-  console.log(formData);
 
   const handleUpdloadImage = async () => {
     try {

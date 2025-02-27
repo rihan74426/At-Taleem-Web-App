@@ -54,3 +54,7 @@ html.dark {
 .dark .post-content a {
   color: red;
 }
+
+.dark .ql-editor::before {
+  color: white !important;
+}
