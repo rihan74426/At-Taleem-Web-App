@@ -1,5 +1,6 @@
 // import CallToAction from "@/app/Components/CallToAction";
 import { Button } from "flowbite-react";
+import { PageProps } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
@@ -17,12 +18,8 @@ interface DataResponse {
   posts: Post[];
 }
 
-export default async function PostPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const { slug } = params;
+export default async function PostPage({ params }: PageProps) {
+  const { slug } = params || {};
 
   let post: Post | null = null;
 
