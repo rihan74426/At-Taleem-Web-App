@@ -36,7 +36,7 @@ export default function CreatePostPage() {
   }
 
   const [formData, setFormData] = useState<FormDataType>({});
-  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>("");
 
   const router = useRouter();
 
