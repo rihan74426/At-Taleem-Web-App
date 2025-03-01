@@ -8,12 +8,13 @@ export const POST = async (req: Request) => {
     const startIndex = parseInt(data.startIndex) || 0;
     const limit = parseInt(data.limit) || 9;
     const sortDirection = data.order === "asc" ? 1 : -1;
+    const decodedSlug = data.slug ? decodeURIComponent(data.slug) : undefined;
     const posts = await Post.find({
       ...(data.userId && { userId: data.userId }),
       ...(data.category &&
         data.category !== "null" &&
         data.category !== "undefined" && { category: data.category }),
-      ...(data.slug && { slug: data.slug }),
+      ...(data.slug && { slug: decodedSlug }),
       ...(data.postId && { _id: data.postId }),
       ...(data.searchTerm && {
         $or: [

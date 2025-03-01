@@ -13,34 +13,34 @@ interface Post {
   // add other post properties as needed
 }
 
-interface DataResponse {
-  posts: Post[];
-}
-
 export default async function PostPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 }) {
-  const { slug } = await params;
+  // Force resolution of params
+  const resolvedParams = await Promise.resolve(params);
+  const { slug } = resolvedParams;
+  const decodedSlug = decodeURIComponent(slug);
   let post: Post | null = null;
 
   try {
     const result = await fetch(`${process.env.URL as string}/api/post/get`, {
       method: "POST",
-      body: JSON.stringify({ slug }),
+      body: JSON.stringify({ slug: decodedSlug }),
       cache: "no-store",
     });
 
     if (!result.ok) throw new Error("Failed to fetch post");
 
-    const data = (await result.json()) as DataResponse;
-    post = data.posts[0];
+    const data = await result.json();
+    post = data?.post || null;
   } catch (error) {
     console.error("Error fetching post:", error);
   }
 
   if (!post) {
+    console.log(decodedSlug);
     return (
       <main className="p-3 flex flex-col max-w-6xl mx-auto min-h-screen">
         <h2 className="text-3xl mt-10 p-3 text-center font-serif max-w-2xl mx-auto lg:text-4xl">

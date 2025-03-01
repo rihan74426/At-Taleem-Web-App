@@ -105,7 +105,8 @@ export default function CreatePostPage() {
       }
 
       setPublishError(null);
-      router.push(`/post/${data.slug}`);
+      const decodedSlug = decodeURIComponent(data.slug!);
+      router.push(`/post/${decodedSlug}`);
     } catch (error) {
       setPublishError("Something went wrong");
       console.log(publishError);

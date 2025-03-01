@@ -18,10 +18,12 @@ export const POST = async (req: Request) => {
       });
     }
     const slug = data.title
-      .split(" ")
-      .join("-")
+      .trim()
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9-]/g, "");
+      .replace(/[\s\p{P}]+/gu, "-") // Replace spaces and punctuation with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with a single hyphen
+      .replace(/^-|-$/g, "");
+
     const newPost = await Post.create({
       userId: user.publicMetadata.userMongoId,
       content: data.content,
