@@ -96,10 +96,10 @@ export default function Header() {
           অবতরনিকা
         </Navbar.Link>
 
-        <Navbar.Link href="#">তালিমের ভিডিও</Navbar.Link>
-        <Navbar.Link href="#">জুমার ভিডিও</Navbar.Link>
-        <Navbar.Link href="#">প্রশ্নোত্তরসমূহ</Navbar.Link>
-        <Navbar.Link href="#">প্রকাশিত বইসমূহ</Navbar.Link>
+        <Navbar.Link href="/taleem-video">তালিমের ভিডিও</Navbar.Link>
+        <Navbar.Link href="/juma-videos">জুমার ভিডিও</Navbar.Link>
+        <Navbar.Link href="/questionaire">প্রশ্নোত্তরসমূহ</Navbar.Link>
+        <Navbar.Link href="/published-books">প্রকাশিত বইসমূহ</Navbar.Link>
       </Navbar.Collapse>
     </Navbar>
   );

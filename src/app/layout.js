@@ -15,18 +15,19 @@ export const metadata = {
   title: "At-Taleem",
   description: "A Quran learning and understanding platform for the community",
   icons: {
-    icon: "/favicon.png", // Default favicon
+    icon: "/favicon.png",
     shortcut: "/favicon.png",
-    apple: "/favicon.png", // Apple touch icon
+    apple: "/favicon.png",
   },
 };
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
         {/* ✅ This ensures the correct theme mode is loaded before hydration */}
         <ThemeModeScript />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <title>At-Taleem</title>
       </head>
       <body className={`${anekBanglaFont.variable} antialiased`}>
         <ClerkProvider>
