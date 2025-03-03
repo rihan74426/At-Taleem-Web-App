@@ -22,7 +22,7 @@ export const metadata = {
 };
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* ✅ This ensures the correct theme mode is loaded before hydration */}
         <ThemeModeScript />

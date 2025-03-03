@@ -57,7 +57,7 @@ export default function Header() {
           src="/favicon.png"
           width={36}
           height={36}
-          className=" rounded-full mx-2"
+          className=" rounded-full w-auto h-auto mx-2"
         />
         <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">
           At-Taleem
@@ -92,14 +92,31 @@ export default function Header() {
       </div>
       <Navbar.Toggle />
       <Navbar.Collapse>
-        <Navbar.Link href="/" active>
-          অবতরনিকা
-        </Navbar.Link>
-
-        <Navbar.Link href="/taleem-video">তালিমের ভিডিও</Navbar.Link>
-        <Navbar.Link href="/juma-videos">জুমার ভিডিও</Navbar.Link>
-        <Navbar.Link href="/questionaire">প্রশ্নোত্তরসমূহ</Navbar.Link>
-        <Navbar.Link href="/published-books">প্রকাশিত বইসমূহ</Navbar.Link>
+        <Link href="/">
+          <Navbar.Link active={path === "/"} as={"div"}>
+            অবতরনিকা
+          </Navbar.Link>
+        </Link>
+        <Link href="/taleem-videos" passHref>
+          <Navbar.Link active={path === "/taleem-videos"} as={"div"}>
+            তালিমের ভিডিও
+          </Navbar.Link>
+        </Link>
+        <Link href="/juma-videos" passHref>
+          <Navbar.Link active={path === "/juma-videos"} as={"div"}>
+            জুমার ভিডিও
+          </Navbar.Link>
+        </Link>
+        <Link href="/questionaire" passHref>
+          <Navbar.Link active={path === "/questionaire"} as={"div"}>
+            প্রশ্নোত্তরসমূহ
+          </Navbar.Link>
+        </Link>
+        <Link href="/published-books" passHref>
+          <Navbar.Link active={path === "/published-books"} as={"div"}>
+            প্রকাশিত বইসমূহ
+          </Navbar.Link>
+        </Link>
       </Navbar.Collapse>
     </Navbar>
   );
