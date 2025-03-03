@@ -1,4 +1,3 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./Components/Header";
 import { Footer, ThemeModeScript } from "flowbite-react";
@@ -7,19 +6,20 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Anek_Bangla } from "next/font/google";
 import ThemeCom from "./components/ThemeCom";
 
+import { Geist, Geist_Mono } from "next/font/google";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const anekBanglaFont = Anek_Bangla({
-  variable: "--font-anek-bangla",
-  subsets: ["bengali"],
-});
-
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+const anekBanglaFont = Anek_Bangla({
+  variable: "--font-anek-bangla",
+  subsets: ["bengali"],
 });
 
 export const metadata = {
