@@ -5,9 +5,6 @@
 body {
   height: 100vh;
 }
-body {
-  font-family: "Geist", sans-serif;
-}
 
 .ql-editor {
   font-size: 1.05rem;

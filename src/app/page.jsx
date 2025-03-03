@@ -1,6 +1,6 @@
 import Link from "next/link";
-import CallToAction from "./components/CallToAction";
 import RecentPosts from "./components/RecentPosts";
+import CallToAction from "./Components/CallToAction";
 
 export default async function Home() {
   let posts = null;
