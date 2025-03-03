@@ -27,7 +27,7 @@ export default async function PostPage({
   try {
     const result = await fetch(`${process.env.URL as string}/api/post/get`, {
       method: "POST",
-      body: JSON.stringify({ slug: decodedSlug }),
+      body: JSON.stringify({ slug }),
       cache: "no-store",
     });
 
@@ -35,12 +35,12 @@ export default async function PostPage({
 
     const data = await result.json();
     post = data?.post || null;
+    console.log(result);
   } catch (error) {
     console.error("Error fetching post:", error);
   }
 
   if (!post) {
-    console.log(decodedSlug);
     return (
       <main className="p-3 flex flex-col max-w-6xl mx-auto min-h-screen">
         <h2 className="text-3xl mt-10 p-3 text-center font-serif max-w-2xl mx-auto lg:text-4xl">
