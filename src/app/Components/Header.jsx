@@ -52,7 +52,13 @@ export default function Header() {
   return (
     <Navbar fluid rounded className="anek-bangla-font">
       <Navbar.Brand href="/">
-        <Image alt="Logo" src="/favicon.svg" width={36} height={36} />
+        <Image
+          alt="Logo"
+          src="/favicon.png"
+          width={36}
+          height={36}
+          className=" rounded-full mx-2"
+        />
         <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">
           At-Taleem
         </span>
@@ -86,7 +92,7 @@ export default function Header() {
       </div>
       <Navbar.Toggle />
       <Navbar.Collapse>
-        <Navbar.Link href="#" active>
+        <Navbar.Link href="/" active>
           অবতরনিকা
         </Navbar.Link>
 

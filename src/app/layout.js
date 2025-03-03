@@ -14,6 +14,11 @@ const anekBanglaFont = Anek_Bangla({
 export const metadata = {
   title: "At-Taleem",
   description: "A Quran learning and understanding platform for the community",
+  icons: {
+    icon: "/favicon.png", // Default favicon
+    shortcut: "/favicon.png",
+    apple: "/favicon.png", // Apple touch icon
+  },
 };
 
 export default function RootLayout({ children }) {
