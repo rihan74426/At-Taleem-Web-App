@@ -6,17 +6,18 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Anek_Bangla } from "next/font/google";
 import ThemeCom from "./components/ThemeCom";
 
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 
-const geistSans = Geist({
+const geistSans = localFont({
+  src: "../public/fonts/Geist-Regular.woff2", // Adjust path based on your file location
   variable: "--font-geist-sans",
-  subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../public/fonts/GeistMono-Regular.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
+
 const anekBanglaFont = Anek_Bangla({
   variable: "--font-anek-bangla",
   subsets: ["bengali"],
