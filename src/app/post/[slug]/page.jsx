@@ -1,5 +1,5 @@
 import CallToAction from "@/app/Components/CallToAction";
-import RecentPosts from "@/app/components/RecentPosts";
+import RecentPosts from "@/app/Components/RecentPosts";
 import { Button } from "flowbite-react";
 import Link from "next/link";
 export default async function PostPage({ params }) {
