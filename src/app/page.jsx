@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CallToAction from "./Components/CallToAction";
 import RecentPosts from "./Components/RecentPosts";
+import { slugify } from "transliteration";
 
 export default async function Home() {
   let posts = null;

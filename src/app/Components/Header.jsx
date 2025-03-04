@@ -76,8 +76,8 @@ export default function Header() {
       <Button className="w-12 h-10 lg:hidden" color="gray" pill>
         <AiOutlineSearch />
       </Button>
-      <div className="order-2 hidden items-center md:flex">
-        <DarkThemeToggle onClick={toggleMode} />
+      <div className="order-2 items-center">
+        <DarkThemeToggle onClick={toggleMode} className="m-2" />
         <SignedIn>
           <UserButton appearance={{ baseTheme: dark }} />
         </SignedIn>
@@ -115,6 +115,11 @@ export default function Header() {
         <Link href="/published-books" passHref>
           <Navbar.Link active={path === "/published-books"} as={"div"}>
             প্রকাশিত বইসমূহ
+          </Navbar.Link>
+        </Link>
+        <Link href="/dashboard" passHref>
+          <Navbar.Link active={path === "/dashboard"} as={"div"}>
+            ড্যাশবোর্ড
           </Navbar.Link>
         </Link>
       </Navbar.Collapse>

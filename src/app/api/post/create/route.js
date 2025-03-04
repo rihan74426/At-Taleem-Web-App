@@ -1,6 +1,7 @@
-import Post from '../../../../lib/models/post.model.js';
-import { connect } from '../../../../lib/mongodb/mongoose.js';
-import { currentUser } from '@clerk/nextjs/server';
+import { slugify } from "transliteration";
+import Post from "../../../../lib/models/post.model.js";
+import { connect } from "../../../../lib/mongodb/mongoose.js";
+import { currentUser } from "@clerk/nextjs/dist/types/server/index.js";
 export const POST = async (req) => {
   const user = await currentUser();
   try {
@@ -12,15 +13,17 @@ export const POST = async (req) => {
       user.publicMetadata.userMongoId !== data.userMongoId ||
       user.publicMetadata.isAdmin !== true
     ) {
-      return new Response('Unauthorized', {
+      return new Response("Unauthorized", {
         status: 401,
       });
     }
-    const slug = data.title
-      .split(' ')
-      .join('-')
+    const slug1 = data.title
+      .split(" ")
+      .join("-")
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9-]/g, '');
+      .replace(/[^a-zA-Z0-9-]/g, "");
+
+    const slug = slugify(slug1);
     const newPost = await Post.create({
       userId: user.publicMetadata.userMongoId,
       content: data.content,
@@ -34,8 +37,8 @@ export const POST = async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.log('Error creating post:', error);
-    return new Response('Error creating post', {
+    console.log("Error creating post:", error);
+    return new Response("Error creating post", {
       status: 500,
     });
   }

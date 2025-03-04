@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
         <title>At-Taleem</title>
       </head>
       <body className={`${anekBanglaFont.variable} antialiased`}>
-        <ClerkProvider>
+        <ClerkProvider dynamic>
           <ThemeProvider>
             <ThemeCom>
               <Header />
