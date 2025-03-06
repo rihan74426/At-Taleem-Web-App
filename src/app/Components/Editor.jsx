@@ -9,20 +9,24 @@ export default function Editor({ initialData, onSave, onCancel }) {
   const [description, setDescription] = useState(initialData.description);
 
   return (
-    <div className="bg-white p-4 rounded shadow">
+    <div className="bg-white border border-blue-600 dark:bg-gray-900 p-4 rounded shadow">
       <input
-        className="w-full p-2 border rounded"
+        className="w-full p-2 border rounded dark:bg-black"
         type="text"
         value={greeting}
         onChange={(e) => setGreeting(e.target.value)}
       />
-      <ReactQuill
+      <input
+        className="w-full p-2 border rounded dark:bg-black"
+        type="text"
         value={description}
-        onChange={setDescription}
-        className="mt-2"
+        onChange={(e) => setDescription(e.target.value)}
       />
       <div className="mt-4 flex justify-end gap-2">
-        <button className="bg-gray-300 px-4 py-2 rounded" onClick={onCancel}>
+        <button
+          className="bg-yellow-500 text-white px-4 py-2 rounded"
+          onClick={onCancel}
+        >
           Cancel
         </button>
         <button

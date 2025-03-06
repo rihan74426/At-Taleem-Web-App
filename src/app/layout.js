@@ -3,7 +3,7 @@ import Header from "./Components/Header";
 import { Footer, ThemeModeScript } from "flowbite-react";
 import ThemeProvider from "./Components/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Anek_Bangla, Mirza } from "next/font/google";
+import { Anek_Bangla } from "next/font/google";
 import ThemeCom from "./Components/ThemeCom";
 
 const anekBanglaFont = Anek_Bangla({

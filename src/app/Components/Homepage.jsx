@@ -14,7 +14,6 @@ export default function Homepage() {
 
   const rqustUrl = "/api/homepage/get";
   useEffect(() => {
-    setIsAdmin(isSignedIn && user.publicMetadata.isAdmin);
     fetch(rqustUrl)
       .then((res) => res.json())
       .then((content) => setData(content));
@@ -33,10 +32,7 @@ export default function Homepage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {data ? (
-        <div
-          className="relative"
-          onMouseEnter={() => isAdmin && setIsEditing(true)}
-        >
+        <div className="relative">
           {isEditing ? (
             <Editor
               initialData={data}
@@ -50,12 +46,12 @@ export default function Homepage() {
                 className="mt-4 text-gray-700"
                 dangerouslySetInnerHTML={{ __html: data.description }}
               />
-              {isAdmin && (
+              {user?.publicMetadata?.isAdmin && (
                 <button
-                  className="absolute top-0 right-0 text-blue-500"
+                  className=" place-self-end list-item rounded-md dark:text-white 0 bg-blend-color dark:bg-black p-1"
                   onClick={() => setIsEditing(true)}
                 >
-                  ✏️ Edit
+                  Edit
                 </button>
               )}
             </>

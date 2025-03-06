@@ -1,4 +1,3 @@
-import CallToAction from "@/app/Components/CallToAction";
 import RecentPosts from "@/app/Components/RecentPosts";
 import { Button } from "flowbite-react";
 import Link from "next/link";
@@ -56,9 +55,7 @@ export default async function PostPage({ params }) {
         className="p-3 max-w-2xl mx-auto w-full post-content"
         dangerouslySetInnerHTML={{ __html: post?.content }}
       ></div>
-      <div className="max-w-4xl mx-auto w-full">
-        <CallToAction />
-      </div>
+      <div className="max-w-4xl mx-auto w-full"></div>
       <RecentPosts limit={3} />
     </main>
   );

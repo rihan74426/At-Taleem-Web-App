@@ -1,5 +1,4 @@
 import Link from "next/link";
-import CallToAction from "./Components/CallToAction";
 import Homepage from "./Components/Homepage";
 import RecentPosts from "./Components/RecentPosts";
 
