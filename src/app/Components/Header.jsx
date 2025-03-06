@@ -76,7 +76,7 @@ export default function Header() {
       <Button className="w-12 h-10 lg:hidden" color="gray" pill>
         <AiOutlineSearch />
       </Button>
-      <div className="order-2 items-center">
+      <div className="order-2 items-center flex">
         <DarkThemeToggle onClick={toggleMode} className="m-2" />
         <SignedIn>
           <UserButton appearance={{ baseTheme: dark }} />

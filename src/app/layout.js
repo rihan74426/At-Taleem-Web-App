@@ -3,7 +3,7 @@ import Header from "./Components/Header";
 import { Footer, ThemeModeScript } from "flowbite-react";
 import ThemeProvider from "./Components/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Anek_Bangla } from "next/font/google";
+import { Anek_Bangla, Mirza } from "next/font/google";
 import ThemeCom from "./Components/ThemeCom";
 
 const anekBanglaFont = Anek_Bangla({
@@ -27,9 +27,16 @@ export default function RootLayout({ children }) {
         {/* ✅ This ensures the correct theme mode is loaded before hydration */}
         <ThemeModeScript />
         <link rel="icon" href="/favicon.png" type="image/png" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Mirza:wght@400;500;600;700&display=swap"
+        />
         <title>At-Taleem</title>
       </head>
-      <body className={`${anekBanglaFont.variable} antialiased`}>
+      <body
+        className={`${anekBanglaFont.variable} antialiased`}
+        style={{ fontFamily: "Mirza, sans-serif" }}
+      >
         <ClerkProvider dynamic>
           <ThemeProvider>
             <ThemeCom>
