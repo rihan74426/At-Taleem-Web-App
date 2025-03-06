@@ -50,15 +50,20 @@ export default function Header() {
     }
   }, [searchParams]);
   return (
-    <Navbar fluid rounded className="anek-bangla-font">
+    <Navbar
+      fluid
+      rounded
+      className="anek-bangla-font bg-blue-300 dark:bg-gray-900"
+    >
       <Navbar.Brand href="/">
         <Image
           alt="Logo"
           src="/favicon.png"
           width={36}
           height={36}
-          className=" rounded-full w-auto h-auto mx-2"
+          className="rounded-full mx-2 object-contain"
         />
+
         <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">
           At-Taleem
         </span>
