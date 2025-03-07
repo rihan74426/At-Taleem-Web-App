@@ -64,7 +64,7 @@ export default function Header() {
           className="rounded-full mx-2 object-contain"
         />
 
-        <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">
+        <span className="self-center mirzaFont whitespace-nowrap text-xl font-semibold dark:text-white">
           At-Taleem
         </span>
       </Navbar.Brand>
@@ -82,16 +82,16 @@ export default function Header() {
         <AiOutlineSearch />
       </Button>
       <div className="order-2 items-center flex">
-        <DarkThemeToggle onClick={toggleMode} className="m-2" />
+        <DarkThemeToggle onClick={toggleMode} className="m-2" color="red" />
         <SignedIn>
           <UserButton appearance={{ baseTheme: dark }} />
         </SignedIn>
         <SignedOut>
           <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
-            <SignInButton />
+            <SignInButton mode="modal" />
           </div>
           <div className="mr-2 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
-            <SignUpButton />
+            <SignUpButton mode="modal" />
           </div>
         </SignedOut>
       </div>

@@ -30,7 +30,7 @@ export default function Homepage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto anek-bangla-font">
       {data ? (
         <div className="relative">
           {isEditing ? (
@@ -41,9 +41,9 @@ export default function Homepage() {
             />
           ) : (
             <>
-              <h1 className="text-3xl font-bold">{data.greeting}</h1>
+              <h1 className=" font-bold text-4xl">{data.greeting}</h1>
               <div
-                className="mt-4 text-gray-700"
+                className="mt-4 dark:text-gray-200 "
                 dangerouslySetInnerHTML={{ __html: data.description }}
               />
               {user?.publicMetadata?.isAdmin && (
