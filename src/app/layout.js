@@ -1,6 +1,6 @@
 import "./globals.css";
 import Header from "./Components/Header";
-import { Footer, ThemeModeScript } from "flowbite-react";
+import { ThemeModeScript } from "flowbite-react";
 import ThemeProvider from "./Components/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Anek_Bangla, Mirza } from "next/font/google";
@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
             <ThemeCom>
               <Header />
               {children}
-              <Footer />
+              {/* <Footer /> */}
             </ThemeCom>
           </ThemeProvider>
         </ClerkProvider>

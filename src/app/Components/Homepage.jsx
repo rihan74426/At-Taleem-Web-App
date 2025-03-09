@@ -41,7 +41,9 @@ export default function Homepage() {
             />
           ) : (
             <>
-              <h1 className=" font-bold text-4xl">{data.greeting}</h1>
+              <h1 className=" font-bold text-center text-4xl">
+                {data.greeting}
+              </h1>
               <div
                 className="mt-4 dark:text-gray-200 "
                 dangerouslySetInnerHTML={{ __html: data.description }}
