@@ -11,11 +11,9 @@ export default function VideoComments({ videoId }) {
   const [error, setError] = useState("");
   const user = useUser();
 
-  const fetchComments = async (pageNumber = 1) => {
+  const fetchComments = async () => {
     try {
-      const res = await fetch(
-        `/api/comments?videoId=${videoId}&page=${pageNumber}&limit=${limit}`
-      );
+      const res = await fetch(`/api/comments?videoId=${videoId}`);
       if (res.ok) {
         const data = await res.json();
         setComments(data.comments);
@@ -37,7 +35,7 @@ export default function VideoComments({ videoId }) {
     try {
       // Replace these with actual user data, perhaps from Clerk authentication
       const userId = user?.user.id;
-      const username = user.user.fullName; // Replace with actual username
+      const username = user?.user.fullName; // Replace with actual username
 
       const res = await fetch("/api/comments", {
         method: "POST",
@@ -90,11 +88,12 @@ export default function VideoComments({ videoId }) {
       <ul className="space-y-4">
         {comments.map((comment) => (
           <li key={comment._id} className="border-b pb-2">
-            <p className="font-semibold">
+            <p className="font-semibold italic">
               {comment.username}{" "}
-              {user?.publicMetadata?.isAdmin && (
+              {user?.user?.publicMetadata?.isAdmin && (
                 <span className="text-blue-300 bg-slate-600">Admin</span>
               )}
+              :
             </p>
             <p>{comment.content}</p>
             <p className="text-xs text-gray-500">

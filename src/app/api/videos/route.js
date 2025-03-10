@@ -24,10 +24,36 @@ function normalizeVideoUrl(platform, url) {
 }
 
 // GET: Paginated videos, sorted descending
+
 export async function GET(request) {
   await connect();
-  // Parse query parameters
   const { searchParams } = new URL(request.url);
+  const videoId = searchParams.get("videoId");
+
+  // If a videoId is provided, fetch that single video.
+  if (videoId) {
+    try {
+      const video = await Videos.findById(videoId);
+      if (!video) {
+        return new Response(JSON.stringify({ error: "Video not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ video }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("Error fetching video:", error);
+      return new Response(JSON.stringify({ error: "Error fetching video" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  // Otherwise, handle pagination for the video list
   const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = 20;
   const skip = (page - 1) * limit;
@@ -53,36 +79,6 @@ export async function GET(request) {
   } catch (error) {
     console.error("Error fetching videos:", error);
     return new Response(JSON.stringify({ error: "Error fetching videos" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
-
-// POST: Admin adds a new video
-export async function POST(request) {
-  await connect();
-  try {
-    const data = await request.json();
-    const { title, platform, videoUrl, category } = data;
-
-    // Normalize video URL based on platform
-    const normalizedUrl = normalizeVideoUrl(platform, videoUrl);
-
-    const newVideo = await Videos.create({
-      title,
-      platform,
-      videoUrl: normalizedUrl,
-      category,
-    });
-
-    return new Response(JSON.stringify(newVideo), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error("Error adding video:", error);
-    return new Response(JSON.stringify({ error: "Error adding video" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

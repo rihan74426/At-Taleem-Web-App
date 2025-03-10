@@ -5,8 +5,6 @@ export async function GET(request) {
   await connect();
   const { searchParams } = new URL(request.url);
   const videoId = searchParams.get("videoId");
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "20");
 
   if (!videoId) {
     return new Response(JSON.stringify({ error: "Missing videoId" }), {
@@ -17,13 +15,11 @@ export async function GET(request) {
 
   const query = { videoId };
   try {
-    const comments = await Comment.find(query)
-      .sort({ createdAt: -1 }) // latest first
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const comments = await Comment.find(query).sort({ createdAt: -1 }); // latest first
+
     const total = await Comment.countDocuments(query);
 
-    return new Response(JSON.stringify({ comments, total, page, limit }), {
+    return new Response(JSON.stringify({ comments, total }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

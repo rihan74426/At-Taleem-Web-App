@@ -17,7 +17,7 @@ export default function VideoDetailPage() {
       if (res.ok) {
         const data = await res.json();
         // Assuming data.videos is returned as an array, and we're taking the first one.
-        setVideo(data.videos[0]);
+        setVideo(data.video);
       }
       setLoading(false);
     }
@@ -32,9 +32,10 @@ export default function VideoDetailPage() {
       <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
       <div className="relative pb-[56.25%] mb-6">
         <ReactPlayer
-          url={video.embedUrl}
+          url={video.videoUrl}
           width="100%"
           height="100%"
+          title={video.title}
           className="absolute top-0 left-0"
           controls
         />
