@@ -62,6 +62,16 @@ export default function Homepage() {
       ) : (
         <p>Loading...</p>
       )}
+
+      <div className="justify-center mt-4">
+        <h2 className="text-2xl font-bold text-red-500 text-center">
+          Construction of this website is in progress!...
+        </h2>
+        <p>
+          Thank you for your Visiing us. Please Sign up on the account page.
+          We'll send you an email once the website is ready
+        </p>
+      </div>
     </div>
   );
 }
