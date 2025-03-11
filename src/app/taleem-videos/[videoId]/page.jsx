@@ -22,23 +22,36 @@ export default function VideoDetailPage() {
       setLoading(false);
     }
     fetchVideo();
+    console.log(video);
   }, [videoId]);
 
   if (loading) return <p>Loading...</p>;
   if (!video) return <p>Video not found</p>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 min-h-full h-full">
       <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
-      <div className="relative pb-[56.25%] mb-6">
-        <ReactPlayer
-          url={video.videoUrl}
-          width="100%"
-          height="100%"
-          title={video.title}
-          className="absolute top-0 left-0"
-          controls
-        />
+      <div className="relative">
+        {video.platform == "YouTube" ? (
+          <ReactPlayer
+            url={video.videoUrl}
+            width="100%"
+            height="100%"
+            title={video.title}
+            className="absolute top-0 left-0"
+            controls
+          />
+        ) : (
+          <iframe
+            src={video.videoUrl}
+            width="720"
+            height="405"
+            scrolling="no"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen={true}
+          ></iframe>
+        )}
       </div>
       <VideoComments videoId={video._id} />
     </div>

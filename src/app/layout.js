@@ -5,6 +5,7 @@ import ThemeProvider from "./Components/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Anek_Bangla, Mirza } from "next/font/google";
 import ThemeCom from "./Components/ThemeCom";
+import FooterCom from "./Components/Footer";
 
 const anekBanglaFont = Anek_Bangla({
   variable: "--font-anek-bangla",
@@ -45,7 +46,7 @@ export default function RootLayout({ children }) {
             <ThemeCom>
               <Header />
               {children}
-              {/* <Footer /> */}
+              <FooterCom />
             </ThemeCom>
           </ThemeProvider>
         </ClerkProvider>
