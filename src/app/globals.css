@@ -15,7 +15,7 @@
 
 body {
   height: 100vh;
-  font-family: "Mirza", sans-serif;
+  font-family: "Anek Bangla", serif;
   font-size: larger;
 }
 
@@ -83,6 +83,20 @@ html.dark {
 
 .post-content p {
   margin-bottom: 0.5rem;
+}
+
+/* NProgress Custom Styling */
+#nprogress .bar {
+  background: #3b82f6 !important; /* Flowbite primary blue */
+  height: 4px !important;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px #3b82f6, 0 0 5px #3b82f6;
+}
+
+#nprogress .spinner {
+  display: none !important; /* Hide the spinner */
 }
 
 .post-content h1 {

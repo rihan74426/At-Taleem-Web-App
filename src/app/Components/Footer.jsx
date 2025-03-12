@@ -20,8 +20,8 @@ export default function FooterCom() {
             <Image
               alt="Logo"
               src="/favicon.png"
-              width={36}
-              height={36}
+              width={72}
+              height={72}
               className="rounded-full mx-2 object-contain"
             />
           </div>

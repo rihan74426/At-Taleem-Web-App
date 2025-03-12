@@ -1,3 +1,3 @@
 export default function PublishedBooks() {
-  return <div>Published Books</div>;
+  return <div className="min-h-screen">Published Books</div>;
 }

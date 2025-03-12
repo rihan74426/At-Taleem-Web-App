@@ -1,3 +1,3 @@
 export default function Questionaire() {
-  return <div>Questionaires</div>;
+  return <div className="min-h-screen">Questionaires</div>;
 }

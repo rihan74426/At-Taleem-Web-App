@@ -16,12 +16,12 @@ export default function Editor({ initialData, onSave, onCancel }) {
         value={greeting}
         onChange={(e) => setGreeting(e.target.value)}
       />
-      <input
+      <textarea
         className="w-full p-2 border rounded dark:bg-black"
         type="text"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-      />
+      ></textarea>
       <div className="mt-4 flex justify-end gap-2">
         <button
           className="bg-yellow-500 text-white px-4 py-2 rounded"

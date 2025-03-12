@@ -6,50 +6,73 @@ import VideoComments from "@/app/Components/VideoComments";
 
 export default function VideoDetailPage() {
   const params = useParams();
-  const videoId = params.videoId; // The ID of the video
+  const videoId = params.videoId; // The ID of the video from the URL
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch video details (assuming you have an API route for video details)
     async function fetchVideo() {
-      const res = await fetch(`/api/videos?videoId=${videoId}`);
-      if (res.ok) {
+      try {
+        const res = await fetch(`/api/videos?videoId=${videoId}`);
+        if (!res.ok) {
+          throw new Error("Failed to fetch video");
+        }
         const data = await res.json();
-        // Assuming data.videos is returned as an array, and we're taking the first one.
+        if (!data.video) {
+          throw new Error("Video not found");
+        }
         setVideo(data.video);
+      } catch (err) {
+        console.error("Error fetching video:", err);
+        setError(err.message || "Error fetching video");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchVideo();
-    console.log(video);
   }, [videoId]);
 
-  if (loading) return <p>Loading...</p>;
-  if (!video) return <p>Video not found</p>;
+  // Full-screen loader
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen ">
+        <p className="text-xl">Loading...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-xl text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 min-h-full h-full">
+    <div className="max-w-4xl mx-auto p-6 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
-      <div className="relative">
-        {video.platform == "YouTube" ? (
+      {/* Responsive container with 16:9 aspect ratio */}
+      <div className="relative w-full pb-[56.25%] mb-6">
+        {video?.platform === "YouTube" ? (
           <ReactPlayer
             url={video.videoUrl}
             width="100%"
             height="100%"
-            title={video.title}
             className="absolute top-0 left-0"
             controls
           />
         ) : (
           <iframe
             src={video.videoUrl}
-            width="720"
-            height="405"
+            title={video.title}
+            className="absolute top-0 left-0 w-full h-full"
             scrolling="no"
             frameBorder="0"
             allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowFullScreen={true}
+            allowFullScreen
           ></iframe>
         )}
       </div>

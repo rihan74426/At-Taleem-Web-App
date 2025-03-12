@@ -7,7 +7,7 @@ export default function FacebookPostEmbed({ videoUrl, fallbackUrl }) {
   const embedUrl = `https://www.facebook.com/plugins/post.php?href=https://www.facebook.com/share/v/18dbyJTjAf/&show_text=true&width=500`;
 
   return (
-    <div>
+    <div className="min-h-screen">
       {embedError ? (
         <div className="p-4 bg-gray-200 text-center">
           <p>Embedding failed. Click below to view the post on Facebook.</p>
