@@ -84,3 +84,53 @@ export async function GET(request) {
     });
   }
 }
+
+export async function POST(request) {
+  await connect();
+  try {
+    const data = await request.json();
+    const { title, videoUrl, embedCode, platform, category } = data;
+
+    // Validate required fields
+    if (!title || !videoUrl || !platform || !category) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // For YouTube, generate embed code automatically
+    let finalEmbedCode = embedCode;
+    if (platform === "YouTube") {
+      // Example: generate YouTube embed URL
+      finalEmbedCode = `<iframe
+          src=${videoUrl}
+          title=${title}
+          className="absolute top-0 left-0 w-full h-full"
+          scrolling="no"
+          frameBorder="0"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          allowFullScreen
+        ></iframe>`;
+    }
+
+    const newVideo = await Videos.create({
+      title,
+      videoUrl,
+      embedCode: finalEmbedCode,
+      platform,
+      category,
+    });
+
+    return new Response(JSON.stringify(newVideo), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error adding video:", error);
+    return new Response(
+      JSON.stringify({ error: "Error adding video", details: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}

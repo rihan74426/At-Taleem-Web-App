@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import ReactPlayer from "react-player";
 import VideoComments from "@/app/Components/VideoComments";
 
 export default function VideoDetailPage() {
@@ -23,6 +22,11 @@ export default function VideoDetailPage() {
           throw new Error("Video not found");
         }
         setVideo(data.video);
+        console.log(
+          data?.video?.platform === "YouTube"
+            ? data.video.embedCode
+            : data.video.videoUrl
+        );
       } catch (err) {
         console.error("Error fetching video:", err);
         setError(err.message || "Error fetching video");
@@ -32,7 +36,6 @@ export default function VideoDetailPage() {
     }
     fetchVideo();
   }, [videoId]);
-
   // Full-screen loader
   if (loading) {
     return (
@@ -56,25 +59,13 @@ export default function VideoDetailPage() {
       <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
       {/* Responsive container with 16:9 aspect ratio */}
       <div className="relative w-full pb-[56.25%] mb-6">
-        {video?.platform === "YouTube" ? (
-          <ReactPlayer
-            url={video.videoUrl}
-            width="100%"
-            height="100%"
-            className="absolute top-0 left-0"
-            controls
-          />
-        ) : (
-          <iframe
-            src={video.videoUrl}
-            title={video.title}
-            className="absolute top-0 left-0 w-full h-full"
-            scrolling="no"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowFullScreen
-          ></iframe>
-        )}
+        <div
+          className="absolute top-0 left-0 w-full h-full"
+          dangerouslySetInnerHTML={{
+            __html:
+              video.platform === "YouTube" ? video.embedCode : video.videoUrl,
+          }}
+        />
       </div>
       <VideoComments videoId={video._id} />
     </div>

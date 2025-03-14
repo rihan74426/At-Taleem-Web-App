@@ -9,15 +9,16 @@ import { slugify } from "transliteration";
 function VideoCard({ video }) {
   return (
     <div className="border p-4 rounded shadow-md ">
-      <h3 className="font-bold">{video.title}</h3>
       <div className="mt-2 aspect-video relative">
-        <iframe
-          src={video.videoUrl}
-          title={video.title}
-          allowFullScreen
+        <div
           className="w-full h-full"
-        ></iframe>
+          dangerouslySetInnerHTML={{
+            __html:
+              video.platform === "YouTube" ? video.embedCode : video.videoUrl,
+          }}
+        />
       </div>
+      <h3 className="font-bold">{video.title}</h3>
       <p className="mt-2 text-sm text-gray-500">
         {new Date(video.createdAt).toLocaleDateString()}
       </p>
@@ -30,12 +31,13 @@ function VideoListItem({ video }) {
   return (
     <div className="flex gap-4 border-b p-2">
       <div className="w-40 aspect-video relative">
-        <iframe
-          src={video.videoUrl}
-          title={video.title}
-          allowFullScreen
+        <div
           className="w-full h-full"
-        ></iframe>
+          dangerouslySetInnerHTML={{
+            __html:
+              video.platform === "YouTube" ? video.embedCode : video.videoUrl,
+          }}
+        />
       </div>
       <div>
         <h3 className="font-bold">{video.title}</h3>
@@ -68,7 +70,7 @@ export default function VideosPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">Video Showcase</h1>
+      <h1 className="text-3xl text-center font-bold mb-4">Juma Videos</h1>
       <div className="flex justify-between mb-4">
         <div>
           <button
@@ -96,7 +98,7 @@ export default function VideosPage() {
               // Wrap the VideoCard in a Link to the video detail page
               <Link
                 key={video._id}
-                href={`/taleem-videos/${video._id}`}
+                href={`/juma-videos/${video._id}`}
                 onClick={() => console.log(video._id)}
               >
                 <VideoCard video={video} />
@@ -107,7 +109,7 @@ export default function VideosPage() {
           <div className="flex flex-col">
             {videos.map((video) => (
               // Wrap the VideoListItem in a Link
-              <Link key={video._id} href={`/taleem-videos/${video._id}`}>
+              <Link key={video._id} href={`/juma-videos/${video._id}`}>
                 <VideoListItem video={video} />
               </Link>
             ))}

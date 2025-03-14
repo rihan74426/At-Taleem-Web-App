@@ -29,34 +29,38 @@ export default function AdminVideosPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
           type="text"
-          placeholder="Video Title"
+          placeholder="শিরোনাম"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded dark:bg-black"
           required
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded dark:bg-black"
         >
-          <option value="Taleem">Taleem</option>
-          <option value="Juma">Juma</option>
+          <option value="Taleem">তালিম</option>
+          <option value="Juma">জুমা</option>
         </select>
         <select
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded dark:bg-black"
         >
           <option value="YouTube">YouTube</option>
           <option value="Facebook">Facebook</option>
         </select>
         <input
-          type="url"
-          placeholder="Video URL (share or embed link)"
+          type="text"
+          placeholder={
+            platform === "YouTube"
+              ? "Please place the YouTube video link here"
+              : "Please put the collected the video embed link from desktop facebook"
+          }
           value={videoUrl}
           onChange={(e) => setVideoUrl(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded dark:bg-black"
           required
         />
         <button type="submit" className="bg-blue-500 text-white py-2 rounded">
