@@ -17,6 +17,7 @@ import {
   SignInButton,
   SignUpButton,
   UserButton,
+  useUser,
 } from "@clerk/nextjs";
 import { dark, light } from "@clerk/themes";
 import { useEffect, useState } from "react";
@@ -122,11 +123,13 @@ export default function Header() {
             প্রকাশিত বইসমূহ
           </Navbar.Link>
         </Link>
-        <Link href="/dashboard" passHref>
-          <Navbar.Link active={path === "/dashboard"} as={"div"}>
-            ড্যাশবোর্ড
-          </Navbar.Link>
-        </Link>
+        {useUser().isSignedIn && (
+          <Link href="/dashboard" passHref>
+            <Navbar.Link active={path === "/dashboard"} as={"div"}>
+              ড্যাশবোর্ড
+            </Navbar.Link>
+          </Link>
+        )}
       </Navbar.Collapse>
     </Navbar>
   );

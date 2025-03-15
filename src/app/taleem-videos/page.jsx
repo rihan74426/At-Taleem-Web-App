@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import ReactPlayer from "react-player";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
@@ -28,32 +29,25 @@ export default function VideosPage() {
     return (
       <div className="border p-4 rounded shadow-md hover:shadow-lg transition duration-300">
         <h3 className="font-bold mb-2">{video.title}</h3>
-        <div className="relative h-0 pb-[56.25%] mb-2">
-          {video.thumbnailUrl ? (
-            <Image
-              src={video.thumbnailUrl}
-              alt={video.title}
-              layout="fill"
-              objectFit="cover"
-              className="rounded"
-            />
+        <div className="relative w-60 h-40">
+          {/* If embedCode exists, display an actual thumbnail from video.videoUrl (or any real thumbnail URL).
+          Otherwise, show a default fallback image from /public. */}
+          {video.embedCode ? (
+            <ReactPlayer url={video.videoUrl} width="100%" height="100%" />
           ) : (
-            // Fallback: a placeholder image if no thumbnail
-            <div className="absolute top-0 left-0 w-full h-full bg-gray-300 rounded flex items-center justify-center text-gray-600">
-              No Thumbnail
-            </div>
+            <Image
+              src="/thumbnail.png" // <-- Your default image in /public/images
+              alt={video.title}
+              fill
+              className="blur-sm rounded object-cover"
+            />
           )}
-          {/* Optional play icon overlay */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg
-              className="w-12 h-12 text-white opacity-80"
-              fill="currentColor"
-              viewBox="0 0 84 84"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="42" cy="42" r="42" fill="black" opacity="0.5" />
-              <polygon points="33,26 58,42 33,58" fill="white" />
-            </svg>
+
+          {/* Overlay text with colored background */}
+          <div className="absolute inset-0 flex items-center justify-center p-2">
+            <div className="bg-green-600 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
+              {video.title}
+            </div>
           </div>
         </div>
         <p className="text-sm text-gray-500">
@@ -67,26 +61,26 @@ export default function VideosPage() {
   function VideoListItem({ video }) {
     return (
       <div className="flex gap-4 border-b p-2">
-        <div className="w-40 h-24 relative">
+        <div className="relative w-40 h-24">
+          {/* If embedCode exists, display an actual thumbnail from video.videoUrl (or any real thumbnail URL).
+          Otherwise, show a default fallback image from /public. */}
           {video.embedCode ? (
-            <Image
-              src={video.videoUrl}
-              alt={video.title}
-              layout="fill"
-              objectFit="cover"
-              className="rounded"
-            />
+            <ReactPlayer url={video.videoUrl} width="100%" height="100%" />
           ) : (
-            <div className="absolute top-0 left-0 w-full h-full bg-gray-300 rounded flex items-center justify-center text-gray-600">
-              <h3 className="font-bold mb-2">{video.title}</h3>
-            </div>
+            <Image
+              src="/thumbnail.png" // <-- Your default image in /public/images
+              alt={video.title}
+              objectFit
+              className="rounded object-cover"
+            />
           )}
-        </div>
-        <div>
-          <h3 className="font-bold">{video.title}</h3>
-          <p className="text-sm text-gray-500">
-            {new Date(video.createdAt).toLocaleDateString()}
-          </p>
+
+          {/* Overlay text with colored background */}
+          <div className="absolute inset-0 flex items-center justify-center p-2">
+            <div className="bg-green-600 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
+              {video.title}
+            </div>
+          </div>
         </div>
       </div>
     );

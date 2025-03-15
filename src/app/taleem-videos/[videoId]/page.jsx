@@ -65,15 +65,12 @@ export default function VideoDetailPage() {
             controls
           />
         ) : (
-          <iframe
-            src={video.videoUrl}
-            title={video.title}
+          <div
             className="absolute top-0 left-0 w-full h-full"
-            scrolling="no"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowFullScreen
-          ></iframe>
+            dangerouslySetInnerHTML={{
+              __html: video.videoUrl,
+            }}
+          />
         )}
       </div>
       <VideoComments videoId={video._id} />
