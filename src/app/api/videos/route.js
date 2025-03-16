@@ -3,25 +3,6 @@ import Videos from "@/lib/models/Videos";
 import { connect } from "@/lib/mongodb/mongoose";
 
 // Utility: Normalize video URL
-function normalizeVideoUrl(platform, url) {
-  if (platform === "YouTube") {
-    // Convert share URL to embed URL if necessary.
-    // e.g., from "https://youtu.be/VIDEO_ID" to "https://www.youtube.com/embed/VIDEO_ID"
-    const ytMatch =
-      url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) ||
-      url.match(/v=([A-Za-z0-9_-]+)/);
-    if (ytMatch) {
-      return `https://www.youtube.com/embed/${ytMatch[1]}`;
-    }
-    return url;
-  } else if (platform === "Facebook") {
-    // Facebook embed: Use Facebook's standard embed URL pattern.
-    // For example, if the URL is "https://www.facebook.com/{page}/videos/{id}/", you may have to format it.
-    // For simplicity, we'll assume the URL is already an embed URL.
-    return url;
-  }
-  return url;
-}
 
 // GET: Paginated videos, sorted descending
 
@@ -89,7 +70,8 @@ export async function POST(request) {
   await connect();
   try {
     const data = await request.json();
-    const { title, videoUrl, embedCode, platform, category } = data;
+
+    let { title, videoUrl, description, platform, category } = data;
 
     // Validate required fields
     if (!title || !videoUrl || !platform || !category) {
@@ -99,25 +81,20 @@ export async function POST(request) {
       );
     }
 
-    // For YouTube, generate embed code automatically
-    let finalEmbedCode = embedCode;
-    if (platform === "YouTube") {
-      // Example: generate YouTube embed URL
-      finalEmbedCode = `<iframe
-          src=${videoUrl}
-          title=${title}
-          className="absolute top-0 left-0 w-full h-full"
-          scrolling="no"
-          frameBorder="0"
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-          allowFullScreen
-        ></iframe>`;
+    // If it's a Facebook embed code, replace the width & height
+    if (platform === "Facebook") {
+      videoUrl = videoUrl
+        .replace(/width="\d+"/g, 'width="720"')
+        .replace(/height="\d+"/g, 'height="405"')
+        .replace(/([?&]width=)\d+/g, "$1" + 720)
+        .replace(/([?&]height=)\d+/g, "$1" + 405);
     }
 
+    // Create a new video document
     const newVideo = await Videos.create({
       title,
+      description, // Ensure description is passed
       videoUrl,
-      embedCode: finalEmbedCode,
       platform,
       category,
     });

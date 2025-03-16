@@ -13,6 +13,7 @@ export default function VideosPage() {
 
   useEffect(() => {
     async function fetchVideos() {
+      console.log("video loaded");
       const res = await fetch(`/api/videos?page=${currentPage}`);
       if (res.ok) {
         const { videos, totalPages, currentPage } = await res.json();
@@ -29,23 +30,17 @@ export default function VideosPage() {
     return (
       <div className="border p-4 rounded shadow-md hover:shadow-lg transition duration-300">
         <h3 className="font-bold mb-2">{video.title}</h3>
-        <div className="relative w-60 h-40">
-          {/* If embedCode exists, display an actual thumbnail from video.videoUrl (or any real thumbnail URL).
-          Otherwise, show a default fallback image from /public. */}
-          {video.embedCode ? (
-            <ReactPlayer url={video.videoUrl} width="100%" height="100%" />
-          ) : (
-            <Image
-              src="/thumbnail.png" // <-- Your default image in /public/images
-              alt={video.title}
-              fill
-              className="blur-sm rounded object-cover"
-            />
-          )}
-
-          {/* Overlay text with colored background */}
+        <div className="relative w-80 h-40">
+          (
+          <Image
+            src="/thumbnail.png" // <-- Your default image in /public/images
+            alt={video.title}
+            fill
+            className="blur-sm rounded object-cover"
+          />
+          ){/* Overlay text with colored background */}
           <div className="absolute inset-0 flex items-center justify-center p-2">
-            <div className="bg-green-600 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
+            <div className="bg-green-800 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
               {video.title}
             </div>
           </div>
@@ -62,25 +57,29 @@ export default function VideosPage() {
     return (
       <div className="flex gap-4 border-b p-2">
         <div className="relative w-40 h-24">
-          {/* If embedCode exists, display an actual thumbnail from video.videoUrl (or any real thumbnail URL).
-          Otherwise, show a default fallback image from /public. */}
-          {video.embedCode ? (
+          {video?.platform === "YouTube" ? (
             <ReactPlayer url={video.videoUrl} width="100%" height="100%" />
           ) : (
             <Image
               src="/thumbnail.png" // <-- Your default image in /public/images
               alt={video.title}
-              objectFit
-              className="rounded object-cover"
+              fill
+              className="blur-sm rounded object-cover"
             />
           )}
 
           {/* Overlay text with colored background */}
           <div className="absolute inset-0 flex items-center justify-center p-2">
-            <div className="bg-green-600 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
+            <div className="bg-green-600 bg-opacity-80 text-sm text-white text-center px-2 py-1 rounded-lg">
               {video.title}
             </div>
           </div>
+        </div>
+        <div>
+          <h3 className="font-bold mb-2">{video.title}</h3>
+          <p className="text-sm text-gray-500">
+            {new Date(video.createdAt).toLocaleDateString()}
+          </p>
         </div>
       </div>
     );

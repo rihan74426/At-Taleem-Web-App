@@ -66,12 +66,18 @@ export default function VideoDetailPage() {
           />
         ) : (
           <div
-            className="absolute top-0 left-0 w-full h-full"
+            className="absolute items-center place-content-center flex w-full h-full"
             dangerouslySetInnerHTML={{
               __html: video.videoUrl,
             }}
           />
         )}
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold">Video Description:</h2>
+        <p className="text-lg whitespace-pre-wrap">
+          {video.description ? video.description : "No description added!"}
+        </p>
       </div>
       <VideoComments videoId={video._id} />
     </div>

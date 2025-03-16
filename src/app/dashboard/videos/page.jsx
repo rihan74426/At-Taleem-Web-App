@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 export default function AdminVideosPage() {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [platform, setPlatform] = useState("YouTube"); // or "facebook"
   const [category, setCategory] = useState("Taleem"); // or "facebook"
   const [videoUrl, setVideoUrl] = useState("");
@@ -14,10 +15,16 @@ export default function AdminVideosPage() {
     const res = await fetch("/api/videos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, platform, videoUrl, category }),
+      body: JSON.stringify({
+        title,
+        description,
+        platform,
+        videoUrl,
+        category,
+      }),
     });
     if (res.ok) {
-      router.push("/taleem-videos"); // Redirect to video list
+      router.push(`/${category.toLowerCase()}-videos`); // Redirect to video list
     } else {
       console.error("Error adding video");
     }
@@ -35,6 +42,13 @@ export default function AdminVideosPage() {
           className="border p-2 rounded dark:bg-black"
           required
         />
+        <textarea
+          type="text"
+          placeholder="বিবরণী (অপশনাল)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="border p-2 rounded dark:bg-black"
+        ></textarea>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}

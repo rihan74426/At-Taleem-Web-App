@@ -31,7 +31,7 @@ export default function Homepage() {
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       {data ? (
-        <div className="relative bg-white dark:bg-gray-900 shadow-md p-6 rounded-lg">
+        <div className="relative bg-white dark:bg-gray-900 shadow-md p-6 rounded-lg ">
           {isEditing ? (
             <Editor
               initialData={data}
@@ -56,7 +56,7 @@ export default function Homepage() {
                 {data.greeting}
               </h1>
               <div
-                className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed"
+                className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap"
                 dangerouslySetInnerHTML={{ __html: data.description }}
               />
             </>
