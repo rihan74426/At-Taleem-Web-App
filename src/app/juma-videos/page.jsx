@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ReactPlayer from "react-player";
+import { useUser } from "@clerk/nextjs";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
@@ -11,10 +12,13 @@ export default function VideosPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const user = useUser();
+
   useEffect(() => {
     async function fetchVideos() {
-      console.log("video loaded");
-      const res = await fetch(`/api/videos?page=${currentPage}`);
+      let url = `/api/videos?page=${currentPage}&category=Juma`;
+
+      const res = await fetch(url);
       if (res.ok) {
         const { videos, totalPages, currentPage } = await res.json();
         setVideos(videos);
@@ -30,15 +34,13 @@ export default function VideosPage() {
     return (
       <div className="border p-4 rounded shadow-md hover:shadow-lg transition duration-300">
         <h3 className="font-bold mb-2">{video.title}</h3>
-        <div className="relative w-80 h-40">
-          (
+        <div className="relative  w-50 h-36 ">
           <Image
             src="/thumbnail.png" // <-- Your default image in /public/images
             alt={video.title}
             fill
             className="blur-sm rounded object-cover"
           />
-          ){/* Overlay text with colored background */}
           <div className="absolute inset-0 flex items-center justify-center p-2">
             <div className="bg-green-800 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
               {video.title}
@@ -86,13 +88,15 @@ export default function VideosPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 min-h-screen">
-      <h1 className="text-3xl text-center font-bold mb-4">Juma Videos</h1>
+    <div className="max-w-6xl flex flex-col mx-auto p-4 min-h-screen">
+      <h1 className="text-3xl text-center font-bold mb-4" id="main-container">
+        Juma Videos
+      </h1>
       <div className="flex justify-between mb-4">
         <div>
           <button
             onClick={() => setViewMode("card")}
-            className={`px-4 py-2 border ${
+            className={`px-4 py-2 border rounded-xl hover:bg-blue-200 ${
               viewMode === "card" ? "bg-blue-500 text-white" : "text-blue-500"
             }`}
           >
@@ -100,17 +104,27 @@ export default function VideosPage() {
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`ml-2 px-4 py-2 border ${
+            className={`ml-2 px-4 py-2 border rounded-xl hover:bg-blue-200 ${
               viewMode === "list" ? "bg-blue-500 text-white" : "text-blue-500"
             }`}
           >
             List View
           </button>
         </div>
+        {user.isSignedIn && user.user.publicMetadata.isAdmin && (
+          <Link
+            href={"dashboard/videos"}
+            className={`ml-2 px-4 py-2 border rounded-3xl place-content-end  hover:bg-blue-200 ${
+              viewMode === "list" ? "bg-blue-500 text-white" : "text-blue-500"
+            }`}
+          >
+            Add New Video
+          </Link>
+        )}
       </div>
-      <div className="grid gap-4">
+      <div className="grid gap-4 mb-5">
         {viewMode === "card" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {videos.map((video) => (
               <Link key={video._id} href={`/juma-videos/${video._id}`}>
                 <VideoCard video={video} />
@@ -128,11 +142,14 @@ export default function VideosPage() {
         )}
       </div>
       {/* Pagination Controls */}
-      <div className="mt-4 flex justify-center gap-2">
+      <div className=" flex mt-auto justify-center gap-2">
         {Array.from({ length: totalPages }, (_, i) => (
           <button
             key={i}
-            onClick={() => setCurrentPage(i + 1)}
+            onClick={() => {
+              setCurrentPage(i + 1);
+              document.body.scrollTop = document.documentElement.scrollTop = 0;
+            }}
             className={`px-3 py-1 border ${
               currentPage === i + 1 ? "bg-blue-500 text-white" : "text-blue-500"
             }`}

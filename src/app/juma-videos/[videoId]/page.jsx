@@ -53,7 +53,10 @@ export default function VideoDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
+      <div className="flex justify-between">
+        <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
+        <p className=" italic">Category: {video.category}</p>
+      </div>
       {/* Responsive container with 16:9 aspect ratio */}
       <div className="relative w-full pb-[56.25%] mb-6">
         {video?.platform === "YouTube" ? (

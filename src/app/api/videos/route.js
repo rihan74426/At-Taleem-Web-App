@@ -34,18 +34,25 @@ export async function GET(request) {
     }
   }
 
-  // Otherwise, handle pagination for the video list
+  // Handle pagination for the video list, with optional category filtering.
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = 20;
+  const limit = 10;
   const skip = (page - 1) * limit;
+  const category = searchParams.get("category");
 
   try {
-    const videos = await Videos.find({})
+    // Build the query – add category filter if provided.
+    const query = {};
+    if (category) {
+      query.category = category;
+    }
+
+    const videos = await Videos.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const totalVideos = await Videos.countDocuments();
+    const totalVideos = await Videos.countDocuments(query);
 
     const responseBody = {
       videos,
