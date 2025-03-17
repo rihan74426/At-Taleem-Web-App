@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ReactPlayer from "react-player";
 import { useUser } from "@clerk/nextjs";
+import { BsCardText, BsList } from "react-icons/bs";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
@@ -100,7 +101,7 @@ export default function VideosPage() {
               viewMode === "card" ? "bg-blue-500 text-white" : "text-blue-500"
             }`}
           >
-            Card View
+            <BsCardText />
           </button>
           <button
             onClick={() => setViewMode("list")}
@@ -108,7 +109,7 @@ export default function VideosPage() {
               viewMode === "list" ? "bg-blue-500 text-white" : "text-blue-500"
             }`}
           >
-            List View
+            <BsList />
           </button>
         </div>
         {user.isSignedIn && user.user.publicMetadata.isAdmin && (
