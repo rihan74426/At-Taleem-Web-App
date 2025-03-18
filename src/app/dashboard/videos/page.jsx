@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ResponseModal from "@/app/Components/ResponseModal";
+import "react-datepicker/dist/react-datepicker.css";
+import { Datepicker } from "flowbite-react";
 
 export default function AdminVideosPage() {
   const [title, setTitle] = useState("");
@@ -9,6 +11,7 @@ export default function AdminVideosPage() {
   const [platform, setPlatform] = useState("YouTube"); // or "facebook"
   const [category, setCategory] = useState("Taleem"); // or "facebook"
   const [videoUrl, setVideoUrl] = useState("");
+  const [recordingDate, setRecordingDate] = useState(new Date());
   const router = useRouter();
   const [modal, setModal] = useState({
     isOpen: false,
@@ -31,6 +34,7 @@ export default function AdminVideosPage() {
         platform,
         videoUrl,
         category,
+        recordingDate,
       }),
     });
     if (res.ok) {
@@ -55,7 +59,6 @@ export default function AdminVideosPage() {
           required
         />
         <textarea
-          type="text"
           placeholder="বিবরণী (অপশনাল)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -82,13 +85,21 @@ export default function AdminVideosPage() {
           placeholder={
             platform === "YouTube"
               ? "Please place the YouTube video link here"
-              : "Please put the collected the video embed link from desktop facebook"
+              : "Please put the collected video embed link from desktop Facebook"
           }
           value={videoUrl}
           onChange={(e) => setVideoUrl(e.target.value)}
           className="border p-2 rounded dark:bg-black"
           required
         />
+        <div className="flex items-center gap-2">
+          <Datepicker
+            onChange={(date) => setRecordingDate(date)}
+            value={recordingDate}
+            showTodayButton
+          />
+          <label>: Recording Date</label>
+        </div>
         <button type="submit" className="bg-blue-500 text-white py-2 rounded">
           Add Video
         </button>

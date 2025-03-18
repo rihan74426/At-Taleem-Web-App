@@ -41,7 +41,6 @@ export async function GET(request) {
   const category = searchParams.get("category");
 
   try {
-    // Build the query – add category filter if provided.
     const query = {};
     if (category) {
       query.category = category;
@@ -78,10 +77,11 @@ export async function POST(request) {
   try {
     const data = await request.json();
 
-    let { title, videoUrl, description, platform, category } = data;
+    let { title, videoUrl, description, platform, category, recordingDate } =
+      data;
 
     // Validate required fields
-    if (!title || !videoUrl || !platform || !category) {
+    if (!title || !videoUrl || !platform || !category || !recordingDate) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -104,6 +104,7 @@ export async function POST(request) {
       videoUrl,
       platform,
       category,
+      recordingDate,
     });
 
     return new Response(JSON.stringify(newVideo), {

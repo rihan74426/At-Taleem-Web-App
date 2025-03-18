@@ -6,12 +6,15 @@ import Image from "next/image";
 import ReactPlayer from "react-player";
 import { useUser } from "@clerk/nextjs";
 import { BsCardText, BsList } from "react-icons/bs";
+import AdminVideosPage from "../dashboard/videos/page";
+import { Modal } from "flowbite-react";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
   const [viewMode, setViewMode] = useState("card"); // "card" or "list"
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [videoModal, setVideoModal] = useState(false);
 
   const user = useUser();
 
@@ -113,14 +116,15 @@ export default function VideosPage() {
           </button>
         </div>
         {user.isSignedIn && user.user.publicMetadata.isAdmin && (
-          <Link
-            href={"dashboard/videos"}
+          <button
+            // href={"dashboard/videos"}
+            onClick={() => setVideoModal(true)}
             className={`ml-2 px-4 py-2 border rounded-3xl place-content-end  hover:bg-blue-200 ${
               viewMode === "list" ? "bg-blue-500 text-white" : "text-blue-500"
             }`}
           >
             Add New Video
-          </Link>
+          </button>
         )}
       </div>
       <div className="grid gap-4 mb-5">
@@ -159,6 +163,28 @@ export default function VideosPage() {
           </button>
         ))}
       </div>
+      {/* {videoModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className="bg-black/50 absolute inset-0"
+            onClick={() => setVideoModal(false)}
+          ></div>
+          <div className="relative bg-slate-200 dark:bg-gray-600 p-10 rounded-lg shadow-lg">
+            <AdminVideosPage />
+          </div>
+        </div>
+      )} */}
+      <Modal
+        show={videoModal}
+        size="lg"
+        popup
+        onClose={() => setVideoModal(false)}
+      >
+        <Modal.Header></Modal.Header>
+        <Modal.Body>
+          <AdminVideosPage />
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }
