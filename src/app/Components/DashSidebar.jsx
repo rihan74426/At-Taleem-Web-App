@@ -79,9 +79,13 @@ export default function DashSidebar() {
             </Link>
           )}
           {user?.publicMetadata?.isAdmin && (
-            <Link href="/dashboard/videos">
-              <Sidebar.Item icon={AiOutlineVideoCamera} as="div">
-                Add Video
+            <Link href="/dashboard?tab=addVideo">
+              <Sidebar.Item
+                active={tab === "addVideo"}
+                icon={HiOutlineUserGroup}
+                as="div"
+              >
+                Add New Video
               </Sidebar.Item>
             </Link>
           )}
