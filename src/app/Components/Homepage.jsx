@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
+import ResponseModal from "./ResponseModal";
 
 const Editor = dynamic(() => import("./Editor"), { ssr: false });
 
@@ -9,6 +10,15 @@ export default function Homepage() {
   const { user } = useUser();
   const [data, setData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+
+  const showModal = (message, status) => {
+    setModal({ isOpen: true, message, status });
+  };
 
   const rqustUrl = "/api/homepage/get";
 
@@ -19,13 +29,19 @@ export default function Homepage() {
   }, []);
 
   const handleUpdate = async (updatedContent) => {
-    await fetch(rqustUrl, {
+    const res = await fetch(rqustUrl, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedContent),
     });
     setData(updatedContent);
     setIsEditing(false);
+    if (res.ok) {
+      showModal("Successfully Updated Greetings!", "success");
+    } else {
+      showModal("Failed to Update Greetings! Please try again...", "error");
+      console.error("Error Updating");
+    }
   };
 
   return (
@@ -74,6 +90,12 @@ export default function Homepage() {
           We'll notify you via email once the website is ready.
         </p>
       </div>
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+      />
     </div>
   );
 }

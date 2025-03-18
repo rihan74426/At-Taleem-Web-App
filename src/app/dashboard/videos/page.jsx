@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ResponseModal from "@/app/Components/ResponseModal";
 
 export default function AdminVideosPage() {
   const [title, setTitle] = useState("");
@@ -9,6 +10,15 @@ export default function AdminVideosPage() {
   const [category, setCategory] = useState("Taleem"); // or "facebook"
   const [videoUrl, setVideoUrl] = useState("");
   const router = useRouter();
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+
+  const showModal = (message, status) => {
+    setModal({ isOpen: true, message, status });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,8 +34,10 @@ export default function AdminVideosPage() {
       }),
     });
     if (res.ok) {
+      showModal("Successfully Added Video!", "success");
       router.push(`/${category.toLowerCase()}-videos`); // Redirect to video list
     } else {
+      showModal("Failed to Add Video! Please try again...", "error");
       console.error("Error adding video");
     }
   };
@@ -81,6 +93,12 @@ export default function AdminVideosPage() {
           Add Video
         </button>
       </form>
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+      />
     </div>
   );
 }
