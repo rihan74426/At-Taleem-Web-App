@@ -4,21 +4,27 @@ import { useEffect, useState } from "react";
 
 export default function VideoComments({ videoId }) {
   const [comments, setComments] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [expandedComments, setExpandedComments] = useState({});
   const [newComment, setNewComment] = useState("");
-  const [error, setError] = useState("");
   const user = useUser();
 
-  const fetchComments = async () => {
+  const fetchComments = async (parentComment = null) => {
     try {
-      const res = await fetch(`/api/comments?videoId=${videoId}`);
+      const res = await fetch(
+        `/api/comments?videoId=${videoId}&parentComment=${parentComment || ""}`
+      );
       if (res.ok) {
         const data = await res.json();
-        setComments(data.comments);
-        setTotal(data.total);
-        setPage(data.page);
+        if (parentComment) {
+          setExpandedComments((prev) => ({
+            ...prev,
+            [parentComment]: data.comments,
+          }));
+        } else {
+          setComments(data.comments);
+        }
       }
     } catch (err) {
       console.error("Error fetching comments:", err);
@@ -31,94 +37,144 @@ export default function VideoComments({ videoId }) {
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    try {
-      // Replace these with actual user data, perhaps from Clerk authentication
-      const userId = user?.user.id;
-      const username = user?.user.fullName; // Replace with actual username
+    if (!user?.user) return alert("You must be logged in to comment.");
 
-      const res = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId,
-          userId,
-          username,
-          content: newComment,
-        }),
-      });
-      if (res.ok) {
-        setNewComment("");
-        fetchComments();
-      } else {
-        const data = await res.json();
-        setError(data.error || "Error adding comment");
-      }
-    } catch (err) {
-      console.error("Error adding comment:", err);
-      setError("Error adding comment");
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        videoId,
+        userId: user?.user.id,
+        username: user?.user.fullName,
+        content: newComment,
+      }),
+    });
+
+    if (res.ok) {
+      setNewComment("");
+      fetchComments();
     }
+  };
+
+  const handleReplySubmit = async (e, parentComment) => {
+    e.preventDefault();
+    if (!user?.user) return alert("You must be logged in to reply.");
+
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        videoId,
+        userId: user?.user.id,
+        username: user?.user.fullName,
+        content: replyText,
+        parentComment,
+      }),
+    });
+
+    if (res.ok) {
+      setReplyText("");
+      setReplyingTo(null);
+      fetchComments(parentComment);
+    }
+  };
+
+  const handleLike = async (commentId) => {
+    if (!user?.user) return alert("You must be logged in to like a comment.");
+
+    await fetch("/api/comments", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commentId, userId: user?.user.id }),
+    });
+
+    fetchComments();
   };
 
   return (
     <div className="dark:text-white text-black">
       <h2 className="text-4xl font-bold mb-4 text-center">Comments</h2>
-      {user.isSignedIn ? (
-        <form onSubmit={handleCommentSubmit} className="mb-6">
+
+      {/* Comment Input */}
+      {user?.user ? (
+        <form onSubmit={handleCommentSubmit} className="mb-4">
           <textarea
             className="w-full border rounded p-2 dark:bg-black"
-            placeholder="Add your comment..."
+            placeholder="Write a comment..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             required
           />
-          {error && <p className="text-red-500">{error}</p>}
           <button
             type="submit"
             className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
           >
-            Submit Comment
+            Submit
           </button>
         </form>
       ) : (
-        <p className="text-red-500 text-center">
-          Please sign in to add a comment.
-        </p>
+        <p className="text-gray-500 text-center">Log in to comment.</p>
       )}
+
       <ul className="space-y-4">
         {comments.map((comment) => (
           <li key={comment._id} className="border-b pb-2">
-            <p className="font-semibold italic">
-              {comment.username}{" "}
-              {user?.user?.publicMetadata?.isAdmin && (
-                <span className="text-blue-300 bg-slate-600">Admin</span>
-              )}
-              :
-            </p>
+            <p className="font-semibold italic">{comment.username}</p>
             <p>{comment.content}</p>
-            <p className="text-xs text-gray-500">
-              {new Date(comment.createdAt).toLocaleString()}
-            </p>
+            <div className="flex items-center gap-3 text-gray-500 text-sm">
+              <button
+                onClick={() => handleLike(comment._id)}
+                className="text-blue-400 hover:text-blue-600"
+              >
+                👍 {comment?.likes?.length}
+              </button>
+              <button
+                onClick={() => setReplyingTo(comment._id)}
+                className="text-green-400 hover:text-green-600"
+              >
+                Reply
+              </button>
+              <button
+                onClick={() => fetchComments(comment._id)}
+                className="text-orange-400 hover:text-orange-600"
+              >
+                {expandedComments[comment._id]
+                  ? "Hide Replies"
+                  : "View Replies"}
+              </button>
+            </div>
+
+            {replyingTo === comment._id && (
+              <form
+                onSubmit={(e) => handleReplySubmit(e, comment._id)}
+                className="mt-2"
+              >
+                <textarea
+                  className="w-full border rounded p-2 dark:bg-black"
+                  placeholder="Write a reply..."
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  required
+                />
+                <button
+                  type="submit"
+                  className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Submit Reply
+                </button>
+              </form>
+            )}
+
+            {expandedComments[comment._id] &&
+              expandedComments[comment._id].map((reply) => (
+                <div key={reply._id} className="ml-8 mt-2 border-l pl-4">
+                  <p className="font-semibold">{reply.username}</p>
+                  <p>{reply.content}</p>
+                </div>
+              ))}
           </li>
         ))}
       </ul>
-      {/* <div className="flex justify-between items-center mt-4">
-        <button
-          onClick={() => fetchComments(page - 1)}
-          disabled={page === 1}
-          className="bg-gray-300 px-4 py-2 rounded"
-        >
-          Previous
-        </button>
-        <span>Page {page}</span>
-        <button
-          onClick={() => fetchComments(page + 1)}
-          disabled={comments.length < limit}
-          className="bg-gray-300 px-4 py-2 rounded"
-        >
-          Next
-        </button>
-      </div> */}
     </div>
   );
 }
