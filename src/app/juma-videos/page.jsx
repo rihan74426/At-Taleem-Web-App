@@ -52,7 +52,11 @@ export default function VideosPage() {
           </div>
         </div>
         <p className="text-sm text-gray-500">
-          {new Date(video.createdAt).toLocaleDateString()}
+          {" "}
+          {video.recordingDate ? "Recorded: " : "Post Created: "}
+          {new Date(
+            video.recordingDate ? video.recordingDate : video.createdAt
+          ).toLocaleDateString()}
         </p>
       </div>
     );
@@ -84,7 +88,11 @@ export default function VideosPage() {
         <div>
           <h3 className="font-bold mb-2">{video.title}</h3>
           <p className="text-sm text-gray-500">
-            {new Date(video.createdAt).toLocaleDateString()}
+            {" "}
+            {video.recordingDate ? "Recorded: " : "Post Created: "}
+            {new Date(
+              video.recordingDate ? video.recordingDate : video.createdAt
+            ).toLocaleDateString()}
           </p>
         </div>
       </div>
@@ -119,9 +127,9 @@ export default function VideosPage() {
           <button
             // href={"dashboard/videos"}
             onClick={() => setVideoModal(true)}
-            className={`ml-2 px-4 py-2 border rounded-3xl place-content-end  hover:bg-blue-200 ${
-              viewMode === "list" ? "bg-blue-500 text-white" : "text-blue-500"
-            }`}
+            className={
+              "ml-2 px-4 py-2 border rounded-3xl place-content-end  hover:bg-blue-200 dark:bg-gray-800"
+            }
           >
             Add New Video
           </button>

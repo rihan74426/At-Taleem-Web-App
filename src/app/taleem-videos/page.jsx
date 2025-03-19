@@ -6,12 +6,15 @@ import Image from "next/image";
 import ReactPlayer from "react-player";
 import { useUser } from "@clerk/nextjs";
 import { BsCardText, BsList, BsSdCard } from "react-icons/bs";
+import { Modal } from "flowbite-react";
+import AdminVideosPage from "../dashboard/videos/page";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
   const [viewMode, setViewMode] = useState("card"); // "card" or "list"
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [videoModal, setVideoModal] = useState(false);
 
   const user = useUser();
   useEffect(() => {
@@ -47,7 +50,11 @@ export default function VideosPage() {
           </div>
         </div>
         <p className="text-sm text-gray-500">
-          {new Date(video.createdAt).toLocaleDateString()}
+          {" "}
+          {video.recordingDate ? "Recorded: " : "Post Created: "}
+          {new Date(
+            video.recordingDate ? video.recordingDate : video.createdAt
+          ).toLocaleDateString()}
         </p>
       </div>
     );
@@ -79,7 +86,11 @@ export default function VideosPage() {
         <div>
           <h3 className="font-bold mb-2">{video.title}</h3>
           <p className="text-sm text-gray-500">
-            {new Date(video.createdAt).toLocaleDateString()}
+            {" "}
+            {video.recordingDate ? "Recorded: " : "Post Created: "}
+            {new Date(
+              video.recordingDate ? video.recordingDate : video.createdAt
+            ).toLocaleDateString()}
           </p>
         </div>
       </div>
@@ -109,14 +120,15 @@ export default function VideosPage() {
           </button>
         </div>
         {user.isSignedIn && user.user.publicMetadata.isAdmin && (
-          <Link
-            href={"dashboard/videos"}
-            className={`ml-2 px-4 py-2 border rounded-3xl place-content-end  hover:bg-blue-200 ${
-              viewMode === "list" ? "bg-blue-500 text-white" : "text-blue-500"
-            }`}
+          <button
+            // href={"dashboard/videos"}
+            onClick={() => setVideoModal(true)}
+            className={
+              "ml-2 px-4 py-2 border rounded-3xl place-content-end  hover:bg-blue-200 dark:bg-gray-800"
+            }
           >
             Add New Video
-          </Link>
+          </button>
         )}
       </div>
       <div className="grid gap-4 mb-5">
@@ -155,6 +167,17 @@ export default function VideosPage() {
           </button>
         ))}
       </div>
+      <Modal
+        show={videoModal}
+        size="lg"
+        popup
+        onClose={() => setVideoModal(false)}
+      >
+        <Modal.Header></Modal.Header>
+        <Modal.Body>
+          <AdminVideosPage />
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }
