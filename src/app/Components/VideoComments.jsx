@@ -6,25 +6,16 @@ export default function VideoComments({ videoId }) {
   const [comments, setComments] = useState([]);
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
-  const [expandedComments, setExpandedComments] = useState({});
   const [newComment, setNewComment] = useState("");
   const user = useUser();
 
-  const fetchComments = async (parentComment = null) => {
+  // Fetch comments and replies
+  const fetchComments = async () => {
     try {
-      const res = await fetch(
-        `/api/comments?videoId=${videoId}&parentComment=${parentComment || ""}`
-      );
+      const res = await fetch(`/api/comments?videoId=${videoId}`);
       if (res.ok) {
         const data = await res.json();
-        if (parentComment) {
-          setExpandedComments((prev) => ({
-            ...prev,
-            [parentComment]: data.comments,
-          }));
-        } else {
-          setComments(data.comments);
-        }
+        setComments(data.comments);
       }
     } catch (err) {
       console.error("Error fetching comments:", err);
@@ -35,9 +26,11 @@ export default function VideoComments({ videoId }) {
     fetchComments();
   }, [videoId]);
 
+  // Submit a new comment
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!user?.user) return alert("You must be logged in to comment.");
+    if (!newComment.trim()) return;
 
     const res = await fetch("/api/comments", {
       method: "POST",
@@ -46,7 +39,7 @@ export default function VideoComments({ videoId }) {
         videoId,
         userId: user?.user.id,
         username: user?.user.fullName,
-        content: newComment,
+        content: newComment.trim(),
       }),
     });
 
@@ -56,9 +49,11 @@ export default function VideoComments({ videoId }) {
     }
   };
 
-  const handleReplySubmit = async (e, parentComment) => {
+  // Submit a reply (supports nested replies)
+  const handleReplySubmit = async (e, parentId) => {
     e.preventDefault();
     if (!user?.user) return alert("You must be logged in to reply.");
+    if (!replyText.trim()) return;
 
     const res = await fetch("/api/comments", {
       method: "POST",
@@ -67,28 +62,51 @@ export default function VideoComments({ videoId }) {
         videoId,
         userId: user?.user.id,
         username: user?.user.fullName,
-        content: replyText,
-        parentComment,
+        content: replyText.trim(),
+        parentComment: parentId, // Correctly associate the reply with the right comment/reply
       }),
     });
 
     if (res.ok) {
       setReplyText("");
       setReplyingTo(null);
-      fetchComments(parentComment);
+      fetchComments();
     }
   };
 
+  // Like/unlike a comment or reply
   const handleLike = async (commentId) => {
     if (!user?.user) return alert("You must be logged in to like a comment.");
 
-    await fetch("/api/comments", {
+    const res = await fetch("/api/comments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ commentId, userId: user?.user.id }),
     });
 
-    fetchComments();
+    if (res.ok) {
+      setComments((prev) =>
+        prev.map((comment) => ({
+          ...comment,
+          likes:
+            comment._id === commentId
+              ? comment.likes.includes(user?.user.id)
+                ? comment.likes.filter((id) => id !== user?.user.id)
+                : [...comment.likes, user?.user.id]
+              : comment.likes,
+          replies: comment.replies.map((reply) =>
+            reply._id === commentId
+              ? {
+                  ...reply,
+                  likes: reply.likes.includes(user?.user.id)
+                    ? reply.likes.filter((id) => id !== user?.user.id)
+                    : [...reply.likes, user?.user.id],
+                }
+              : reply
+          ),
+        }))
+      );
+    }
   };
 
   return (
@@ -116,6 +134,7 @@ export default function VideoComments({ videoId }) {
         <p className="text-gray-500 text-center">Log in to comment.</p>
       )}
 
+      {/* Comments & Replies */}
       <ul className="space-y-4">
         {comments.map((comment) => (
           <li key={comment._id} className="border-b pb-2">
@@ -134,16 +153,9 @@ export default function VideoComments({ videoId }) {
               >
                 Reply
               </button>
-              <button
-                onClick={() => fetchComments(comment._id)}
-                className="text-orange-400 hover:text-orange-600"
-              >
-                {expandedComments[comment._id]
-                  ? "Hide Replies"
-                  : "View Replies"}
-              </button>
             </div>
 
+            {/* Reply Form */}
             {replyingTo === comment._id && (
               <form
                 onSubmit={(e) => handleReplySubmit(e, comment._id)}
@@ -165,11 +177,48 @@ export default function VideoComments({ videoId }) {
               </form>
             )}
 
-            {expandedComments[comment._id] &&
-              expandedComments[comment._id].map((reply) => (
+            {/* Replies Section */}
+            {comment.replies &&
+              comment.replies.map((reply) => (
                 <div key={reply._id} className="ml-8 mt-2 border-l pl-4">
                   <p className="font-semibold">{reply.username}</p>
                   <p>{reply.content}</p>
+                  <div className="flex items-center gap-3 text-gray-500 text-sm">
+                    <button
+                      onClick={() => handleLike(reply._id)}
+                      className="text-blue-400 hover:text-blue-600"
+                    >
+                      👍 {reply?.likes?.length || 0}
+                    </button>
+                    <button
+                      onClick={() => setReplyingTo(reply._id)}
+                      className="text-green-400 hover:text-green-600"
+                    >
+                      Reply
+                    </button>
+                  </div>
+
+                  {/* Nested Reply Form */}
+                  {replyingTo === reply._id && (
+                    <form
+                      onSubmit={(e) => handleReplySubmit(e, reply._id)}
+                      className="mt-2"
+                    >
+                      <textarea
+                        className="w-full border rounded p-2 dark:bg-black"
+                        placeholder="Write a reply..."
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="submit"
+                        className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
+                      >
+                        Submit Reply
+                      </button>
+                    </form>
+                  )}
                 </div>
               ))}
           </li>

@@ -2,21 +2,17 @@ import mongoose from "mongoose";
 
 const CommentSchema = new mongoose.Schema(
   {
-    videoId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Videos",
-      required: true,
-    },
-    userId: { type: String, required: true }, // Or a reference to your User model if applicable
+    videoId: { type: String, required: true },
+    userId: { type: String, required: true },
     username: { type: String, required: true },
     content: { type: String, required: true },
     parentComment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Comment",
       default: null,
-    }, // For replies
-    replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }], // Array of reply IDs
-    likes: [{ type: String }], // Array of userIds who liked the comment
+    },
+    replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
+    likes: [{ type: String }],
   },
   { timestamps: true }
 );
