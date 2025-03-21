@@ -82,6 +82,14 @@ export default function VideoDetailPage() {
           {video.description ? video.description : "No description added!"}
         </p>
       </div>
+      {video.recordingDate && (
+        <div className="flex mt-6">
+          <h2 className="text-xl font-bold">Video Recording Date: </h2>
+          <p className="text-lg items-center whitespace-pre-wrap">
+            {"  " + new Date(video.recordingDate).toLocaleDateString()}
+          </p>
+        </div>
+      )}
       <VideoComments videoId={video._id} />
     </div>
   );

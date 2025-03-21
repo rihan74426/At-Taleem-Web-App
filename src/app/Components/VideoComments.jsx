@@ -1,5 +1,6 @@
 "use client";
 import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export default function VideoComments({ videoId }) {
@@ -145,7 +146,7 @@ export default function VideoComments({ videoId }) {
                 onClick={() => handleLike(comment._id)}
                 className="text-blue-400 hover:text-blue-600"
               >
-                👍 {comment?.likes?.length}
+                ❤️ {" " + comment?.likes?.length}
               </button>
               <button
                 onClick={() => setReplyingTo(comment._id)}
@@ -187,38 +188,11 @@ export default function VideoComments({ videoId }) {
                     <button
                       onClick={() => handleLike(reply._id)}
                       className="text-blue-400 hover:text-blue-600"
+                      href="https://www.flaticon.com/free-icons/love-and-romance"
                     >
-                      👍 {reply?.likes?.length || 0}
-                    </button>
-                    <button
-                      onClick={() => setReplyingTo(reply._id)}
-                      className="text-green-400 hover:text-green-600"
-                    >
-                      Reply
+                      ❤️{" " + reply?.likes?.length || 0}
                     </button>
                   </div>
-
-                  {/* Nested Reply Form */}
-                  {replyingTo === reply._id && (
-                    <form
-                      onSubmit={(e) => handleReplySubmit(e, reply._id)}
-                      className="mt-2"
-                    >
-                      <textarea
-                        className="w-full border rounded p-2 dark:bg-black"
-                        placeholder="Write a reply..."
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="submit"
-                        className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
-                      >
-                        Submit Reply
-                      </button>
-                    </form>
-                  )}
                 </div>
               ))}
           </li>
