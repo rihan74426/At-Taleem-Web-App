@@ -171,18 +171,43 @@ export default function VideosPage() {
           </button>
         ))}
       </div>
-      {/* {videoModal && (
+      {videoModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
-            className="bg-black/50 absolute inset-0"
+            className="bg-black/80 absolute inset-0"
             onClick={() => setVideoModal(false)}
           ></div>
-          <div className="relative bg-slate-200 dark:bg-gray-600 p-10 rounded-lg shadow-lg">
-            <AdminVideosPage />
+          <div className="relative bg-slate-500 h-5/6 overflow-auto sm:w-2/3 w-full lg:w-1/3   dark:bg-gray-600 rounded-lg shadow-lg m-5">
+            <button
+              className=" ml-auto absolute right-5 top-2 items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-400 dark:hover:text-white"
+              onClick={() => setVideoModal(false)}
+              title="Close"
+            >
+              <svg
+                stroke="currentColor"
+                fill="none"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                class="h-5 w-5"
+                height="1em"
+                width="1em"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+            <div className="mt-5">
+              <AdminVideosPage />
+            </div>
           </div>
         </div>
-      )} */}
-      <Modal
+      )}
+      {/* <Modal
         show={videoModal}
         size="lg"
         popup
@@ -192,7 +217,7 @@ export default function VideosPage() {
         <Modal.Body>
           <AdminVideosPage />
         </Modal.Body>
-      </Modal>
+      </Modal> */}
     </div>
   );
 }
