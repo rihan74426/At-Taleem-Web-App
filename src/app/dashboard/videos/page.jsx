@@ -5,13 +5,19 @@ import ResponseModal from "@/app/Components/ResponseModal";
 import "react-datepicker/dist/react-datepicker.css";
 import { Datepicker } from "flowbite-react";
 
-export default function AdminVideosPage() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [platform, setPlatform] = useState("YouTube"); // or "facebook"
-  const [category, setCategory] = useState("Taleem"); // or "facebook"
-  const [videoUrl, setVideoUrl] = useState("");
-  const [recordingDate, setRecordingDate] = useState(new Date());
+export default function AdminVideosPage({ initialVideo = null, onClose }) {
+  const [title, setTitle] = useState(initialVideo?.title || "");
+  const [description, setDescription] = useState(
+    initialVideo?.description || ""
+  );
+  const [platform, setPlatform] = useState(initialVideo?.platform || "YouTube");
+  const [category, setCategory] = useState(initialVideo?.category || "Taleem");
+  const [videoUrl, setVideoUrl] = useState(initialVideo?.videoUrl || "");
+  const [recordingDate, setRecordingDate] = useState(
+    initialVideo?.recordingDate
+      ? new Date(initialVideo.recordingDate)
+      : new Date()
+  );
   const router = useRouter();
   const [modal, setModal] = useState({
     isOpen: false,
@@ -25,30 +31,42 @@ export default function AdminVideosPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await fetch("/api/videos", {
-      method: "POST",
+    const payload = {
+      title,
+      description,
+      platform,
+      videoUrl,
+      category,
+      recordingDate,
+    };
+
+    // Determine if we're adding a new video or editing an existing one
+    const method = initialVideo ? "PATCH" : "POST";
+    const url = initialVideo
+      ? `/api/videos/${initialVideo._id}`
+      : "/api/videos";
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        description,
-        platform,
-        videoUrl,
-        category,
-        recordingDate,
-      }),
+      body: JSON.stringify(payload),
     });
+
     if (res.ok) {
-      showModal("Successfully Added Video!", "success");
-      router.push(`/${category.toLowerCase()}-videos`); // Redirect to video list
+      showModal("Successfully saved video!", "success");
+      router.push(`/${category.toLowerCase()}-videos`);
+      onClose();
     } else {
-      showModal("Failed to Add Video! Please try again...", "error");
-      console.error("Error adding video");
+      showModal("Failed to save video! Please try again...", "error");
+      console.error("Error saving video");
     }
   };
 
   return (
     <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Add New Video</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        {initialVideo ? "Edit Video" : "Add New Video"}
+      </h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
           type="text"
@@ -101,7 +119,7 @@ export default function AdminVideosPage() {
           <label>: Recording Date</label>
         </div>
         <button type="submit" className="bg-blue-500 text-white py-2 rounded">
-          Add Video
+          {initialVideo ? "Update Video" : "Add Video"}
         </button>
       </form>
       <ResponseModal

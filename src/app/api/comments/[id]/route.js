@@ -43,7 +43,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   await connect();
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const deletedComment = await Comment.findByIdAndDelete(id);
     if (!deletedComment) {
