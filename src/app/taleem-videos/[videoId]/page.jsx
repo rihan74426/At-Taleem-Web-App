@@ -5,6 +5,8 @@ import ReactPlayer from "react-player";
 import VideoComments from "@/app/Components/VideoComments";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import AdminVideosPage from "@/app/dashboard/videos/page";
+import { useUser } from "@clerk/nextjs";
+import ResponseModal from "@/app/Components/ResponseModal";
 
 export default function VideoDetailPage() {
   const params = useParams();
@@ -15,6 +17,7 @@ export default function VideoDetailPage() {
   const [error, setError] = useState(null);
   const [videoModal, setVideoModal] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
+  const user = useUser();
 
   // Function to fetch video details
   const fetchVideo = async () => {
@@ -38,13 +41,19 @@ export default function VideoDetailPage() {
 
   // Delete video handler
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this video?")) return;
-    const res = await fetch(`/api/videos/${video._id}`, { method: "DELETE" });
-    if (res.ok) {
-      // After deletion, navigate to the parent listing page
-      router.push(`/${video.category.toLowerCase()}-videos`);
+    if (!user?.user.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal("Please be an Admin first to change anything", "error");
     } else {
-      alert("Failed to delete video.");
+      if (!window.confirm("Are you sure you want to delete this video?"))
+        return;
+      const res = await fetch(`/api/videos/${video._id}`, { method: "DELETE" });
+      if (res.ok) {
+        // After deletion, navigate to the parent listing page
+        router.push(`/${video.category.toLowerCase()}-videos`);
+      } else {
+        alert("Failed to delete video.");
+      }
     }
   };
 
@@ -178,6 +187,12 @@ export default function VideoDetailPage() {
           </div>
         </div>
       )}
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+      />
     </div>
   );
 }

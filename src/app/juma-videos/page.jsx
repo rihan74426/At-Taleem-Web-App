@@ -7,6 +7,7 @@ import AdminVideosPage from "../dashboard/videos/page"; // The modal content for
 import { Modal } from "flowbite-react";
 import { VideoCard } from "../Components/VideoCard";
 import { VideoListItem } from "../Components/VideoList";
+import ResponseModal from "../Components/ResponseModal";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
@@ -16,6 +17,15 @@ export default function VideosPage() {
   const [videoModal, setVideoModal] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
   const user = useUser();
+
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+  const showModal = (message, status) => {
+    setModal({ isOpen: true, message, status });
+  };
 
   useEffect(() => {
     async function fetchVideos() {
@@ -38,10 +48,16 @@ export default function VideosPage() {
   };
 
   const handleDelete = async (videoId) => {
-    if (!window.confirm("Are you sure you want to delete this video?")) return;
-    const res = await fetch(`/api/videos/${videoId}`, { method: "DELETE" });
-    if (res.ok) {
-      setVideos((prev) => prev.filter((v) => v._id !== videoId));
+    if (!user?.user.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal("Please be an Admin first to change anything", "error");
+    } else {
+      if (!window.confirm("Are you sure you want to delete this video?"))
+        return;
+      const res = await fetch(`/api/videos/${videoId}`, { method: "DELETE" });
+      if (res.ok) {
+        setVideos((prev) => prev.filter((v) => v._id !== videoId));
+      }
     }
   };
 
@@ -160,6 +176,12 @@ export default function VideosPage() {
           </div>
         </div>
       )}
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+      />
     </div>
   );
 }

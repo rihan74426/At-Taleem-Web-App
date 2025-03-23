@@ -70,28 +70,33 @@ export default function CreatePostPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const res = await fetch("/api/post/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          userMongoId: user.publicMetadata.userMongoId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setPublishError(data.message);
-        return;
+    if (!user?.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal("Please be an Admin first to change anything", "error");
+    } else {
+      try {
+        const res = await fetch("/api/post/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...formData,
+            userMongoId: user.publicMetadata.userMongoId,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setPublishError(data.message);
+          return;
+        }
+        if (res.ok) {
+          setPublishError(null);
+          router.push(`/post/${data.slug}`);
+        }
+      } catch (error) {
+        setPublishError("Something went wrong");
       }
-      if (res.ok) {
-        setPublishError(null);
-        router.push(`/post/${data.slug}`);
-      }
-    } catch (error) {
-      setPublishError("Something went wrong");
     }
   };
 

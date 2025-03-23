@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import ResponseModal from "@/app/Components/ResponseModal";
 import "react-datepicker/dist/react-datepicker.css";
 import { Datepicker } from "flowbite-react";
+import { useUser } from "@clerk/nextjs";
 
 export default function AdminVideosPage({
   initialVideo = null,
@@ -28,41 +29,47 @@ export default function AdminVideosPage({
     message: "",
     status: "",
   });
-
   const showModal = (message, status) => {
     setModal({ isOpen: true, message, status });
   };
+  const user = useUser().user;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = {
-      title,
-      description,
-      platform,
-      videoUrl,
-      category,
-      recordingDate,
-    };
-
-    // Determine if we're adding a new video or editing an existing one
-    const method = initialVideo ? "PATCH" : "POST";
-    const url = initialVideo
-      ? `/api/videos/${initialVideo._id}`
-      : "/api/videos";
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      showModal("Successfully saved video!", "success");
-      onUpdate(payload);
-      onClose();
+    if (!user?.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal("Please be an Admin first to change anything", "error");
     } else {
-      showModal("Failed to save video! Please try again...", "error");
-      console.error("Error saving video");
+      e.preventDefault();
+      const payload = {
+        title,
+        description,
+        platform,
+        videoUrl,
+        category,
+        recordingDate,
+      };
+
+      // Determine if we're adding a new video or editing an existing one
+      const method = initialVideo ? "PATCH" : "POST";
+      const url = initialVideo
+        ? `/api/videos/${initialVideo._id}`
+        : "/api/videos";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        showModal("Successfully saved video!", "success");
+        onUpdate(payload);
+        onClose();
+      } else {
+        showModal("Failed to save video! Please try again...", "error");
+        console.error("Error saving video");
+      }
     }
   };
 

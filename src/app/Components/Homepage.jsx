@@ -29,18 +29,23 @@ export default function Homepage() {
   }, []);
 
   const handleUpdate = async (updatedContent) => {
-    const res = await fetch(rqustUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedContent),
-    });
-    setData(updatedContent);
-    setIsEditing(false);
-    if (res.ok) {
-      showModal("Successfully Updated Greetings!", "success");
+    if (!user?.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal("Please be an Admin first to change anything", "error");
     } else {
-      showModal("Failed to Update Greetings! Please try again...", "error");
-      console.error("Error Updating");
+      const res = await fetch(rqustUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedContent),
+      });
+      setData(updatedContent);
+      setIsEditing(false);
+      if (res.ok) {
+        showModal("Successfully Updated Greetings!", "success");
+      } else {
+        showModal("Failed to Update Greetings! Please try again...", "error");
+        console.error("Error Updating");
+      }
     }
   };
 
@@ -56,17 +61,14 @@ export default function Homepage() {
             />
           ) : (
             <>
-              {/* Edit Button (Aligned Right) */}
-              {user?.publicMetadata?.isAdmin && (
-                <div className="flex justify-end mb-2">
-                  <button
-                    className="bg-blue-600 dark:bg-green-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-all"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    Edit
-                  </button>
-                </div>
-              )}
+              <div className="flex justify-end mb-2">
+                <button
+                  className="bg-blue-600 dark:bg-green-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-all"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit
+                </button>
+              </div>
 
               <h1 className="font-bold text-center text-4xl text-gray-900 dark:text-white">
                 {data.greeting}

@@ -7,6 +7,7 @@ import AdminVideosPage from "../dashboard/videos/page"; // The modal content for
 import { Modal } from "flowbite-react";
 import { VideoCard } from "../Components/VideoCard";
 import { VideoListItem } from "../Components/VideoList";
+import ResponseModal from "../Components/ResponseModal";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
@@ -16,7 +17,14 @@ export default function VideosPage() {
   const [videoModal, setVideoModal] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
   const user = useUser();
-
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+  const showModal = (message, status) => {
+    setModal({ isOpen: true, message, status });
+  };
   useEffect(() => {
     async function fetchVideos() {
       let url = `/api/videos?page=${currentPage}&category=Taleem`;
@@ -38,10 +46,16 @@ export default function VideosPage() {
   };
 
   const handleDelete = async (videoId) => {
-    if (!window.confirm("Are you sure you want to delete this video?")) return;
-    const res = await fetch(`/api/videos/${videoId}`, { method: "DELETE" });
-    if (res.ok) {
-      setVideos((prev) => prev.filter((v) => v._id !== videoId));
+    if (!user?.user.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal("Please be an Admin first to change anything", "error");
+    } else {
+      if (!window.confirm("Are you sure you want to delete this video?"))
+        return;
+      const res = await fetch(`/api/videos/${videoId}`, { method: "DELETE" });
+      if (res.ok) {
+        setVideos((prev) => prev.filter((v) => v._id !== videoId));
+      }
     }
   };
 
@@ -69,17 +83,15 @@ export default function VideosPage() {
             <BsList />
           </button>
         </div>
-        {user.isSignedIn && user.user.publicMetadata.isAdmin && (
-          <button
-            onClick={() => {
-              setEditingVideo(null);
-              setVideoModal(true);
-            }}
-            className="ml-2 px-4 py-2 border rounded-3xl hover:bg-blue-200 dark:hover:bg-blue-900 dark:bg-gray-800"
-          >
-            Add New Video
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setEditingVideo(null);
+            setVideoModal(true);
+          }}
+          className="ml-2 px-4 py-2 border rounded-3xl hover:bg-blue-200 dark:hover:bg-blue-900 dark:bg-gray-800"
+        >
+          Add New Video
+        </button>
       </div>
       {viewMode === "card" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-5">
@@ -160,6 +172,12 @@ export default function VideosPage() {
           </div>
         </div>
       )}
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+      />
     </div>
   );
 }
