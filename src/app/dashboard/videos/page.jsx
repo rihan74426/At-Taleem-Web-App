@@ -5,7 +5,11 @@ import ResponseModal from "@/app/Components/ResponseModal";
 import "react-datepicker/dist/react-datepicker.css";
 import { Datepicker } from "flowbite-react";
 
-export default function AdminVideosPage({ initialVideo = null, onClose }) {
+export default function AdminVideosPage({
+  initialVideo = null,
+  onClose,
+  onUpdate,
+}) {
   const [title, setTitle] = useState(initialVideo?.title || "");
   const [description, setDescription] = useState(
     initialVideo?.description || ""
@@ -54,7 +58,7 @@ export default function AdminVideosPage({ initialVideo = null, onClose }) {
 
     if (res.ok) {
       showModal("Successfully saved video!", "success");
-      router.push(`/${category.toLowerCase()}-videos`);
+      onUpdate(payload);
       onClose();
     } else {
       showModal("Failed to save video! Please try again...", "error");

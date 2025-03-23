@@ -9,9 +9,12 @@ export function VideoListItem({ video, onEdit, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="relative flex gap-4 border-b p-2">
+    <div key={video._id} className="relative flex gap-4 border-b p-2">
       <div className="relative w-40 h-24">
-        <Link key={video._id} href={`/juma-videos/${video._id}`}>
+        <Link
+          key={video._id}
+          href={`/${video.category.toLowerCase()}-videos/${video._id}`}
+        >
           {video.platform === "YouTube" ? (
             <ReactPlayer url={video.videoUrl} width="100%" height="100%" />
           ) : (
@@ -30,7 +33,10 @@ export function VideoListItem({ video, onEdit, onDelete }) {
         </Link>
       </div>
       <div className="flex-1">
-        <Link key={video._id} href={`/juma-videos/${video._id}`}>
+        <Link
+          key={video._id}
+          href={`/${video.category.toLowerCase()}-videos/${video._id}`}
+        >
           <h3 className="font-bold mb-2">{video.title}</h3>
           <p className="text-sm text-gray-500">
             {video.recordingDate ? "Recorded: " : "Post Created: "}

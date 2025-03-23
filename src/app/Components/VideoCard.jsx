@@ -41,7 +41,10 @@ export function VideoCard({ video, onEdit, onDelete }) {
           </div>
         )}
       </div>
-      <Link key={video._id} href={`/juma-videos/${video._id}`}>
+      <Link
+        key={video._id}
+        href={`/${video.category.toLowerCase()}-videos/${video._id}`}
+      >
         <h3 className="font-bold mb-2">{video.title}</h3>
         <div className="relative w-full h-36">
           <Image
