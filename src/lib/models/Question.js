@@ -4,14 +4,14 @@ const QuestionSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String },
-    category: { type: String }, // Optional: category or tags
-    // For the asker – if anonymous, email is stored instead of a userId
-    userId: { type: String }, // Optional: if logged in
+    category: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }], // Reference to Category model
+    userId: { type: String },
     username: { type: String, default: "Anonymous" },
-    email: { type: String }, // Required if asked anonymously
+    email: { type: String },
     status: { type: String, enum: ["pending", "answered"], default: "pending" },
     answer: { type: String },
     answeredAt: { type: Date },
+    helpfulCount: { type: Number, default: 0 }, // Track helpful votes
   },
   { timestamps: true }
 );
