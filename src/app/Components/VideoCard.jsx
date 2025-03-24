@@ -10,16 +10,19 @@ export function VideoCard({ video, onEdit, onDelete }) {
   return (
     <div className="relative border p-4 rounded shadow-md hover:shadow-lg transition duration-300">
       {/* Options button in top right */}
-      <div className="absolute top-2 right-2">
+      <div
+        className="absolute top-2 right-2"
+        onMouseEnter={() => setMenuOpen((prev) => !prev)}
+        onMouseLeave={() => setMenuOpen(false)}
+      >
         <button
           onClick={() => setMenuOpen((prev) => !prev)}
           className="text-gray-600 hover:text-gray-900"
-          onMouseEnter={() => setMenuOpen((prev) => !prev)}
         >
           <FiMoreVertical size={20} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-32 dark:bg-slate-900 dark:text-white text-black bg-white border rounded shadow-md z-10">
+          <div className="absolute right-0 w-32 dark:bg-slate-900 dark:text-white text-black bg-white border rounded shadow-md z-10">
             <button
               onClick={() => {
                 setMenuOpen(false);

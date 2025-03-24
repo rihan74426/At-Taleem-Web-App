@@ -47,16 +47,19 @@ export function VideoListItem({ video, onEdit, onDelete }) {
         </Link>
       </div>
       {/* Options button */}
-      <div className="relative">
+      <div
+        className="relative"
+        onMouseEnter={() => setMenuOpen((prev) => !prev)}
+        onMouseLeave={() => setMenuOpen(false)}
+      >
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          onMouseEnter={() => setMenuOpen((prev) => !prev)}
           className="text-gray-600 hover:text-gray-900"
         >
           <FiMoreVertical size={20} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-32 dark:bg-slate-900 dark:text-white text-black bg-white border rounded shadow-md z-10">
+          <div className="absolute right-0 w-32 dark:bg-slate-900 dark:text-white text-black bg-white border rounded shadow-md z-10">
             <button
               onClick={() => {
                 setMenuOpen(false);

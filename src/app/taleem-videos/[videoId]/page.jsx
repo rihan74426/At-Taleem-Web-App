@@ -19,6 +19,15 @@ export default function VideoDetailPage() {
   const [editingVideo, setEditingVideo] = useState(null);
   const user = useUser();
 
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+  const showModal = (message, status) => {
+    setModal({ isOpen: true, message, status });
+  };
+
   // Function to fetch video details
   const fetchVideo = async () => {
     try {
@@ -109,7 +118,7 @@ export default function VideoDetailPage() {
       </div>
 
       {/* Video Player */}
-      <div className="relative  flex place-content-center w-full pb-[56.25%] mb-6">
+      <div className="relative flex place-content-center w-full sm:mb-6">
         {" "}
         {video.platform === "YouTube" ? (
           <ReactPlayer
@@ -121,7 +130,7 @@ export default function VideoDetailPage() {
           />
         ) : (
           <div
-            className="absolute items-center place-content-center flex w-full h-full"
+            className="items-center place-content-center flex w-full h-full"
             dangerouslySetInnerHTML={{ __html: video.videoUrl }}
           />
         )}

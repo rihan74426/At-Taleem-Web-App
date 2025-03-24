@@ -128,7 +128,7 @@ export default function VideoComments({ videoId }) {
   };
 
   return (
-    <div className="dark:text-white text-black">
+    <div className="dark:text-white text-black mt-10">
       <h2 className="text-4xl font-bold mb-4 text-center">Comments</h2>
 
       {/* Primary Comment Input */}
@@ -149,7 +149,7 @@ export default function VideoComments({ videoId }) {
           </button>
         </form>
       ) : (
-        <p className="text-gray-500 text-center">Log in to comment.</p>
+        <p className="text-gray-500 text-center">Please Log in to comment.</p>
       )}
 
       {/* Comments & Replies List */}
