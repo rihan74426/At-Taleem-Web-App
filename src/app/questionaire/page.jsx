@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { connectStorageEmulator } from "firebase/storage";
 
 export default function QuestionnairePage() {
   // State for questions and filters
@@ -10,6 +11,7 @@ export default function QuestionnairePage() {
   const [selectedCategory, setSelectedCategory] = useState(""); // "" means all categories
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState([]);
 
   // Fetch questions from the API based on filters
   const fetchQuestions = async () => {
@@ -35,9 +37,22 @@ export default function QuestionnairePage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
+
   // Refetch questions when filters or page change
   useEffect(() => {
     fetchQuestions();
+    fetchCategories();
   }, [page, searchTerm, statusFilter, selectedCategory]);
 
   return (
@@ -75,11 +90,13 @@ export default function QuestionnairePage() {
             }}
             className="border p-2 rounded dark:bg-black"
           >
-            <option value="">All Categories</option>
-            {/* Replace with dynamic options from your centralized category store */}
-            <option value="tech">Tech</option>
-            <option value="education">Education</option>
-            <option value="health">Health</option>
+            {categories.map((category) => {
+              return (
+                <option key={category._id} value={category._id}>
+                  {category.name}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
