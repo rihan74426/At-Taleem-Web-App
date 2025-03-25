@@ -113,8 +113,8 @@ export default function Header() {
             জুমার ভিডিও
           </Navbar.Link>
         </Link>
-        <Link href="/questionaire" passHref>
-          <Navbar.Link active={path === "/questionaire"} as={"div"}>
+        <Link href="/questionnaires" passHref>
+          <Navbar.Link active={path === "/questionnaires"} as={"div"}>
             প্রশ্নোত্তরসমূহ
           </Navbar.Link>
         </Link>

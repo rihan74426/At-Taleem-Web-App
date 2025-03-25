@@ -10,7 +10,7 @@ export async function POST(request) {
     const { title, description, category, userId, username, email } = data;
 
     // Validate required fields
-    if (!title || !category || (!userId && !email)) {
+    if (!title || !email) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -29,13 +29,13 @@ export async function POST(request) {
     // Optionally, send a notification email that a new question was posted
     // (if needed, for admin notifications)
     // await sendEmail({ subject: "New Question Posted", to: adminEmail, text: ... });
-    if (email) {
-      await sendEmail(
-        email,
-        "Question Received",
-        "We have received your question and will answer it soon."
-      );
-    }
+    // if (email) {
+    //   await sendEmail(
+    //     email,
+    //     "Question Received",
+    //     "We have received your question and will answer it soon."
+    //   );
+    // }
     return new Response(JSON.stringify(newQuestion), {
       status: 201,
       headers: { "Content-Type": "application/json" },
@@ -52,16 +52,43 @@ export async function POST(request) {
 export async function GET(request) {
   await connect();
   const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id"); // Use "id" here
+
+  if (id) {
+    try {
+      const question = await Question.findById(id);
+      if (!question) {
+        return new Response(JSON.stringify({ error: "Question not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ question }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("Error fetching question:", error);
+      return new Response(
+        JSON.stringify({ error: "Error fetching question" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }
+
+  // If no specific question is requested, fetch multiple questions based on filters.
   const status = searchParams.get("status"); // e.g., "pending" or "answered"
   const category = searchParams.get("category"); // can be comma-separated list
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = 10;
+  const limit = parseInt(searchParams.get("limit") || "10", 10);
   const skip = (page - 1) * limit;
 
   let query = {};
   if (status) query.status = status;
   if (category) {
-    // If multiple categories are provided, split and search for any match
     const cats = category.split(",");
     query.category = { $in: cats };
   }
