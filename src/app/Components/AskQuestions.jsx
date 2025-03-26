@@ -65,30 +65,50 @@ export default function AskQuestionForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-xl mx-auto p-4 border rounded dark:bg-gray-900 text-white shadow-sm space-y-4"
-    >
-      <h2 className="text-2xl font-bold">
-        {initialQuestion ? "Edit Your Question" : "Ask a Question"}
-      </h2>
-      <input
-        type="text"
-        placeholder="Question Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full border p-2 rounded dark:bg-black"
-        required
-      />
-      <textarea
-        placeholder="Detailed Description (optional)"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        className="w-full border p-2 rounded dark:bg-black"
-      />
-      {isSignedIn && (
+    <div className="max-w-xl mx-auto p-4 ">
+      <h1 className="text-2xl font-bold mb-4">
+        {initialQuestion ? "Edit Your Question" : "Add a Question"}
+      </h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {!isSignedIn && (
+          <div className="space-y-2">
+            {!anonymous && (
+              <input
+                type="text"
+                placeholder="Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full border p-2 rounded dark:bg-black"
+                required
+              />
+            )}
+            <input
+              type="email"
+              placeholder="উত্তর পাঠানোর জন্য একটি ই-মেইল দিন"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border p-2 rounded dark:bg-black"
+              required
+            />
+          </div>
+        )}
+        <input
+          type="text"
+          placeholder="প্রশ্নটি লিখুন..."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full border p-2 rounded dark:bg-black"
+          required
+        />
+        <textarea
+          placeholder="বিস্তারিত বর্ণনা থাকলে লিখুন..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full border p-2 rounded dark:bg-black"
+        />
+
         <div className="flex items-center gap-2">
-          <label htmlFor="anonymous">Ask Anonymously?</label>
+          <label htmlFor="anonymous">অজ্ঞাতনামা?</label>
           <input
             id="anonymous"
             type="checkbox"
@@ -96,33 +116,13 @@ export default function AskQuestionForm({
             onChange={(e) => setAnonymous(e.target.checked)}
           />
         </div>
-      )}
-      {(!isSignedIn || anonymous) && (
-        <div className="space-y-2">
-          <input
-            type="text"
-            placeholder="Your Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border p-2 rounded dark:bg-black"
-            required
-          />
-          <input
-            type="email"
-            placeholder="Your Email (for answer notifications)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border p-2 rounded dark:bg-black"
-            required
-          />
-        </div>
-      )}
-      <button
-        type="submit"
-        className="w-full bg-blue-500 text-white py-2 rounded"
-      >
-        {initialQuestion ? "Update Question" : "Submit Question"}
-      </button>
-    </form>
+        <button
+          type="submit"
+          className="w-full bg-blue-500 text-white py-2 rounded"
+        >
+          {initialQuestion ? "Update Question" : "Submit Question"}
+        </button>
+      </form>
+    </div>
   );
 }

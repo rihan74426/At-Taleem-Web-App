@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import AskQuestionForm from "../Components/AskQuestions";
+import { HiOutlinePencil } from "react-icons/hi";
+import { AiOutlineDelete } from "react-icons/ai";
 
 export default function QuestionnairePage() {
   const { user, isSignedIn } = useUser();
@@ -81,7 +83,7 @@ export default function QuestionnairePage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <input
           type="text"
-          placeholder="Search questions..."
+          placeholder="প্রশ্ন খুঁজুন..."
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -110,6 +112,7 @@ export default function QuestionnairePage() {
             }}
             className="border p-2 rounded dark:bg-black"
           >
+            <option value="all">All</option>
             {categories.map((category) => (
               <option key={category._id} value={category._id}>
                 {category.name}
@@ -125,12 +128,12 @@ export default function QuestionnairePage() {
           onClick={() => setShowModal(true)}
           className="mb-4 px-4 py-2 bg-blue-500 text-white rounded"
         >
-          Ask for a Question in Taleem
+          তালিমে প্রশ্ন করুন
         </button>
       </div>
 
       {/* Question List */}
-      <ul className="space-y-4">
+      <ul className="space-y-4 mb-5">
         {questions.map((question) => (
           <li
             key={question._id}
@@ -140,53 +143,62 @@ export default function QuestionnairePage() {
               <h2 className="text-xl font-bold mb-1 cursor-pointer">
                 {question.title}
               </h2>
-            </Link>
-            <p className="text-gray-600">
-              {question.description
-                ? question.description.substring(0, 100) + "..."
-                : "No description."}
-            </p>
-            <div className="flex justify-between items-center mt-2">
-              <span
-                className={`px-2 py-1 text-sm rounded ${
-                  question.status === "answered"
-                    ? "bg-green-200 text-green-800"
-                    : "bg-yellow-200 text-yellow-800"
-                }`}
-              >
-                {question.status.charAt(0).toUpperCase() +
-                  question.status.slice(1)}
-              </span>
-              <span className="text-gray-500 text-sm">
-                {new Date(question.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-gray-700">
-              Asked by: {question.anonymous ? "Anonymous" : question.username}
-            </p>
+              <p className="text-gray-600">
+                {question.description
+                  ? question.description.substring(0, 100) + "..."
+                  : "No description."}
+              </p>
+              <div className="flex flex-col sm:grid sm:grid-cols-3 md:grid-cols-4  items-center gap-2 mt-2">
+                {/* Status Badge */}
+                <span
+                  className={`px-2  py-1 text-sm rounded w-2/3 text-center ${
+                    question.status === "answered"
+                      ? "bg-green-200 text-green-800"
+                      : "bg-yellow-200 text-yellow-800"
+                  }`}
+                >
+                  {question.status.charAt(0).toUpperCase() +
+                    question.status.slice(1)}
+                </span>
 
-            {/* Edit & Delete Options */}
-            {isSignedIn &&
-              user?.id === question.userId &&
-              question.status === "pending" && (
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingQuestion(question);
-                      setShowModal(true);
-                    }}
-                    className="text-blue-500"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteQuestion(question._id)}
-                    className="text-red-500"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
+                {/* Asked By */}
+                <p className="px-2 text-sm text-gray-500 w-full text-center sm:text-left">
+                  প্রশ্নটি করেছেন:{" "}
+                  {question.isAnonymous ? "Anonymous" : question.username}
+                </p>
+
+                {/* Date Asked */}
+                <span className="text-gray-500 px-2 text-sm w-full text-center">
+                  প্রশ্ন করার তারিখ:{" "}
+                  {new Date(question.createdAt).toLocaleDateString()}
+                </span>
+
+                {/* Edit & Delete Options */}
+                {isSignedIn &&
+                  user?.id === question.userId &&
+                  question.status === "pending" && (
+                    <div className="flex gap-2 w-full justify-center sm:justify-end">
+                      <button
+                        onClick={() => {
+                          setEditingQuestion(question);
+                          setShowModal(true);
+                        }}
+                        className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                        title="Edit Question"
+                      >
+                        <HiOutlinePencil size={20} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteQuestion(question._id)}
+                        className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                        title="Delete Question"
+                      >
+                        <AiOutlineDelete size={20} />
+                      </button>
+                    </div>
+                  )}
+              </div>
+            </Link>
           </li>
         ))}
       </ul>
@@ -208,18 +220,39 @@ export default function QuestionnairePage() {
 
       {/* Modal for Asking / Editing a Question */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div>
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className="bg-black/80 absolute inset-0"
+            onClick={() => setShowModal(false)}
+          ></div>
+          <div className="relative h-5/6 p-5 overflow-auto sm:w-2/3 w-full lg:w-1/3 border rounded dark:bg-gray-900 text-white shadow-sm">
             <button
+              className="ml-auto absolute right-5 top-2 items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-400 dark:hover:text-white"
               onClick={() => setShowModal(false)}
-              className=" justify-end flex text-end text-gray-500"
+              title="Close"
             >
-              ✖
+              <svg
+                stroke="currentColor"
+                fill="none"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-5 w-5"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
             </button>
-            <AskQuestionForm
-              initialQuestion={editingQuestion}
-              onQuestionSubmitted={handleQuestionSubmit}
-            />
+            <div className="mt-5">
+              <AskQuestionForm
+                initialQuestion={editingQuestion}
+                onQuestionSubmitted={handleQuestionSubmit}
+              />
+            </div>
           </div>
         </div>
       )}
