@@ -148,34 +148,35 @@ export default function QuestionnairePage() {
                   ? question.description.substring(0, 100) + "..."
                   : "No description."}
               </p>
-              <div className="flex flex-col sm:grid sm:grid-cols-3 md:grid-cols-4  items-center gap-2 mt-2">
-                {/* Status Badge */}
-                <span
-                  className={`px-2  py-1 text-sm rounded w-2/3 text-center ${
-                    question.status === "answered"
-                      ? "bg-green-200 text-green-800"
-                      : "bg-yellow-200 text-yellow-800"
-                  }`}
-                >
-                  {question.status.charAt(0).toUpperCase() +
-                    question.status.slice(1)}
-                </span>
+            </Link>
+            <div className="flex flex-col sm:grid sm:grid-cols-3 md:grid-cols-4  items-center gap-2 mt-2">
+              {/* Status Badge */}
+              <span
+                className={`px-2  py-1 text-sm rounded w-2/3 text-center ${
+                  question.status === "answered"
+                    ? "bg-green-200 text-green-800"
+                    : "bg-yellow-200 text-yellow-800"
+                }`}
+              >
+                {question.status.charAt(0).toUpperCase() +
+                  question.status.slice(1)}
+              </span>
 
-                {/* Asked By */}
-                <p className="px-2 text-sm text-gray-500 w-full text-center sm:text-left">
-                  প্রশ্নটি করেছেন:{" "}
-                  {question.isAnonymous ? "Anonymous" : question.username}
-                </p>
+              {/* Asked By */}
+              <p className="px-2 text-sm text-gray-500 w-full text-center sm:text-left">
+                প্রশ্নটি করেছেন:{" "}
+                {question.isAnonymous ? "Anonymous" : question.username}
+              </p>
 
-                {/* Date Asked */}
-                <span className="text-gray-500 px-2 text-sm w-full text-center">
-                  প্রশ্ন করার তারিখ:{" "}
-                  {new Date(question.createdAt).toLocaleDateString()}
-                </span>
+              {/* Date Asked */}
+              <span className="text-gray-500 px-2 text-sm w-full text-center">
+                প্রশ্ন করার তারিখ:{" "}
+                {new Date(question.createdAt).toLocaleDateString()}
+              </span>
 
-                {/* Edit & Delete Options */}
-                {isSignedIn &&
-                  user?.id === question.userId &&
+              {/* Edit & Delete Options */}
+              {(isSignedIn && user?.id === question.userId) ||
+                (user?.publicMetadata.isAdmin &&
                   question.status === "pending" && (
                     <div className="flex gap-2 w-full justify-center sm:justify-end">
                       <button
@@ -196,9 +197,8 @@ export default function QuestionnairePage() {
                         <AiOutlineDelete size={20} />
                       </button>
                     </div>
-                  )}
-              </div>
-            </Link>
+                  ))}
+            </div>
           </li>
         ))}
       </ul>

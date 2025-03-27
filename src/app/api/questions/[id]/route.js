@@ -4,15 +4,9 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function PATCH(request, { params }) {
   await connect();
   try {
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     // Expect data.answer to be provided for updating an answer
-    if (!data.answer) {
-      return new Response(JSON.stringify({ error: "Missing answer content" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
 
     const updatedQuestion = await Question.findByIdAndUpdate(
       id,

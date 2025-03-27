@@ -39,7 +39,7 @@ export default function AskQuestionForm({
 
     const method = initialQuestion ? "PATCH" : "POST";
     const url = initialQuestion
-      ? `/api/questions/${initialQuestion._id}`
+      ? `/api/questions/id=${initialQuestion._id}`
       : "/api/questions";
 
     const res = await fetch(url, {
