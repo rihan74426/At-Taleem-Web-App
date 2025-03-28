@@ -165,7 +165,7 @@ export default function QuestionnairePage() {
               {/* Asked By */}
               <p className="px-2 text-sm text-gray-500 w-full text-center sm:text-left">
                 প্রশ্নটি করেছেন:{" "}
-                {question.isAnonymous ? "Anonymous" : question.username}
+                {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
               </p>
 
               {/* Date Asked */}
@@ -225,7 +225,7 @@ export default function QuestionnairePage() {
             className="bg-black/80 absolute inset-0"
             onClick={() => setShowModal(false)}
           ></div>
-          <div className="relative h-5/6 p-5 overflow-auto sm:w-2/3 w-full lg:w-1/3 border rounded dark:bg-gray-900 text-white shadow-sm">
+          <div className="relative p-5 overflow-auto sm:w-2/3 w-full lg:w-1/3 border rounded dark:bg-gray-900 text-white shadow-sm">
             <button
               className="ml-auto absolute right-5 top-2 items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-400 dark:hover:text-white"
               onClick={() => setShowModal(false)}

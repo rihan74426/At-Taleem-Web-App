@@ -121,7 +121,10 @@ export async function GET(request) {
 export async function PUT(request) {
   await connect();
   try {
-    const { questionId } = await request.json();
+    const data = await request.json();
+    const { questionId, title, description, category, isAnonymous, email } =
+      data;
+
     if (!questionId) {
       return new Response(JSON.stringify({ error: "Missing questionId" }), {
         status: 400,
@@ -129,10 +132,17 @@ export async function PUT(request) {
       });
     }
 
-    // Increment the helpful count by 1
+    // Build an object with fields to update
+    const updateFields = {};
+    if (title !== undefined) updateFields.title = title;
+    if (description !== undefined) updateFields.description = description;
+    if (category !== undefined) updateFields.category = category; // Expecting an array of category IDs
+    if (isAnonymous !== undefined) updateFields.isAnonymous = isAnonymous;
+    if (email !== undefined) updateFields.email = email;
+
     const updatedQuestion = await Question.findByIdAndUpdate(
       questionId,
-      { $inc: { helpful: 1 } },
+      updateFields,
       { new: true }
     );
 
@@ -143,15 +153,15 @@ export async function PUT(request) {
       });
     }
 
-    return new Response(JSON.stringify({ helpful: updatedQuestion.helpful }), {
+    return new Response(JSON.stringify(updatedQuestion), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error updating helpful count:", error);
-    return new Response(
-      JSON.stringify({ error: "Error updating helpful count" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    console.error("Error editing question:", error);
+    return new Response(JSON.stringify({ error: "Error editing question" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

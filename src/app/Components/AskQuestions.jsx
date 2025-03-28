@@ -13,7 +13,7 @@ export default function AskQuestionForm({
   );
   // For logged-in users, allow a checkbox to ask anonymously.
   const [anonymous, setAnonymous] = useState(
-    initialQuestion?.anonymous || false
+    initialQuestion?.isAnonymous || false
   );
   // For anonymous questions (or if user is not logged in), ask for name and email.
   const [name, setName] = useState(initialQuestion?.username || "");
@@ -23,7 +23,8 @@ export default function AskQuestionForm({
     e.preventDefault();
 
     // Prepare question data:
-    let questionData = { title, description };
+    let questionData = { title, description, questionId: initialQuestion._id };
+    if (initialQuestion) questionData.questionId = initialQuestion._id;
     if (isSignedIn && !anonymous) {
       // Use logged-in user's profile (you can adjust these fields based on your Clerk configuration)
       questionData.userId = user?.id;
@@ -37,10 +38,8 @@ export default function AskQuestionForm({
       questionData.isAnonymous = true;
     }
 
-    const method = initialQuestion ? "PATCH" : "POST";
-    const url = initialQuestion
-      ? `/api/questions/id=${initialQuestion._id}`
-      : "/api/questions";
+    const method = initialQuestion ? "PUT" : "POST";
+    const url = "/api/questions/";
 
     const res = await fetch(url, {
       method,
@@ -92,6 +91,7 @@ export default function AskQuestionForm({
             />
           </div>
         )}
+        <label>প্রশ্নঃ</label>
         <input
           type="text"
           placeholder="প্রশ্নটি লিখুন..."
@@ -100,6 +100,7 @@ export default function AskQuestionForm({
           className="w-full border p-2 rounded dark:bg-black"
           required
         />
+        <label>বিস্তারিতঃ</label>
         <textarea
           placeholder="বিস্তারিত বর্ণনা থাকলে লিখুন..."
           value={description}
