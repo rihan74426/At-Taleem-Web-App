@@ -5,7 +5,7 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function PATCH(request, { params }) {
   await connect();
   try {
-    const { id } = params; // params is an object with id property
+    const { id } = await params; // params is an object with id property
     const data = await request.json();
 
     // Validate that answer is provided
@@ -14,45 +14,46 @@ export async function PATCH(request, { params }) {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
-    }
+    } else {
+      const updatedQuestion = await Question.findByIdAndUpdate(
+        id,
+        {
+          answer: data.answer,
+          status: "answered",
+          answeredAt: new Date(),
+        },
+        { new: true }
+      );
 
-    // Update the question with the answer, change status, and set answeredAt timestamp
-    const updatedQuestion = await Question.findByIdAndUpdate(
-      id,
-      {
-        answer: data.answer,
-        status: "answered",
-        answeredAt: new Date(),
-      },
-      { new: true }
-    );
+      if (!updatedQuestion) {
+        return new Response(JSON.stringify({ error: "Question not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
-    if (!updatedQuestion) {
-      return new Response(JSON.stringify({ error: "Question not found" }), {
-        status: 404,
+      // Update the question with the answer, change status, and set answeredAt timestamp
+
+      // Trigger email if question has an email and its helpfulCount is 10 or more
+      // if (updatedQuestion.email) {
+      //   await sendEmail({
+      //     to: updatedQuestion.email,
+      //     subject: "Your Question Has Been Answered",
+      //     text: `Your question "${updatedQuestion.title}" has been answered: ${updatedQuestion.answer}`,
+      //   });
+      // }
+      // if (updatedQuestion.helpfulCount >= 10) {
+      //   await sendEmail({
+      //     to: updatedQuestion.email,
+      //     subject: "Your Question Helped more than 10 people",
+      //   });
+      // }
+
+      return new Response(JSON.stringify(updatedQuestion), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
-
-    // Trigger email if question has an email and its helpfulCount is 10 or more
-    // if (updatedQuestion.email) {
-    //   await sendEmail({
-    //     to: updatedQuestion.email,
-    //     subject: "Your Question Has Been Answered",
-    //     text: `Your question "${updatedQuestion.title}" has been answered: ${updatedQuestion.answer}`,
-    //   });
-    // }
-    // if (updatedQuestion.helpfulCount >= 10) {
-    //   await sendEmail({
-    //     to: updatedQuestion.email,
-    //     subject: "Your Question Helped more than 10 people",
-    //   });
-    // }
-
-    return new Response(JSON.stringify(updatedQuestion), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
   } catch (error) {
     console.error("Error updating question:", error);
     return new Response(JSON.stringify({ error: "Error updating question" }), {
