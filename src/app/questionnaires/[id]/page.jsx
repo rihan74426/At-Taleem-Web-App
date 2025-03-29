@@ -10,6 +10,7 @@ import { AiOutlineDelete } from "react-icons/ai";
 // Dynamically import ReactQuill to avoid SSR issues
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
+import { HiOutlinePencil } from "react-icons/hi";
 
 export default function QuestionDetailPage() {
   const { id } = useParams();
@@ -24,6 +25,7 @@ export default function QuestionDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [showAnswerEditor, setShowAnswerEditor] = useState(false);
 
   // Category management state (admin only)
   const [categories, setCategories] = useState([]); // All available categories from the store
@@ -42,7 +44,6 @@ export default function QuestionDetailPage() {
       const data = await res.json();
       if (!data.question) throw new Error("Question not found");
       setQuestion(data.question);
-      // Pre-fill selected categories if available (expecting an array of category objects)
       if (data.question.category) {
         setQuestionCategories(data.question.category);
       }
@@ -71,55 +72,42 @@ export default function QuestionDetailPage() {
     fetchCategories();
   }, [id]);
 
-  // Handlers for category input/suggestions
-  const handleFocus = () => {
-    setShowSuggestions(true);
+  // Update suggestions when categoryInput, categories, or questionCategories change
+  useEffect(() => {
+    const input = categoryInput.trim().toLowerCase();
     const filtered = categories.filter(
       (cat) =>
-        cat.name.toLowerCase().includes(categoryInput.toLowerCase()) &&
-        !questionCategories.find((c) => c._id === cat._id)
+        cat.name.toLowerCase().includes(input) &&
+        !questionCategories.some((qc) => qc._id === cat._id)
     );
     setSuggestions(filtered);
+  }, [categoryInput, categories, questionCategories]);
+
+  // Handlers for input focus and blur
+  const handleFocus = () => {
+    setShowSuggestions(true);
   };
 
   const handleBlur = () => {
-    // Delay hiding suggestions to allow clicks to register
     setTimeout(() => setShowSuggestions(false), 100);
   };
 
+  // Handle input change
   const handleChange = (e) => {
-    const value = e.target.value;
-    setCategoryInput(value);
-    if (value.trim() === "") {
-      const filtered = categories.filter(
-        (cat) =>
-          cat.name.toLowerCase().includes(categoryInput.toLowerCase()) &&
-          !questionCategories.find((c) => c._id === cat._id)
-      );
-      setSuggestions(questionCategories.length > 0 ? filtered : categories);
-    } else {
-      const filtered = categories.filter((cat) =>
-        cat.name.toLowerCase().includes(value.toLowerCase())
-      );
-      setSuggestions(filtered);
-    }
+    setCategoryInput(e.target.value);
   };
 
+  // Handle selecting an existing category
   const handleSelect = (cat) => {
-    if (!questionCategories.find((c) => c._id === cat._id)) {
-      setQuestionCategories((prev) => [...prev, cat]);
+    if (!questionCategories.some((c) => c._id === cat._id)) {
+      const updated = [...questionCategories, cat];
+      setQuestionCategories(updated);
     }
     setCategoryInput("");
-    // Filter out the selected category from the suggestions:
-    const filtered = categories.filter(
-      (cat) =>
-        cat.name.toLowerCase().includes(categoryInput.toLowerCase()) &&
-        !questionCategories.find((c) => c._id === cat._id)
-    );
-    setSuggestions(filtered);
     setShowSuggestions(false);
   };
-  // Create a new category if none match the input
+
+  // Create a new category if none match the input and select it
   const handleAddNewCategory = async () => {
     if (!categoryInput.trim()) return;
     try {
@@ -131,13 +119,16 @@ export default function QuestionDetailPage() {
       if (res.ok) {
         const newCat = await res.json();
         setCategories((prev) => [...prev, newCat]);
-        handleSelect(newCat);
+        setQuestionCategories((prev) => [...prev, newCat]);
+        setCategoryInput("");
+        setShowSuggestions(false);
       }
     } catch (err) {
       console.error("Error adding new category:", err);
     }
   };
 
+  // Remove a category from the question
   const removeCategory = (catId) => {
     setQuestionCategories((prev) => prev.filter((cat) => cat._id !== catId));
   };
@@ -160,6 +151,7 @@ export default function QuestionDetailPage() {
         const updatedQuestion = await res.json();
         setQuestion(updatedQuestion);
         setAnswer("");
+        setShowAnswerEditor(false);
       } else {
         alert("Failed to submit answer.");
       }
@@ -221,30 +213,30 @@ export default function QuestionDetailPage() {
       {/* Author Info */}
       <p className="mt-1 text-sm text-gray-500">
         প্রশ্নটি করেছেনঃ{" "}
-        {user.publicMetadata.isAdmin &&
-          question.isAnonymous &&
-          question.username + " as"}{" "}
+        {user.publicMetadata.isAdmin && question.isAnonymous
+          ? question.username + " as "
+          : ""}
         {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
       </p>
 
       {/* Edit & Delete Options */}
       {isSignedIn &&
-        (user?.id === question.userId ||
-          (user?.publicMetadata.isAdmin && question.status === "pending")) && (
+        ((user?.id === question.userId && question.status === "pending") ||
+          user?.publicMetadata.isAdmin) && (
           <div className="mt-3 flex gap-3">
             <button
               onClick={() => {
                 setEditingQuestion(question);
                 setShowModal(true);
               }}
-              className="text-blue-500 p-2 bg-gray-200 rounded"
+              className="bg-blue-500 text-white rounded p-2"
               title="Edit Question"
             >
-              <BsFillPencilFill size={20} />
+              <HiOutlinePencil size={20} />
             </button>
             <button
               onClick={handleDeleteQuestion}
-              className="text-red-500 p-2 bg-gray-200 rounded"
+              className=" p-2 bg-red-500 text-white rounded"
               title="Delete Question"
             >
               <AiOutlineDelete size={20} />
@@ -257,6 +249,18 @@ export default function QuestionDetailPage() {
         <h2 className="text-xl font-semibold mb-2 border-b inline">উত্তরঃ</h2>
         {question.answer ? (
           <div className="p-3 my-3 border rounded">
+            {user?.publicMetadata.isAdmin && (
+              <button
+                title="Edit Answer"
+                onClick={() => {
+                  setShowAnswerEditor(true);
+                  setAnswer(question.answer);
+                }}
+                className="mt-2 p-2  float-end bg-blue-500 text-white rounded"
+              >
+                <HiOutlinePencil />
+              </button>
+            )}
             <div
               className="p-5"
               dangerouslySetInnerHTML={{ __html: question.answer }}
@@ -270,11 +274,17 @@ export default function QuestionDetailPage() {
             </span>
           </div>
         ) : (
-          <p className="text-gray-500">Not answered yet.</p>
+          user?.publicMetadata.isAdmin && (
+            <button
+              onClick={() => setShowAnswerEditor(true)}
+              className="mt-2 px-3 py-1 bg-green-500 text-white rounded"
+            >
+              Answer
+            </button>
+          )
         )}
 
-        {/* Answer Submission (Only for Admins) */}
-        {user?.publicMetadata.isAdmin && question.status === "pending" && (
+        {showAnswerEditor && (
           <div className="mt-4">
             {/* Category selection for the question */}
             <div className="mb-4 relative">
@@ -341,6 +351,15 @@ export default function QuestionDetailPage() {
               className="mt-10 px-4 py-2 bg-green-500 text-white rounded"
             >
               {submitting ? "Submitting..." : "Submit Answer"}
+            </button>
+            <button
+              onClick={() => {
+                setShowAnswerEditor(false);
+                setAnswer("");
+              }}
+              className="ml-3 mt-4 px-4 py-2 bg-gray-300 text-black rounded"
+            >
+              Cancel
             </button>
           </div>
         )}
