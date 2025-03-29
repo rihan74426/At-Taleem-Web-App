@@ -1,21 +1,22 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import AskQuestionForm from "@/app/Components/AskQuestions";
-
-// Dynamic import for ReactQuill (avoid SSR issues)
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-import "react-quill-new/dist/quill.snow.css";
 import { BsFillPencilFill } from "react-icons/bs";
 import { AiOutlineDelete } from "react-icons/ai";
 
+// Dynamically import ReactQuill to avoid SSR issues
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+import "react-quill-new/dist/quill.snow.css";
+
 export default function QuestionDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
   const { user, isSignedIn } = useUser();
 
-  // State Management
+  // Main state
   const [question, setQuestion] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,7 +25,15 @@ export default function QuestionDetailPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
 
-  // Fetch Question Details
+  // Category management state (admin only)
+  const [categories, setCategories] = useState([]); // All available categories from the store
+  const [categoryInput, setCategoryInput] = useState("");
+  const [questionCategories, setQuestionCategories] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef(null);
+
+  // Fetch question details
   const fetchQuestion = async () => {
     if (!id) return;
     try {
@@ -33,6 +42,10 @@ export default function QuestionDetailPage() {
       const data = await res.json();
       if (!data.question) throw new Error("Question not found");
       setQuestion(data.question);
+      // Pre-fill selected categories if available (expecting an array of category objects)
+      if (data.question.category) {
+        setQuestionCategories(data.question.category);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -40,26 +53,113 @@ export default function QuestionDetailPage() {
     }
   };
 
+  // Fetch available categories from centralized store
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
+
   useEffect(() => {
     fetchQuestion();
+    fetchCategories();
   }, [id]);
 
-  // Handle Answer Submission
+  // Handlers for category input/suggestions
+  const handleFocus = () => {
+    setShowSuggestions(true);
+    const filtered = categories.filter(
+      (cat) =>
+        cat.name.toLowerCase().includes(categoryInput.toLowerCase()) &&
+        !questionCategories.find((c) => c._id === cat._id)
+    );
+    setSuggestions(filtered);
+  };
+
+  const handleBlur = () => {
+    // Delay hiding suggestions to allow clicks to register
+    setTimeout(() => setShowSuggestions(false), 100);
+  };
+
+  const handleChange = (e) => {
+    const value = e.target.value;
+    setCategoryInput(value);
+    if (value.trim() === "") {
+      const filtered = categories.filter(
+        (cat) =>
+          cat.name.toLowerCase().includes(categoryInput.toLowerCase()) &&
+          !questionCategories.find((c) => c._id === cat._id)
+      );
+      setSuggestions(questionCategories.length > 0 ? filtered : categories);
+    } else {
+      const filtered = categories.filter((cat) =>
+        cat.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(filtered);
+    }
+  };
+
+  const handleSelect = (cat) => {
+    if (!questionCategories.find((c) => c._id === cat._id)) {
+      setQuestionCategories((prev) => [...prev, cat]);
+    }
+    setCategoryInput("");
+    // Filter out the selected category from the suggestions:
+    const filtered = categories.filter(
+      (cat) =>
+        cat.name.toLowerCase().includes(categoryInput.toLowerCase()) &&
+        !questionCategories.find((c) => c._id === cat._id)
+    );
+    setSuggestions(filtered);
+    setShowSuggestions(false);
+  };
+  // Create a new category if none match the input
+  const handleAddNewCategory = async () => {
+    if (!categoryInput.trim()) return;
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: categoryInput.trim() }),
+      });
+      if (res.ok) {
+        const newCat = await res.json();
+        setCategories((prev) => [...prev, newCat]);
+        handleSelect(newCat);
+      }
+    } catch (err) {
+      console.error("Error adding new category:", err);
+    }
+  };
+
+  const removeCategory = (catId) => {
+    setQuestionCategories((prev) => prev.filter((cat) => cat._id !== catId));
+  };
+
+  // Handle answer submission (admin)
   const handleSubmitAnswer = async () => {
     if (!answer.trim()) return alert("Answer cannot be empty");
     setSubmitting(true);
-
     try {
       const res = await fetch(`/api/questions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answer, userId: user.id }),
+        body: JSON.stringify({
+          answer,
+          userId: user.id,
+          category: questionCategories.map((c) => c._id),
+        }),
       });
-
       if (res.ok) {
         const updatedQuestion = await res.json();
         setQuestion(updatedQuestion);
-        setAnswer(""); // Clear input after submission
+        setAnswer("");
       } else {
         alert("Failed to submit answer.");
       }
@@ -70,13 +170,13 @@ export default function QuestionDetailPage() {
     }
   };
 
-  // Handle Question Deletion (Only if user is the owner)
+  // Handle question deletion (only for owner)
   const handleDeleteQuestion = async () => {
     if (!confirm("Are you sure you want to delete this question?")) return;
     try {
       const res = await fetch(`/api/questions/${id}`, { method: "DELETE" });
       if (res.ok) {
-        // Redirect after deletion if needed
+        router.push("/questionnaires");
       }
     } catch (err) {
       console.error("Error deleting question:", err);
@@ -95,7 +195,7 @@ export default function QuestionDetailPage() {
     );
 
   return (
-    <div className="max-w-3xl mx-auto p-4 min-h-screen">
+    <div className="max-w-3xl mx-auto p-4 min-h-screen space-y-6 relative">
       {/* Question Header */}
       <h1 className="text-2xl font-bold mb-2">প্রশ্নঃ {question.title}</h1>
       <p className="text-gray-600">
@@ -121,38 +221,47 @@ export default function QuestionDetailPage() {
       {/* Author Info */}
       <p className="mt-1 text-sm text-gray-500">
         প্রশ্নটি করেছেনঃ{" "}
+        {user.publicMetadata.isAdmin &&
+          question.isAnonymous &&
+          question.username + " as"}{" "}
         {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
       </p>
 
-      {/* Edit & Delete (Only for the question owner) */}
-      {(isSignedIn && user?.id === question.userId) ||
-        (user?.publicMetadata.isAdmin && question.status === "pending" && (
+      {/* Edit & Delete Options */}
+      {isSignedIn &&
+        (user?.id === question.userId ||
+          (user?.publicMetadata.isAdmin && question.status === "pending")) && (
           <div className="mt-3 flex gap-3">
             <button
               onClick={() => {
                 setEditingQuestion(question);
                 setShowModal(true);
               }}
-              className="text-blue-500 p-2 "
+              className="text-blue-500 p-2 bg-gray-200 rounded"
+              title="Edit Question"
             >
-              <BsFillPencilFill />
+              <BsFillPencilFill size={20} />
             </button>
-            <button onClick={handleDeleteQuestion} className="text-red-500 p-2">
-              <AiOutlineDelete />
+            <button
+              onClick={handleDeleteQuestion}
+              className="text-red-500 p-2 bg-gray-200 rounded"
+              title="Delete Question"
+            >
+              <AiOutlineDelete size={20} />
             </button>
           </div>
-        ))}
+        )}
 
       {/* Answer Section */}
       <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2 border-b">উত্তর</h2>
+        <h2 className="text-xl font-semibold mb-2 border-b inline">উত্তরঃ</h2>
         {question.answer ? (
-          <div className="p-3 mb-2">
-            <p
-              className="text-gray-500"
+          <div className="p-3 my-3 border rounded">
+            <div
+              className="p-5"
               dangerouslySetInnerHTML={{ __html: question.answer }}
             />
-            <p className="text-gray-500">
+            <p className="text-gray-500 text-sm">
               উত্তর প্রদানের তারিখঃ{" "}
               {new Date(question.answeredAt).toLocaleDateString()}
             </p>
@@ -167,9 +276,61 @@ export default function QuestionDetailPage() {
         {/* Answer Submission (Only for Admins) */}
         {user?.publicMetadata.isAdmin && question.status === "pending" && (
           <div className="mt-4">
+            {/* Category selection for the question */}
+            <div className="mb-4 relative">
+              <label className="block mb-1 text-sm font-semibold">
+                Assign Categories:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {questionCategories.map((cat) => (
+                  <div
+                    key={cat._id}
+                    className="flex items-center gap-1 bg-slate-700 text-blue-200 px-2 py-1 rounded hover:bg-red-500 hover:cursor-pointer"
+                    onClick={() => removeCategory(cat._id)}
+                    title="Click to remove"
+                  >
+                    <span>{cat.name}</span>
+                    <span className="text-red-600">&times;</span>
+                  </div>
+                ))}
+              </div>
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Add a category..."
+                value={categoryInput}
+                onChange={handleChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                className="w-full border p-2 rounded mt-2 dark:bg-black"
+              />
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 border rounded bg-white dark:bg-gray-800 mt-1 z-10 max-h-48 overflow-auto">
+                  {suggestions.length > 0 ? (
+                    suggestions.map((cat) => (
+                      <div
+                        key={cat._id}
+                        onMouseDown={() => handleSelect(cat)}
+                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                      >
+                        {cat.name}
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      onMouseDown={handleAddNewCategory}
+                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                    >
+                      Add "{categoryInput}" as a new category
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <ReactQuill
               theme="snow"
-              placeholder="উত্তর লিখুন..."
+              placeholder="Write your answer here..."
               className="h-72 mb-3"
               value={answer}
               onChange={setAnswer}
@@ -210,7 +371,7 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
-      {/* Comments Section (Reused from Video Comments Component) */}
+      {/* (Optional) Comments Section for follow-up discussion */}
       {/* <div className="mt-6">
         <h2 className="text-xl font-semibold mb-2">Discussion</h2>
         <VideoComments entityId={id} entityType="question" />

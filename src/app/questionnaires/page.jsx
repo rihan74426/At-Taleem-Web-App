@@ -26,7 +26,7 @@ export default function QuestionnairePage() {
       let url = `/api/questions?page=${page}&limit=10`;
       if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
       if (statusFilter !== "all") url += `&status=${statusFilter}`;
-      if (selectedCategory) url += `&category=${selectedCategory}`;
+      if (selectedCategory !== "all") url += `&category=${selectedCategory}`;
 
       const res = await fetch(url);
       if (res.ok) {

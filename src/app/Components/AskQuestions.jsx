@@ -23,19 +23,18 @@ export default function AskQuestionForm({
     e.preventDefault();
 
     // Prepare question data:
-    let questionData = { title, description, questionId: initialQuestion._id };
+    let questionData = { title, description };
     if (initialQuestion) questionData.questionId = initialQuestion._id;
-    if (isSignedIn && !anonymous) {
+    questionData.isAnonymous = anonymous;
+    if (isSignedIn) {
       // Use logged-in user's profile (you can adjust these fields based on your Clerk configuration)
       questionData.userId = user?.id;
       questionData.username = user?.fullName;
       questionData.email = user?.primaryEmailAddress?.emailAddress;
-      questionData.isAnonymous = false;
     } else {
       // For non-logged in or if anonymous is checked
       questionData.username = name.trim() || "Anonymous";
       questionData.email = email.trim();
-      questionData.isAnonymous = true;
     }
 
     const method = initialQuestion ? "PUT" : "POST";

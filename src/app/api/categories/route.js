@@ -25,14 +25,22 @@ export async function POST(request) {
   if (!data.name) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
     });
   }
 
-  const newCategory = await Category.create({
-    data,
-  });
-
-  return new Response(JSON.stringify(newCategory), { status: 201 });
+  try {
+    const newCategory = await Category.create(data);
+    return new Response(JSON.stringify(newCategory), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
 
 export async function DELETE(request, { params }) {

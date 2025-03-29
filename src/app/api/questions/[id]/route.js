@@ -19,6 +19,7 @@ export async function PATCH(request, { params }) {
         id,
         {
           answer: data.answer,
+          category: data.category,
           status: "answered",
           answeredAt: new Date(),
         },
