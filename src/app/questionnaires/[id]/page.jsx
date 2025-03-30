@@ -11,6 +11,7 @@ import { AiOutlineDelete } from "react-icons/ai";
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 import { HiOutlinePencil } from "react-icons/hi";
+import ResponseModal from "@/app/Components/ResponseModal";
 
 export default function QuestionDetailPage() {
   const { id } = useParams();
@@ -23,7 +24,7 @@ export default function QuestionDetailPage() {
   const [error, setError] = useState(null);
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [showInputModal, setShowInputModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showAnswerEditor, setShowAnswerEditor] = useState(false);
 
@@ -34,6 +35,14 @@ export default function QuestionDetailPage() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef(null);
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+  const showModal = (message, status) => {
+    setModal({ isOpen: true, message, status });
+  };
 
   // Fetch question details
   const fetchQuestion = async () => {
@@ -109,22 +118,30 @@ export default function QuestionDetailPage() {
 
   // Create a new category if none match the input and select it
   const handleAddNewCategory = async () => {
-    if (!categoryInput.trim()) return;
-    try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: categoryInput.trim() }),
-      });
-      if (res.ok) {
-        const newCat = await res.json();
-        setCategories((prev) => [...prev, newCat]);
-        setQuestionCategories((prev) => [...prev, newCat]);
-        setCategoryInput("");
-        setShowSuggestions(false);
+    if (!user?.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal(
+        "You have to be an Admin to change anything restricted",
+        "error"
+      );
+    } else {
+      if (!categoryInput.trim()) return;
+      try {
+        const res = await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: categoryInput.trim() }),
+        });
+        if (res.ok) {
+          const newCat = await res.json();
+          setCategories((prev) => [...prev, newCat]);
+          setQuestionCategories((prev) => [...prev, newCat]);
+          setCategoryInput("");
+          setShowSuggestions(false);
+        }
+      } catch (err) {
+        console.error("Error adding new category:", err);
       }
-    } catch (err) {
-      console.error("Error adding new category:", err);
     }
   };
 
@@ -136,42 +153,58 @@ export default function QuestionDetailPage() {
   // Handle answer submission (admin)
   const handleSubmitAnswer = async () => {
     if (!answer.trim()) return alert("Answer cannot be empty");
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/questions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answer,
-          userId: user.id,
-          category: questionCategories.map((c) => c._id),
-        }),
-      });
-      if (res.ok) {
-        const updatedQuestion = await res.json();
-        setQuestion(updatedQuestion);
-        setAnswer("");
-        setShowAnswerEditor(false);
-      } else {
-        alert("Failed to submit answer.");
+    if (!user?.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal(
+        "You have to be an Admin to change anything restricted",
+        "error"
+      );
+    } else {
+      setSubmitting(true);
+      try {
+        const res = await fetch(`/api/questions/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            answer,
+            userId: user.id,
+            category: questionCategories.map((c) => c._id),
+          }),
+        });
+        if (res.ok) {
+          const updatedQuestion = await res.json();
+          setQuestion(updatedQuestion);
+          setAnswer("");
+          setShowAnswerEditor(false);
+        } else {
+          alert("Failed to submit answer.");
+        }
+      } catch (err) {
+        console.error("Error submitting answer:", err);
+      } finally {
+        setSubmitting(false);
       }
-    } catch (err) {
-      console.error("Error submitting answer:", err);
-    } finally {
-      setSubmitting(false);
     }
   };
 
   // Handle question deletion (only for owner)
   const handleDeleteQuestion = async () => {
     if (!confirm("Are you sure you want to delete this question?")) return;
-    try {
-      const res = await fetch(`/api/questions/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        router.push("/questionnaires");
+    if (!user?.user.publicMetadata?.isAdmin) {
+      modal.isOpen = true;
+      showModal(
+        "You have to be an Admin to change anything restricted",
+        "error"
+      );
+    } else {
+      try {
+        const res = await fetch(`/api/questions/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          router.push("/questionnaires");
+        }
+      } catch (err) {
+        console.error("Error deleting question:", err);
       }
-    } catch (err) {
-      console.error("Error deleting question:", err);
     }
   };
 
@@ -189,7 +222,8 @@ export default function QuestionDetailPage() {
   return (
     <div className="max-w-3xl mx-auto p-4 min-h-screen space-y-6 relative">
       {/* Question Header */}
-      <h1 className="text-2xl font-bold mb-2">প্রশ্নঃ {question.title}</h1>
+      <h2 className="text-xl font-semibold mb-2 border-b inline">প্রশ্নঃ</h2>
+      <h1 className="text-2xl font-bold mb-2">{question.title}</h1>
       <p className="text-gray-600">
         বিস্তারিতঃ {question.description || "No description provided."}
       </p>
@@ -218,16 +252,19 @@ export default function QuestionDetailPage() {
           : ""}
         {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
       </p>
-
+      <p className=" italic text-sm text-pretty">
+        --উত্তর দেওয়ার আগ পর্যন্ত প্রশ্নকারী ও এডমিন প্রশ্নটি ইডিট ও ডিলিট করতে
+        পারবেন।--{" "}
+      </p>
       {/* Edit & Delete Options */}
       {isSignedIn &&
-        ((user?.id === question.userId && question.status === "pending") ||
-          user?.publicMetadata.isAdmin) && (
+        user?.id === question.userId &&
+        question.status === "pending" && (
           <div className="mt-3 flex gap-3">
             <button
               onClick={() => {
                 setEditingQuestion(question);
-                setShowModal(true);
+                setShowInputModal(true);
               }}
               className="bg-blue-500 text-white rounded p-2"
               title="Edit Question"
@@ -249,18 +286,16 @@ export default function QuestionDetailPage() {
         <h2 className="text-xl font-semibold mb-2 border-b inline">উত্তরঃ</h2>
         {question.answer ? (
           <div className="p-3 my-3 border rounded">
-            {user?.publicMetadata.isAdmin && (
-              <button
-                title="Edit Answer"
-                onClick={() => {
-                  setShowAnswerEditor(true);
-                  setAnswer(question.answer);
-                }}
-                className="mt-2 p-2  float-end bg-blue-500 text-white rounded"
-              >
-                <HiOutlinePencil />
-              </button>
-            )}
+            <button
+              title="Edit Answer"
+              onClick={() => {
+                setShowAnswerEditor(true);
+                setAnswer(question.answer);
+              }}
+              className="mt-2 p-2  float-end bg-blue-500 text-white rounded"
+            >
+              <HiOutlinePencil />
+            </button>
             <div
               className="p-5"
               dangerouslySetInnerHTML={{ __html: question.answer }}
@@ -274,14 +309,15 @@ export default function QuestionDetailPage() {
             </span>
           </div>
         ) : (
-          user?.publicMetadata.isAdmin && (
+          <div className="p-3 my-3 border rounded">
+            <p className="text-gray-500 text-sm">উত্তর দেওয়া হয় নি</p>
             <button
               onClick={() => setShowAnswerEditor(true)}
               className="mt-2 px-3 py-1 bg-green-500 text-white rounded"
             >
               Answer
             </button>
-          )
+          </div>
         )}
 
         {showAnswerEditor && (
@@ -366,16 +402,16 @@ export default function QuestionDetailPage() {
       </div>
 
       {/* Edit Question Modal */}
-      {showModal && (
+      {showInputModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
             className="bg-black/80 absolute inset-0"
-            onClick={() => setShowModal(false)}
+            onClick={() => setShowInputModal(false)}
           ></div>
           <div className="relative p-5 sm:w-2/3 w-full lg:w-1/3 border rounded bg-gray-900 text-white shadow-sm">
             <button
               className="absolute right-5 top-2 text-gray-400 hover:text-white"
-              onClick={() => setShowModal(false)}
+              onClick={() => setShowInputModal(false)}
             >
               ✖
             </button>
@@ -395,6 +431,12 @@ export default function QuestionDetailPage() {
         <h2 className="text-xl font-semibold mb-2">Discussion</h2>
         <VideoComments entityId={id} entityType="question" />
       </div> */}
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+      />
     </div>
   );
 }

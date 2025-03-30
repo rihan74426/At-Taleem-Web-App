@@ -54,6 +54,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id"); // Use "id" here
 
+  // If an id is provided, fetch that single question.
   if (id) {
     try {
       const question = await Question.findById(id).populate("category");
@@ -79,18 +80,27 @@ export async function GET(request) {
     }
   }
 
-  // If no specific question is requested, fetch multiple questions based on filters.
-  const status = searchParams.get("status"); // e.g., "pending" or "answered"
-  const category = searchParams.get("category"); // can be comma-separated list
+  // For multiple questions, build a query.
+  const status = searchParams.get("status");
+  const category = searchParams.get("category");
+  const search = searchParams.get("search");
   const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = parseInt(searchParams.get("limit") || "10", 10);
   const skip = (page - 1) * limit;
 
   let query = {};
+
   if (status) query.status = status;
   if (category) {
     const cats = category.split(",");
     query.category = { $in: cats };
+  }
+  if (search) {
+    // Search by title or description (case-insensitive)
+    query.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
   }
 
   try {

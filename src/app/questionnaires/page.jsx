@@ -89,7 +89,7 @@ export default function QuestionnairePage() {
             setSearchTerm(e.target.value);
             setPage(1);
           }}
-          className="border p-2 rounded w-full md:w-1/3"
+          className="border p-2 rounded w-full dark:bg-black md:w-1/3"
         />
         <div className="flex gap-4">
           <select
@@ -144,9 +144,9 @@ export default function QuestionnairePage() {
                 {question.title}
               </h2>
               <p className="text-gray-600">
-                {question.description
+                {question.description && question.description.length > 100
                   ? question.description.substring(0, 100) + "..."
-                  : "No description."}
+                  : question.description || "No বিস্তারিত."}
               </p>
             </Link>
             <div className="flex flex-col sm:grid sm:grid-cols-3 md:grid-cols-4  items-center gap-2 mt-2">
