@@ -54,7 +54,7 @@ export default function Header() {
     <Navbar
       fluid
       rounded
-      className="anek-bangla-font bg-blue-300 dark:bg-gray-900"
+      className="anek-bangla-font text-center bg-blue-300 dark:bg-gray-900"
     >
       <Navbar.Brand href="/">
         <Image
@@ -65,7 +65,7 @@ export default function Header() {
           className="rounded-full mx-2 object-contain"
         />
 
-        <span className="self-center mirzaFont whitespace-nowrap text-xl font-semibold dark:text-white">
+        <span className="self-center mirzaFont  whitespace-nowrap text-xl font-semibold dark:text-white">
           At-Taleem
         </span>
       </Navbar.Brand>
@@ -74,15 +74,13 @@ export default function Header() {
           type="text"
           placeholder="Search..."
           rightIcon={AiOutlineSearch}
-          className="hidden lg:inline"
+          className="w-2/3 sm:w-full "
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </form>
-      <Button className="w-12 h-10 lg:hidden" color="gray" pill>
-        <AiOutlineSearch />
-      </Button>
-      <div className="order-2 items-center flex">
+
+      <div className="lg:order-2 hidden sm:flex items-center">
         <DarkThemeToggle onClick={toggleMode} className="m-2" color="red" />
         <SignedIn>
           <UserButton appearance={{ baseTheme: dark }} />
@@ -98,6 +96,26 @@ export default function Header() {
       </div>
       <Navbar.Toggle />
       <Navbar.Collapse>
+        <div className="inline sm:hidden place-content-center self-center items-center">
+          <div
+            onClick={toggleMode}
+            className=" m-1 border flex items-center rounded-lg px-2 text-sm font-medium"
+          >
+            <DarkThemeToggle className="m-1" color="red" />
+            <p>Light/Dark Mode</p>
+          </div>
+          <SignedIn>
+            <UserButton appearance={{ baseTheme: dark }} />
+          </SignedIn>
+          <SignedOut>
+            <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+              <SignInButton mode="modal" />
+            </div>
+            <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+              <SignUpButton mode="modal" />
+            </div>
+          </SignedOut>
+        </div>
         <Link href="/">
           <Navbar.Link active={path === "/"} as={"div"}>
             অবতরনিকা

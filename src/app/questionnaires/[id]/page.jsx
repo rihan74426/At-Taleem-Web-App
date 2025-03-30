@@ -213,7 +213,7 @@ export default function QuestionDetailPage() {
       {/* Author Info */}
       <p className="mt-1 text-sm text-gray-500">
         প্রশ্নটি করেছেনঃ{" "}
-        {user.publicMetadata.isAdmin && question.isAnonymous
+        {user?.publicMetadata?.isAdmin && question.isAnonymous
           ? question.username + " as "
           : ""}
         {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}

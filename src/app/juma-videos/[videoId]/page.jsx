@@ -117,7 +117,7 @@ export default function VideoDetailPage() {
       </div>
 
       {/* Video Player */}
-      <div className="relative  flex place-content-center w-full pb-[56.25%] mb-6">
+      <div className="relative flex place-content-center w-full sm:mb-6">
         {" "}
         {video.platform === "YouTube" ? (
           <ReactPlayer
@@ -129,7 +129,7 @@ export default function VideoDetailPage() {
           />
         ) : (
           <div
-            className="absolute items-center place-content-center flex w-full h-full"
+            className="items-center place-content-center flex w-full h-full"
             dangerouslySetInnerHTML={{ __html: video.videoUrl }}
           />
         )}

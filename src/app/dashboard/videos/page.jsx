@@ -38,7 +38,7 @@ export default function AdminVideosPage({
     e.preventDefault();
     if (!user?.publicMetadata?.isAdmin) {
       modal.isOpen = true;
-      showModal("Please be an Admin first to change anything", "error");
+      showModal("You have to be an Admin first to change anything", "error");
     } else {
       e.preventDefault();
       const payload = {

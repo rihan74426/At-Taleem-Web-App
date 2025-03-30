@@ -197,7 +197,10 @@ export default function VideoComments({ videoId }) {
                 ❤️ {comment?.likes?.length || 0}
               </button>
               <button
-                onClick={() => setReplyingTo(comment._id)}
+                onClick={() => {
+                  if (!user?.user) alert("You must be logged in to reply.");
+                  else setReplyingTo(comment._id);
+                }}
                 className="text-green-400 hover:text-green-600"
               >
                 Reply
