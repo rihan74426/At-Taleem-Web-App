@@ -121,19 +121,18 @@ export default function VideoDetailPage() {
       </div>
 
       {/* Video Player */}
-      <div className="relative flex place-content-center w-full sm:mb-6">
-        {" "}
+      <div className="relative w-full aspect-video mb-6">
         {video.platform === "YouTube" ? (
           <ReactPlayer
             url={video.videoUrl}
             width="100%"
             height="100%"
-            className="absolute top-0 left-0"
+            className="absolute inset-0"
             controls
           />
         ) : (
           <div
-            className="items-center place-content-center flex w-full h-full"
+            className="absolute inset-0 top-36 sm:top-28 md:top-0 flex items-center justify-center"
             dangerouslySetInnerHTML={{ __html: video.videoUrl }}
           />
         )}

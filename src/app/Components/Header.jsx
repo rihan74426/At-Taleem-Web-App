@@ -78,7 +78,7 @@ export default function Header() {
           className="rounded-full mx-2 object-contain"
         />
 
-        <span className="self-center mirzaFont  whitespace-nowrap text-xl font-semibold dark:text-white">
+        <span className="self-center mirzaFont hidden sm:inline whitespace-nowrap text-xl font-semibold dark:text-white">
           At-Taleem
         </span>
       </Navbar.Brand>
@@ -87,7 +87,7 @@ export default function Header() {
           type="text"
           placeholder="Search..."
           rightIcon={AiOutlineSearch}
-          className="w-2/3 sm:w-full "
+          className="w-full"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -108,19 +108,29 @@ export default function Header() {
         </SignedOut>
       </div>
       <Navbar.Toggle />
-
-      <Navbar.Collapse ref={collapseRef}>
+      <Navbar.Collapse>
         <div className="inline w-full sm:hidden place-content-center self-center items-center">
           <SignedIn>
             <UserButton appearance={{ baseTheme: dark }} />
           </SignedIn>
           <SignedOut>
-            <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
-              <SignInButton mode="modal" />
-            </div>
-            <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
-              <SignUpButton mode="modal" />
-            </div>
+            <SignInButton
+              children={
+                <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+                  Log In
+                </div>
+              }
+              mode="modal"
+            />
+
+            <SignUpButton
+              children={
+                <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+                  Sign Up
+                </div>
+              }
+              mode="modal"
+            />
           </SignedOut>
           <div
             onClick={toggleMode}
