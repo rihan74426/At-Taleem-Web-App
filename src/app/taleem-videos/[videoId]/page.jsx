@@ -132,7 +132,7 @@ export default function VideoDetailPage() {
           />
         ) : (
           <div
-            className="absolute inset-0 top-36 sm:top-28 md:top-0 flex items-center justify-center"
+            className="inset-0 flex items-center justify-center"
             dangerouslySetInnerHTML={{ __html: video.videoUrl }}
           />
         )}
