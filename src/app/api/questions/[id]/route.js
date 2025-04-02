@@ -6,7 +6,7 @@ export async function PATCH(request, { params }) {
   await connect();
   try {
     // Extract the question ID from params
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
 
     // Validate that the increment value is provided
