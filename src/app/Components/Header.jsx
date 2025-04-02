@@ -109,36 +109,12 @@ export default function Header() {
       </div>
       <Navbar.Toggle />
       <Navbar.Collapse>
-        <div className="inline w-full sm:hidden place-content-center self-center items-center">
-          <SignedIn>
-            <UserButton appearance={{ baseTheme: dark }} />
-          </SignedIn>
-          <SignedOut>
-            <SignInButton
-              children={
-                <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
-                  Log In
-                </div>
-              }
-              mode="modal"
-            />
-
-            <SignUpButton
-              children={
-                <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
-                  Sign Up
-                </div>
-              }
-              mode="modal"
-            />
-          </SignedOut>
-          <div
-            onClick={toggleMode}
-            className="flex py-2 place-content-center items-center pl-3 pr-4 md:p-0 border-b hover:cursor-pointer border-gray-100 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white md:border-0 md:hover:bg-transparent md:hover:text-cyan-700 md:dark:hover:bg-transparent md:dark:hover:text-white"
-          >
-            <DarkThemeToggle className="m-1" color="red" />
-            <p>Light/Dark Mode</p>
-          </div>
+        <div
+          onClick={toggleMode}
+          className="flex py-2 sm:hidden place-content-center items-center pl-3 pr-4 md:p-0 border-b hover:cursor-pointer border-gray-100 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white md:border-0 md:hover:bg-transparent md:hover:text-cyan-700 md:dark:hover:bg-transparent md:dark:hover:text-white"
+        >
+          <DarkThemeToggle className="m-1" color="red" />
+          <p>Light/Dark Mode</p>
         </div>
         <Link href="/">
           <Navbar.Link active={path === "/"} as={"div"}>
@@ -172,6 +148,30 @@ export default function Header() {
             </Navbar.Link>
           </Link>
         )}
+        <div className="inline w-full sm:hidden place-content-center self-center items-center">
+          <SignedIn>
+            <UserButton appearance={{ baseTheme: dark }} />
+          </SignedIn>
+          <SignedOut>
+            <SignInButton
+              children={
+                <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+                  Log In
+                </div>
+              }
+              mode="modal"
+            />
+
+            <SignUpButton
+              children={
+                <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium border bg-blue-400 dark:bg-black text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+                  Sign Up
+                </div>
+              }
+              mode="modal"
+            />
+          </SignedOut>
+        </div>
       </Navbar.Collapse>
     </Navbar>
   );
