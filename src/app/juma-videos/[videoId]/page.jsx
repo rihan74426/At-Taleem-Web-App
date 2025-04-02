@@ -95,7 +95,7 @@ export default function VideoDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 min-h-screen">
-      <div className="flex justify-between">
+      <div className="flex justify-between mb-6">
         <h1 className="text-3xl font-bold mb-4">{video.title}</h1>
 
         <div className="flex gap-2 ">
@@ -128,7 +128,7 @@ export default function VideoDetailPage() {
           />
         ) : (
           <div
-            className="absolute inset-0 top-36 sm:top-28 md:top-0 flex items-center justify-center"
+            className="inset-0 flex items-center justify-center"
             dangerouslySetInnerHTML={{ __html: video.videoUrl }}
           />
         )}
