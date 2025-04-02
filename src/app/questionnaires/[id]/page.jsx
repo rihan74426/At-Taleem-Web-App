@@ -208,6 +208,31 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleHelpful = async () => {
+    // Optionally, you might want to prevent multiple votes by the same user.
+    if (!isSignedIn) return alert("আগে লগ ইন করুন দয়া করে!");
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/questions/${question._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ increment: 1 }),
+      });
+      if (res.ok) {
+        const updatedQuestion = await res.json();
+        setQuestion(updatedQuestion); // Update the parent component's state with the new question data
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "Failed to update helpful count");
+      }
+    } catch (error) {
+      console.error("Error updating helpful count:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading)
     return <p className="text-center text-gray-500 min-h-screen">Loading...</p>;
   if (error)
@@ -307,6 +332,14 @@ export default function QuestionDetailPage() {
             <span className="text-sm text-gray-500">
               উত্তর প্রদানেঃ মাওলানা মুহাম্মদ নিজাম উদ্দীন রশিদী
             </span>
+            <button
+              onClick={handleHelpful}
+              disabled={loading}
+              className="flex items-center gap-1 text-blue-500 hover:text-blue-700"
+              title="যদি উপকৃত হোন"
+            >
+              উপকৃত হলাম {question.helpfulCount || 0}
+            </button>
           </div>
         ) : (
           <div className="p-3 my-3 border rounded">

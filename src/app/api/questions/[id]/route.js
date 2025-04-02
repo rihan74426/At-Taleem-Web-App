@@ -5,62 +5,48 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function PATCH(request, { params }) {
   await connect();
   try {
-    const { id } = await params; // params is an object with id property
+    // Extract the question ID from params
+    const { id } = params;
     const data = await request.json();
 
-    // Validate that answer is provided
-    if (!data.answer) {
-      return new Response(JSON.stringify({ error: "Missing answer" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    } else {
-      const updatedQuestion = await Question.findByIdAndUpdate(
-        id,
+    // Validate that the increment value is provided
+    if (!data.increment) {
+      return new Response(
+        JSON.stringify({ error: "Missing increment value" }),
         {
-          answer: data.answer,
-          category: data.category,
-          status: "answered",
-          answeredAt: new Date(),
-        },
-        { new: true }
-      );
-
-      if (!updatedQuestion) {
-        return new Response(JSON.stringify({ error: "Question not found" }), {
-          status: 404,
+          status: 400,
           headers: { "Content-Type": "application/json" },
-        });
-      }
+        }
+      );
+    }
 
-      // Update the question with the answer, change status, and set answeredAt timestamp
+    // Update the helpfulCount by incrementing it
+    const updatedQuestion = await Question.findByIdAndUpdate(
+      id,
+      { $inc: { helpfulCount: data.increment } },
+      { new: true }
+    );
 
-      // Trigger email if question has an email and its helpfulCount is 10 or more
-      // if (updatedQuestion.email) {
-      //   await sendEmail({
-      //     to: updatedQuestion.email,
-      //     subject: "Your Question Has Been Answered",
-      //     text: `Your question "${updatedQuestion.title}" has been answered: ${updatedQuestion.answer}`,
-      //   });
-      // }
-      // if (updatedQuestion.helpfulCount >= 10) {
-      //   await sendEmail({
-      //     to: updatedQuestion.email,
-      //     subject: "Your Question Helped more than 10 people",
-      //   });
-      // }
-
-      return new Response(JSON.stringify(updatedQuestion), {
-        status: 200,
+    if (!updatedQuestion) {
+      return new Response(JSON.stringify({ error: "Question not found" }), {
+        status: 404,
         headers: { "Content-Type": "application/json" },
       });
     }
-  } catch (error) {
-    console.error("Error updating question:", error);
-    return new Response(JSON.stringify({ error: "Error updating question" }), {
-      status: 500,
+
+    return new Response(JSON.stringify(updatedQuestion), {
+      status: 200,
       headers: { "Content-Type": "application/json" },
     });
+  } catch (error) {
+    console.error("Error updating helpful count:", error);
+    return new Response(
+      JSON.stringify({ error: "Error updating helpful count" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 
