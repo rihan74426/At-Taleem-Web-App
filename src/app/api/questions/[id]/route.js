@@ -5,43 +5,44 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function PATCH(request, { params }) {
   await connect();
   try {
-    // Extract the question ID from params
-    const { id } = await params;
-    const data = await request.json();
+    const { id } = await params; // id from URL params
+    const { userId } = await request.json();
 
-    // Validate that the increment value is provided
-    if (!data.increment) {
-      return new Response(
-        JSON.stringify({ error: "Missing increment value" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Missing userId" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Update the helpfulCount by incrementing it
-    const updatedQuestion = await Question.findByIdAndUpdate(
-      id,
-      { $inc: { helpfulCount: data.increment } },
-      { new: true }
-    );
-
-    if (!updatedQuestion) {
+    // Fetch the current question
+    const question = await Question.findById(id);
+    if (!question) {
       return new Response(JSON.stringify({ error: "Question not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       });
     }
 
+    // Check if the user already voted helpful
+    const index = question.helpfulVotes.indexOf(userId);
+    if (index === -1) {
+      // Not voted yet, add the user's vote
+      question.helpfulVotes.push(userId);
+    } else {
+      // User already voted, so remove their vote
+      question.helpfulVotes.splice(index, 1);
+    }
+
+    const updatedQuestion = await question.save();
     return new Response(JSON.stringify(updatedQuestion), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error updating helpful count:", error);
+    console.error("Error toggling helpful vote:", error);
     return new Response(
-      JSON.stringify({ error: "Error updating helpful count" }),
+      JSON.stringify({ error: "Error toggling helpful vote" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -53,7 +54,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   await connect();
   try {
-    const { id } = params;
+    const { id } = await params;
     const deletedQuestion = await Question.findByIdAndDelete(id);
     if (!deletedQuestion) {
       return new Response(JSON.stringify({ error: "Question not found" }), {

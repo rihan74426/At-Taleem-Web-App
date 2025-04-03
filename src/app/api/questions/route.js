@@ -57,7 +57,7 @@ export async function GET(request) {
   // If an id is provided, fetch that single question.
   if (id) {
     try {
-      const question = await Question.findById(id).populate("category");
+      const question = await Question.findById(id);
       if (!question) {
         return new Response(JSON.stringify({ error: "Question not found" }), {
           status: 404,

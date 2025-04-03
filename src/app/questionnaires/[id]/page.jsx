@@ -207,27 +207,26 @@ export default function QuestionDetailPage() {
       }
     }
   };
+  const hasVoted = isSignedIn && question?.helpfulVotes.includes(user.id);
 
-  const handleHelpful = async () => {
-    // Optionally, you might want to prevent multiple votes by the same user.
-    if (!isSignedIn) return alert("আগে লগ ইন করুন দয়া করে!");
-
+  const handleToggle = async () => {
+    if (!isSignedIn) return alert("Please sign in to vote.");
     setLoading(true);
     try {
       const res = await fetch(`/api/questions/${question._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ increment: 1 }),
+        body: JSON.stringify({ userId: user.id }),
       });
       if (res.ok) {
         const updatedQuestion = await res.json();
-        setQuestion(updatedQuestion); // Update the parent component's state with the new question data
+        setQuestion(updatedQuestion);
       } else {
         const errorData = await res.json();
-        alert(errorData.error || "Failed to update helpful count");
+        alert(errorData.error || "Failed to update vote");
       }
-    } catch (error) {
-      console.error("Error updating helpful count:", error);
+    } catch (err) {
+      console.error("Error toggling helpful vote:", err);
     } finally {
       setLoading(false);
     }
@@ -317,7 +316,7 @@ export default function QuestionDetailPage() {
                 setShowAnswerEditor(true);
                 setAnswer(question.answer);
               }}
-              className="mt-2 p-2  float-end bg-blue-500 text-white rounded"
+              className="mt-2 p-2  float-end bg-blue-500 text-white rounded hover:bg-blue-700"
             >
               <HiOutlinePencil />
             </button>
@@ -325,21 +324,29 @@ export default function QuestionDetailPage() {
               className="p-5"
               dangerouslySetInnerHTML={{ __html: question.answer }}
             />
-            <p className="text-gray-500 text-sm">
-              উত্তর প্রদানের তারিখঃ{" "}
-              {new Date(question.answeredAt).toLocaleDateString()}
-            </p>
-            <span className="text-sm text-gray-500">
-              উত্তর প্রদানেঃ মাওলানা মুহাম্মদ নিজাম উদ্দীন রশিদী
-            </span>
-            <button
-              onClick={handleHelpful}
-              disabled={loading}
-              className="flex items-center gap-1 text-blue-500 hover:text-blue-700"
-              title="যদি উপকৃত হোন"
-            >
-              উপকৃত হলাম {question.helpfulCount || 0}
-            </button>
+            <div className="flex justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">
+                  উত্তর প্রদানের তারিখঃ{" "}
+                  {new Date(question.answeredAt).toLocaleDateString()}
+                </p>
+                <span className="text-sm text-gray-500">
+                  উত্তর প্রদানেঃ মাওলানা মুহাম্মদ নিজাম উদ্দীন রশিদী
+                </span>
+              </div>
+              <button
+                onClick={handleToggle}
+                disabled={loading}
+                className={`flex place-self-end items-center p-2 rounded gap-1 ${
+                  hasVoted
+                    ? "bg-green-600 hover:bg-green-800"
+                    : "bg-blue-600 hover:bg-blue-800"
+                }`}
+                title="Helpful?"
+              >
+                উপকৃত হলাম {question.helpfulVotes?.length}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="p-3 my-3 border rounded">

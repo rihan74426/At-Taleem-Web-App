@@ -12,7 +12,7 @@ const QuestionSchema = new mongoose.Schema(
     status: { type: String, enum: ["pending", "answered"], default: "pending" },
     answer: { type: String },
     answeredAt: { type: Date },
-    helpfulCount: { type: Number, default: 0 }, // Track helpful votes
+    helpfulVotes: { type: [String], default: [] },
   },
   { timestamps: true }
 );
