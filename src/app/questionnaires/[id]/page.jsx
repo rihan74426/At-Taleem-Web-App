@@ -277,7 +277,7 @@ export default function QuestionDetailPage() {
           : ""}
         {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
       </p>
-      <p className=" italic text-sm text-pretty">
+      <p className=" italic text-sm text-pretty text-center">
         --উত্তর দেওয়ার আগ পর্যন্ত প্রশ্নকারী ও এডমিন প্রশ্নটি ইডিট ও ডিলিট করতে
         পারবেন।--{" "}
       </p>
@@ -341,11 +341,11 @@ export default function QuestionDetailPage() {
                 className={`flex place-self-end items-center p-2 rounded gap-1 ${
                   hasVoted
                     ? "bg-green-600 hover:bg-green-800"
-                    : "bg-blue-600 hover:bg-blue-800"
+                    : "bg-yellow-600 hover:bg-yellow-800"
                 }`}
                 title="Helpful?"
               >
-                উপকৃত হলাম {question.helpfulVotes?.length}
+                উপকৃত হলাম ({question.helpfulVotes?.length})
               </button>
             </div>
           </div>
@@ -472,7 +472,7 @@ export default function QuestionDetailPage() {
         <h2 className="text-xl font-semibold mb-2">Discussion</h2>
         <VideoComments entityId={id} entityType="question" />
       </div> */}
-      <QuestionComments questionId={question._id} />
+      {question.answer && <QuestionComments questionId={question._id} />}
       <ResponseModal
         isOpen={modal.isOpen}
         message={modal.message}

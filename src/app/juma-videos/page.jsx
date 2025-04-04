@@ -85,7 +85,7 @@ export default function VideosPage() {
             <BsList />
           </button>
         </div>
-        {user.isSignedIn && user.user.publicMetadata.isAdmin && (
+        {user.isSignedIn && user.user?.publicMetadata.isAdmin && (
           <button
             onClick={() => {
               setEditingVideo(null);

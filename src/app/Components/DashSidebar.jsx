@@ -14,6 +14,7 @@ import { SignOutButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { AiOutlineVideoCamera } from "react-icons/ai";
+import { BsQuestionOctagon } from "react-icons/bs";
 export default function DashSidebar() {
   const [tab, setTab] = useState("");
   const searchParams = useSearchParams();
@@ -89,6 +90,16 @@ export default function DashSidebar() {
               </Sidebar.Item>
             </Link>
           )}
+          <Link href="/dashboard?tab=askQuestion">
+            <Sidebar.Item
+              active={tab === "askQuestion"}
+              icon={BsQuestionOctagon}
+              labelColor="dark"
+              as="div"
+            >
+              Ask a question
+            </Sidebar.Item>
+          </Link>
           <Sidebar.Item icon={HiArrowSmRight} className="cursor-pointer">
             <SignOutButton />
           </Sidebar.Item>

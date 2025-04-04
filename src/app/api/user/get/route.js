@@ -1,6 +1,6 @@
-import User from '../../../../lib/models/user.model';
-import { connect } from '../../../../lib/mongodb/mongoose';
-import { currentUser } from '@clerk/nextjs/server';
+import User from "../../../../lib/models/user.model";
+import { connect } from "../../../../lib/mongodb/mongoose";
+import { currentUser } from "@clerk/nextjs/server";
 
 export const POST = async (req) => {
   const user = await currentUser();
@@ -9,13 +9,13 @@ export const POST = async (req) => {
     await connect();
     const data = await req.json();
 
-    if (!user.publicMetadata.isAdmin) {
-      return new Response('Unauthorized', { status: 401 });
+    if (!user?.publicMetadata.isAdmin) {
+      return new Response("Unauthorized", { status: 401 });
     }
 
     const startIndex = parseInt(data.startIndex) || 0;
     const limit = parseInt(data.limit) || 9;
-    const sortDirection = data.sort === 'asc' ? 1 : -1;
+    const sortDirection = data.sort === "asc" ? 1 : -1;
     const users = await User.find()
       .sort({ createdAt: sortDirection })
       .skip(startIndex)
@@ -35,7 +35,7 @@ export const POST = async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.log('Error getting the users :', error);
-    return new Response('Error getting the users', { status: 500 });
+    console.log("Error getting the users :", error);
+    return new Response("Error getting the users", { status: 500 });
   }
 };

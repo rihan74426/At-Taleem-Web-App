@@ -149,9 +149,14 @@ export default function Header() {
           </Link>
         )}
         <div className="inline w-full sm:hidden place-content-center self-center items-center">
-          <SignedIn>
-            <UserButton appearance={{ baseTheme: dark }} />
-          </SignedIn>
+          <SignedIn
+            children={
+              <div className="m-1 rounded-lg px-2 py-2 text-sm font-medium bg-blue-400 dark:bg-gray-900 text-gray-800 hover:bg-blue-800 hover:text-white dark:text-white dark:hover:bg-gray-700">
+                <UserButton appearance={{ baseTheme: dark }} />
+              </div>
+            }
+          />
+
           <SignedOut>
             <SignInButton
               children={

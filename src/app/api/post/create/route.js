@@ -12,7 +12,7 @@ export const POST = async (req) => {
     if (
       !user ||
       user.publicMetadata.userMongoId !== data.userMongoId ||
-      user.publicMetadata.isAdmin !== true
+      user?.publicMetadata.isAdmin !== true
     ) {
       return new Response("Unauthorized", { status: 401 });
     }

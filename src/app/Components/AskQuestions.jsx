@@ -63,7 +63,7 @@ export default function AskQuestionForm({
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 ">
+    <div className=" min-w-96 mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">
         {initialQuestion ? "Edit Your Question" : "Add a Question"}
       </h1>

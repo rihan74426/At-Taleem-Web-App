@@ -1,6 +1,6 @@
-import Post from '../../../../lib/models/post.model.js';
-import { connect } from '../../../../lib/mongodb/mongoose.js';
-import { currentUser } from '@clerk/nextjs/server';
+import Post from "../../../../lib/models/post.model.js";
+import { connect } from "../../../../lib/mongodb/mongoose.js";
+import { currentUser } from "@clerk/nextjs/server";
 
 export const PUT = async (req) => {
   const user = await currentUser();
@@ -11,9 +11,9 @@ export const PUT = async (req) => {
     if (
       !user ||
       user.publicMetadata.userMongoId !== data.userMongoId ||
-      user.publicMetadata.isAdmin !== true
+      user?.publicMetadata.isAdmin !== true
     ) {
-      return new Response('Unauthorized', {
+      return new Response("Unauthorized", {
         status: 401,
       });
     }
@@ -35,8 +35,8 @@ export const PUT = async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.log('Error creating post:', error);
-    return new Response('Error creating post', {
+    console.log("Error creating post:", error);
+    return new Response("Error creating post", {
       status: 500,
     });
   }
