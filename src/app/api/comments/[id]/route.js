@@ -10,7 +10,6 @@ export async function PATCH(request, { params }) {
     if (!content) {
       return new Response(JSON.stringify({ error: "Missing content" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -19,22 +18,18 @@ export async function PATCH(request, { params }) {
       { content },
       { new: true }
     );
+
     if (!updatedComment) {
       return new Response(JSON.stringify({ error: "Comment not found" }), {
         status: 404,
-        headers: { "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify(updatedComment), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify(updatedComment), { status: 200 });
   } catch (error) {
     console.error("Error editing comment:", error);
     return new Response(JSON.stringify({ error: "Error editing comment" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
     });
   }
 }
@@ -49,26 +44,21 @@ export async function DELETE(request, { params }) {
     if (!deletedComment) {
       return new Response(JSON.stringify({ error: "Comment not found" }), {
         status: 404,
-        headers: { "Content-Type": "application/json" },
       });
     }
 
-    // Optionally: If this comment is a reply, remove it from the parent's replies array.
+    // Remove comment from parent's replies list
     if (deletedComment.parentComment) {
       await Comment.findByIdAndUpdate(deletedComment.parentComment, {
         $pull: { replies: deletedComment._id },
       });
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (error) {
     console.error("Error deleting comment:", error);
     return new Response(JSON.stringify({ error: "Error deleting comment" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
     });
   }
 }

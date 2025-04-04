@@ -12,6 +12,7 @@ const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 import { HiOutlinePencil } from "react-icons/hi";
 import ResponseModal from "@/app/Components/ResponseModal";
+import QuestionComments from "@/app/Components/QuestionComment";
 
 export default function QuestionDetailPage() {
   const { id } = useParams();
@@ -458,7 +459,7 @@ export default function QuestionDetailPage() {
             <AskQuestionForm
               initialQuestion={editingQuestion}
               onQuestionSubmitted={() => {
-                setShowModal(false);
+                setShowInputModal(false);
                 fetchQuestion();
               }}
             />
@@ -471,6 +472,7 @@ export default function QuestionDetailPage() {
         <h2 className="text-xl font-semibold mb-2">Discussion</h2>
         <VideoComments entityId={id} entityType="question" />
       </div> */}
+      <QuestionComments questionId={question._id} />
       <ResponseModal
         isOpen={modal.isOpen}
         message={modal.message}

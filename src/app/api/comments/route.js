@@ -4,29 +4,35 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function GET(request) {
   await connect();
   const { searchParams } = new URL(request.url);
-  const videoId = searchParams.get("videoId");
+  const entityId = searchParams.get("entityId");
+  const commentType = searchParams.get("commentType"); // "video" or "question"
 
-  if (!videoId) {
-    return new Response(JSON.stringify({ error: "Missing videoId" }), {
-      status: 400,
-    });
+  if (!entityId || !commentType) {
+    return new Response(
+      JSON.stringify({ error: "Missing entityId or commentType" }),
+      {
+        status: 400,
+      }
+    );
   }
 
   try {
-    const comments = await Comment.find({ videoId, parentComment: null })
+    const comments = await Comment.find({
+      entityId,
+      commentType,
+      parentComment: null,
+    })
       .populate({
         path: "replies",
-        options: { sort: { createdAt: -1 } },
+        options: { sort: { createdAt: +1 } },
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: +1 });
 
     return new Response(JSON.stringify({ comments }), { status: 200 });
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: "Error fetching comments", error }),
-      {
-        status: 500,
-      }
+      JSON.stringify({ error: "Error fetching comments", details: error }),
+      { status: 500 }
     );
   }
 }
@@ -35,14 +41,24 @@ export async function POST(request) {
   await connect();
   const data = await request.json();
 
-  if (!data.videoId || !data.userId || !data.username || !data.content) {
+  if (
+    !data.entityId ||
+    !data.commentType ||
+    !data.userId ||
+    !data.username ||
+    !data.content
+  ) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
       status: 400,
     });
   }
 
   const newComment = await Comment.create({
-    ...data,
+    entityId: data.entityId, // Can be a videoId or questionId
+    commentType: data.commentType, // "video" or "question"
+    userId: data.userId,
+    username: data.username,
+    content: data.content,
     parentComment: data.parentComment || null,
   });
 
@@ -79,10 +95,8 @@ export async function PUT(request) {
     });
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: "Error liking comment", error }),
-      {
-        status: 500,
-      }
+      JSON.stringify({ error: "Error liking comment", details: error }),
+      { status: 500 }
     );
   }
 }

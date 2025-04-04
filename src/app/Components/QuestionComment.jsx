@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AiFillEdit } from "react-icons/ai"; // Example edit icon
 import { BsTrash } from "react-icons/bs"; // Example delete icon
 
-export default function VideoComments({ videoId }) {
+export default function QuestionComments({ questionId }) {
   const [comments, setComments] = useState([]);
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
@@ -17,7 +17,7 @@ export default function VideoComments({ videoId }) {
   const fetchComments = async () => {
     try {
       const res = await fetch(
-        `/api/comments?entityId=${videoId}&commentType=video`
+        `/api/comments?entityId=${questionId}&commentType=question`
       );
       if (res.ok) {
         const data = await res.json();
@@ -30,7 +30,7 @@ export default function VideoComments({ videoId }) {
 
   useEffect(() => {
     fetchComments();
-  }, [videoId]);
+  }, [questionId]);
 
   // Submit a new comment
   const handleCommentSubmit = async (e) => {
@@ -42,8 +42,8 @@ export default function VideoComments({ videoId }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        entityId: videoId,
-        commentType: "video",
+        entityId: questionId,
+        commentType: "question",
         userId: user?.user.id,
         username: user?.user.fullName,
         content: newComment.trim(),
@@ -66,8 +66,8 @@ export default function VideoComments({ videoId }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        entityId: videoId,
-        commentType: "video",
+        entityId: questionId,
+        commentType: "question",
         userId: user?.user.id,
         username: user?.user.fullName,
         content: replyText.trim(),
@@ -232,7 +232,7 @@ export default function VideoComments({ videoId }) {
             {replyingTo === comment._id && (
               <form
                 onSubmit={(e) => handleReplySubmit(e, comment._id)}
-                className="mt-2"
+                className="mt-2 border-l ml-8 p-2"
               >
                 <textarea
                   className="w-full border rounded p-2 dark:bg-black"

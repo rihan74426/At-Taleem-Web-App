@@ -153,7 +153,7 @@ export default function VideoDetailPage() {
       )}
 
       {/* Comments Section */}
-      <VideoComments videoId={video._id} />
+      <VideoComments videoId={video._id} commentOf={"video"} />
 
       {/* Modal for Editing Video */}
       {videoModal && (
