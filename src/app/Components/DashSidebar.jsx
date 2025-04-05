@@ -7,6 +7,7 @@ import {
   HiDocumentText,
   HiOutlineUserGroup,
   HiChartPie,
+  HiBookOpen,
 } from "react-icons/hi";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -87,6 +88,17 @@ export default function DashSidebar() {
                 as="div"
               >
                 Add New Video
+              </Sidebar.Item>
+            </Link>
+          )}
+          {user?.publicMetadata?.isAdmin && (
+            <Link href="/dashboard?tab=addBooks">
+              <Sidebar.Item
+                active={tab === "addBooks"}
+                icon={HiBookOpen}
+                as="div"
+              >
+                Add a Book
               </Sidebar.Item>
             </Link>
           )}

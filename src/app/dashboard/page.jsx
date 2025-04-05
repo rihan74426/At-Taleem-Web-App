@@ -10,6 +10,7 @@ import DashUsers from "../Components/DashUsers";
 import DashboardComp from "../Components/DashboardComp";
 import AdminVideosPage from "./videos/page";
 import AskQuestionForm from "../Components/AskQuestions";
+import AddBookForm from "../Components/AddBooks";
 
 export default function Dashboard() {
   const searchParams = useSearchParams();
@@ -36,6 +37,7 @@ export default function Dashboard() {
       {tab === "addVideo" && <AdminVideosPage />}
       {tab === "dash" && <DashboardComp />}
       {tab === "askQuestion" && <AskQuestionForm />}
+      {tab === "addBooks" && <AddBookForm />}
     </div>
   );
 }
