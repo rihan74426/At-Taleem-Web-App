@@ -1,8 +1,33 @@
 import Book from "@/lib/models/Book";
 import { connect } from "@/lib/mongodb/mongoose";
 
-export async function GET() {
+export async function GET(request) {
   await connect();
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id"); // Use "id" here
+
+  // If an id is provided, fetch that single question.
+  if (id) {
+    try {
+      const book = await Book.findById(id);
+      if (!book) {
+        return new Response(JSON.stringify({ error: "book not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ book }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("Error fetching book:", error);
+      return new Response(JSON.stringify({ error: "Error fetching books" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
   try {
     const books = await Book.find({}).sort({ createdAt: -1 });
     return new Response(JSON.stringify({ books }), {
