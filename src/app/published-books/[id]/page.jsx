@@ -2,15 +2,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-// Core viewer
-import { Viewer, Worker } from "@react-pdf-viewer/core";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
 
-// Plugins
-
-// Import styles
-import "@react-pdf-viewer/core/lib/styles/index.css";
-
-// Create new plugin instance
+// Set up the PDF worker to point to your public folder file
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
 export default function BookDetailPage() {
   const { id } = useParams();
@@ -19,7 +16,6 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [numPages, setNumPages] = useState(null);
 
   // Fetch book details from your API
   useEffect(() => {
@@ -38,9 +34,8 @@ export default function BookDetailPage() {
     };
     if (id) fetchBook();
   }, [id]);
-
-  const onDocumentLoadSuccess = ({ numPages: loadedNumPages }) => {
-    setNumPages(loadedNumPages);
+  const options = {
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
   };
 
   if (loading)
@@ -73,7 +68,7 @@ export default function BookDetailPage() {
       </div>
 
       {/* Read Preview Section */}
-      <div className="mb-6">
+      <div className="mb-6 ">
         <button
           className="bg-green-500 text-white px-4 py-2 rounded"
           onClick={() => setShowPreview((prev) => !prev)}
@@ -83,17 +78,26 @@ export default function BookDetailPage() {
       </div>
 
       {showPreview && (
-        <div className="mb-6 border rounded shadow overflow-hidden">
-          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
-            <Viewer
-              fileUrl={book.fullPdfUrl}
-              plugins={
-                [
-                  // Register plugins
-                ]
-              }
-            />
-          </Worker>
+        <div
+          className="mb-6 border rounded shadow overflow-y-auto sm:w-2/3  place-self-center dark:bg-gray-800"
+          style={{ maxHeight: "820px" }}
+        >
+          <Document
+            file={book.fullPdfUrl}
+            onLoadError={(err) => console.error("Error loading PDF:", err)}
+            options={options}
+            renderMode="canvas"
+            className=""
+          >
+            {Array.from({ length: book.freePages }).map((_, index) => (
+              <Page
+                key={`page_${index + 1}`}
+                pageNumber={index + 1}
+                width={600}
+                height={820}
+              />
+            ))}
+          </Document>
           <p className="mt-2 text-center text-sm text-gray-600">
             Free preview: {book.freePages} page
             {book.freePages > 1 ? "s" : ""}
@@ -104,7 +108,7 @@ export default function BookDetailPage() {
       {/* Reviews / Comments Section */}
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Reviews</h2>
-        {/* Include your book reviews/comments component here */}
+        {/* Insert your book reviews/comments component here */}
       </div>
 
       {/* Purchase Button */}
