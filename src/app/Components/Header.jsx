@@ -141,6 +141,16 @@ export default function Header() {
             প্রকাশিত বইসমূহ
           </Navbar.Link>
         </Link>
+        <Link href="/programme" passHref>
+          <Navbar.Link active={path === "/programme"} as={"div"}>
+            কর্মসূচী
+          </Navbar.Link>
+        </Link>
+        <Link href="/about-us" passHref>
+          <Navbar.Link active={path === "/about-us"} as={"div"}>
+            আমাদের সম্পর্কে
+          </Navbar.Link>
+        </Link>
         {isSignedIn && (
           <Link href="/dashboard" passHref>
             <Navbar.Link active={path === "/dashboard"} as={"div"}>

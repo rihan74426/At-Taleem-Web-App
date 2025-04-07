@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
+import BookComments from "@/app/Components/BookComments";
 
 // Set up the PDF worker to point to your public folder file
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
@@ -70,16 +71,22 @@ export default function BookDetailPage() {
       {/* Read Preview Section */}
       <div className="mb-6 ">
         <button
-          className="bg-green-500 text-white px-4 py-2 rounded"
+          className="bg-green-500 mr-5 text-white px-4 py-2 rounded"
           onClick={() => setShowPreview((prev) => !prev)}
         >
           {showPreview ? "Hide Preview" : "Read Preview"}
+        </button>
+        <button
+          className="bg-blue-500 my-5 text-white px-4 py-2 rounded text-xl"
+          onClick={() => router.push(`/books/${book._id}/purchase`)}
+        >
+          Buy Now
         </button>
       </div>
 
       {showPreview && (
         <div
-          className="mb-6 border rounded shadow overflow-y-auto sm:w-2/3  place-self-center dark:bg-gray-800"
+          className="mb-6 border rounded shadow overflow-y-auto sm:w-7/12  place-self-center dark:bg-gray-800"
           style={{ maxHeight: "820px" }}
         >
           <Document
@@ -100,25 +107,14 @@ export default function BookDetailPage() {
           </Document>
           <p className="mt-2 text-center text-sm text-gray-600">
             Free preview: {book.freePages} page
-            {book.freePages > 1 ? "s" : ""}
+            {book.freePages > 1 ? "s" : ""}. purchase the book to read more.
           </p>
         </div>
       )}
 
       {/* Reviews / Comments Section */}
       <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Reviews</h2>
-        {/* Insert your book reviews/comments component here */}
-      </div>
-
-      {/* Purchase Button */}
-      <div className="mt-8">
-        <button
-          className="bg-blue-500 text-white px-6 py-3 rounded text-xl"
-          onClick={() => router.push(`/books/${book._id}/purchase`)}
-        >
-          Buy Now
-        </button>
+        <BookComments bookId={book._id} />
       </div>
     </div>
   );
