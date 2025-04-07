@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -17,6 +17,8 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(600);
 
   // Fetch book details from your API
   useEffect(() => {
@@ -35,9 +37,21 @@ export default function BookDetailPage() {
     };
     if (id) fetchBook();
   }, [id]);
-  const options = {
-    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-  };
+  const options = useMemo(() => {
+    return {
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    };
+  }, []);
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   if (loading)
     return <p className="text-center text-gray-500 min-h-screen">Loading...</p>;
@@ -78,37 +92,52 @@ export default function BookDetailPage() {
         </button>
         <button
           className="bg-blue-500 my-5 text-white px-4 py-2 rounded text-xl"
-          onClick={() => router.push(`/books/${book._id}/purchase`)}
+          onClick={() => router.push(`/published-books/${book._id}/purchase`)}
         >
           Buy Now
         </button>
       </div>
 
       {showPreview && (
-        <div
-          className="mb-6 border rounded shadow overflow-y-auto sm:w-7/12  place-self-center dark:bg-gray-800"
-          style={{ maxHeight: "820px" }}
-        >
-          <Document
-            file={book.fullPdfUrl}
-            onLoadError={(err) => console.error("Error loading PDF:", err)}
-            options={options}
-            renderMode="canvas"
-            className=""
+        <div className="fixed inset-0 flex items-center justify-center z-40">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowPreview(false)}
+          ></div>
+          {/* Modal Content */}
+          <div
+            ref={containerRef}
+            className="mb-6  overflow-y-auto relative bg-white dark:bg-gray-800 rounded shadow-lg p-4"
+            style={{ maxHeight: "80vh" }}
           >
-            {Array.from({ length: book.freePages }).map((_, index) => (
-              <Page
-                key={`page_${index + 1}`}
-                pageNumber={index + 1}
-                width={600}
-                height={820}
-              />
-            ))}
-          </Document>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Free preview: {book.freePages} page
-            {book.freePages > 1 ? "s" : ""}. purchase the book to read more.
-          </p>
+            <button
+              className=" fixed z-50 right-8 p-2 rounded top-8 sm:right-56 bg-yellow-300 dark:text-white dark:bg-gray-800 "
+              onClick={() => setShowPreview(false)}
+            >
+              ✖
+            </button>
+            <div className="mb-4 sm:mb-6 overflow-y-auto rounded shadow  place-self-center dark:bg-gray-800">
+              <Document
+                file={book.fullPdfUrl}
+                onLoadError={(err) => console.error("Error loading PDF:", err)}
+                renderMode="canvas"
+              >
+                {Array.from({ length: book.freePages }).map((_, index) => (
+                  <Page
+                    key={`page_${index + 1}`}
+                    pageNumber={index + 1}
+                    width={containerWidth}
+                    className="border-b mb-2 overflow-auto"
+                  />
+                ))}
+              </Document>
+            </div>
+            <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+              Free preview: {book.freePages} page{book.freePages > 1 ? "s" : ""}
+              . Purchase the book to read more.
+            </p>
+          </div>
         </div>
       )}
 

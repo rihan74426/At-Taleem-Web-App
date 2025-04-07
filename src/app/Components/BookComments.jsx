@@ -35,7 +35,7 @@ export default function BookComments({ bookId }) {
   // Submit a new comment
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (!user?.user) return alert("You must be logged in to comment.");
+    if (!user?.user) return alert("You must be logged in to Review.");
     if (!newComment.trim()) return;
 
     const res = await fetch("/api/comments", {
@@ -59,7 +59,7 @@ export default function BookComments({ bookId }) {
   // Submit a reply (nested comment)
   const handleReplySubmit = async (e, parentComment) => {
     e.preventDefault();
-    if (!user?.user) return alert("You must be logged in to reply.");
+    if (!user?.user) return alert("You must be logged in to reply a review.");
     if (!replyText.trim()) return;
 
     const res = await fetch("/api/comments", {
@@ -84,7 +84,7 @@ export default function BookComments({ bookId }) {
 
   // Like/unlike a comment or reply
   const handleLike = async (commentId) => {
-    if (!user?.user) return alert("You must be logged in to like a comment.");
+    if (!user?.user) return alert("You must be logged in to like a review.");
 
     const res = await fetch("/api/comments", {
       method: "PUT",
@@ -121,8 +121,7 @@ export default function BookComments({ bookId }) {
 
   // Delete a comment
   const handleDelete = async (commentId) => {
-    if (!window.confirm("Are you sure you want to delete this comment?"))
-      return;
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
     const res = await fetch(`/api/comments/${commentId}`, {
       method: "DELETE",
     });
