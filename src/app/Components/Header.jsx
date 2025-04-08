@@ -23,6 +23,7 @@ import { dark, light } from "@clerk/themes";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import AnimatedDropdown from "./AnimatedDropdown";
 export default function Header() {
   const path = usePathname();
   const { theme, setTheme } = useTheme();
@@ -67,7 +68,7 @@ export default function Header() {
     <Navbar
       fluid
       rounded
-      className="anek-bangla-font text-center bg-blue-300 dark:bg-gray-900"
+      className="anek-bangla-font text-center bg-blue-300 dark:bg-gray-800"
     >
       <Navbar.Brand href="/">
         <Image
@@ -121,36 +122,28 @@ export default function Header() {
             অবতরনিকা
           </Navbar.Link>
         </Link>
-        <Link href="/taleem-videos" passHref>
-          <Navbar.Link active={path === "/taleem-videos"} as={"div"}>
-            তালিমের ভিডিও
-          </Navbar.Link>
-        </Link>
-        <Link href="/juma-videos" passHref>
-          <Navbar.Link active={path === "/juma-videos"} as={"div"}>
-            জুমার ভিডিও
-          </Navbar.Link>
-        </Link>
+        <AnimatedDropdown
+          title="ভিডিও "
+          id="videos"
+          items={[
+            { label: "তালিমের ভিডিও", href: "/taleem-videos" },
+            { label: "জুমার ভিডিও", href: "/juma-videos" },
+          ]}
+        />
         <Link href="/questionnaires" passHref>
           <Navbar.Link active={path === "/questionnaires"} as={"div"}>
             প্রশ্নোত্তরসমূহ
           </Navbar.Link>
         </Link>
-        <Link href="/published-books" passHref>
-          <Navbar.Link active={path === "/published-books"} as={"div"}>
-            প্রকাশিত বইসমূহ
-          </Navbar.Link>
-        </Link>
-        <Link href="/programme" passHref>
-          <Navbar.Link active={path === "/programme"} as={"div"}>
-            কর্মসূচী
-          </Navbar.Link>
-        </Link>
-        <Link href="/about-us" passHref>
-          <Navbar.Link active={path === "/about-us"} as={"div"}>
-            আমাদের সম্পর্কে
-          </Navbar.Link>
-        </Link>
+        <AnimatedDropdown
+          title="আমাদের "
+          id="about"
+          items={[
+            { label: "প্রকাশিত বইসমূহ", href: "/published-books" },
+            { label: "কর্মসূচী", href: "/programme" },
+            { label: "সম্পর্কে", href: "/about-us" },
+          ]}
+        />
         {isSignedIn && (
           <Link href="/dashboard" passHref>
             <Navbar.Link active={path === "/dashboard"} as={"div"}>
