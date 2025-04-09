@@ -139,7 +139,7 @@ export default function BookComments({ bookId }) {
         <form onSubmit={handleCommentSubmit} className="mb-4">
           <textarea
             className="w-full border rounded p-2 dark:bg-black"
-            placeholder="Write a comment..."
+            placeholder="Write a review..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             required
@@ -234,7 +234,7 @@ export default function BookComments({ bookId }) {
             {replyingTo === comment._id && (
               <form
                 onSubmit={(e) => handleReplySubmit(e, comment._id)}
-                className="mt-2"
+                className="mt-2 ml-5 border-l p-2"
               >
                 <textarea
                   className="w-full border rounded p-2 dark:bg-black"

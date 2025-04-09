@@ -19,6 +19,7 @@ export default function BookDetailPage() {
   const [showPreview, setShowPreview] = useState(false);
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
+  const [scale, setScale] = useState(1); // For zooming
 
   // Fetch book details from your API
   useEffect(() => {
@@ -46,12 +47,14 @@ export default function BookDetailPage() {
     const updateWidth = () => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.clientWidth);
+      } else {
+        setContainerWidth(window.innerWidth - 40); // Fallback padding
       }
     };
     updateWidth();
     window.addEventListener("resize", updateWidth);
     return () => window.removeEventListener("resize", updateWidth);
-  }, []);
+  }, [showPreview]);
 
   if (loading)
     return <p className="text-center text-gray-500 min-h-screen">Loading...</p>;
@@ -118,6 +121,23 @@ export default function BookDetailPage() {
               ✖
             </button>
             <div className="mb-4 sm:mb-6 overflow-y-auto rounded shadow  place-self-center dark:bg-gray-800">
+              <div className="flex justify-center items-center gap-4 mb-4">
+                <button
+                  onClick={() => setScale((prev) => Math.min(prev + 0.1, 3))}
+                  className="px-3 py-1 bg-green-600 text-white rounded"
+                >
+                  +
+                </button>
+                <span className="text-white dark:text-gray-300">
+                  Zoom: {(scale * 100).toFixed(0)}%
+                </span>
+                <button
+                  onClick={() => setScale((prev) => Math.max(prev - 0.1, 0.5))}
+                  className="px-3 py-1 bg-red-600 text-white rounded"
+                >
+                  −
+                </button>
+              </div>
               <Document
                 file={book.fullPdfUrl}
                 onLoadError={(err) => console.error("Error loading PDF:", err)}
@@ -128,8 +148,9 @@ export default function BookDetailPage() {
                     key={`page_${index + 1}`}
                     pageNumber={index + 1}
                     width={containerWidth}
+                    scale={scale}
                     className="border-b mb-2 overflow-auto"
-                    scale={1}
+                    renderTextLayer={false}
                   />
                 ))}
               </Document>
