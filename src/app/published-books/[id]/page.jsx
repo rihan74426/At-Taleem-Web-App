@@ -129,6 +129,7 @@ export default function BookDetailPage() {
                     pageNumber={index + 1}
                     width={containerWidth}
                     className="border-b mb-2 overflow-auto"
+                    scale={1}
                   />
                 ))}
               </Document>

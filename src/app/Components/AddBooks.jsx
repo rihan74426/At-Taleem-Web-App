@@ -1,8 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/firebase"; // Adjust path based on your project
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { app } from "@/firebase"; // your firebase.js
+import { getAuth, signInWithCustomToken } from "firebase/auth";
 
 export default function AddBookForm({ initialBook, onSuccess }) {
   const router = useRouter();
@@ -20,70 +27,116 @@ export default function AddBookForm({ initialBook, onSuccess }) {
 
   const [coverFile, setCoverFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
+  const user = useUser().user;
+
+  let firebaseSignedIn = false;
+
+  const ensureFirebaseSignedIn = async () => {
+    if (firebaseSignedIn) return;
+    const auth = getAuth(app);
+    if (!auth.currentUser) {
+      const res = await fetch("/api/firebase-token");
+      const { token } = await res.json();
+
+      await signInWithCustomToken(auth, token);
+    }
+    firebaseSignedIn = true;
+  };
 
   const uploadFile = async (file, path) => {
-    const storageRef = ref(storage, path);
-    const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
+    await ensureFirebaseSignedIn();
+
+    return new Promise((resolve, reject) => {
+      const storage = getStorage(app);
+      const fileRef = ref(storage, path);
+      const uploadTask = uploadBytesResumable(fileRef, file);
+
+      uploadTask.on(
+        "state_changed",
+        null,
+        (err) => reject(err),
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
+    });
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    if (!user?.publicMetadata?.isAdmin) {
+      alert("You are not an admin");
+    } else {
+      e.preventDefault();
+      setLoading(true);
 
-    try {
-      let uploadedCoverUrl = coverImage;
-      let uploadedPdfUrl = fullPdfUrl;
+      try {
+        let uploadedCoverUrl = coverImage;
+        let uploadedPdfUrl = fullPdfUrl;
 
-      // Upload cover image if a new file is selected
-      if (coverFile) {
-        uploadedCoverUrl = await uploadFile(
-          coverFile,
-          `covers/${coverFile.name}`
-        );
+        // Upload cover image if a new file is selected
+        if (coverFile) {
+          uploadedCoverUrl = await uploadFile(
+            coverFile,
+            `covers/${coverFile.name}`
+          );
+        }
+
+        // Upload book PDF if a new file is selected
+        if (pdfFile) {
+          uploadedPdfUrl = await uploadFile(pdfFile, `books/${pdfFile.name}`);
+        }
+        if (
+          title === "" ||
+          description === "" ||
+          freePages === "" ||
+          author === "" ||
+          price === ""
+        ) {
+          alert("Missing required fields");
+        } else {
+          const bookData = {
+            title,
+            author,
+            coverImage: uploadedCoverUrl,
+            price,
+            description,
+            fullPdfUrl: uploadedPdfUrl,
+            freePages,
+            categories,
+          };
+
+          const res = initialBook
+            ? await fetch(`/api/books/${initialBook._id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(bookData),
+              })
+            : await fetch("/api/books", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(bookData),
+              });
+
+          if (res.ok) {
+            const data = await res.json();
+            onSuccess && onSuccess(data);
+            router.push("/published-books");
+          } else {
+            const errorData = await res.json();
+            alert(errorData.error || "Error saving book");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error saving book");
+      } finally {
+        setLoading(false);
       }
-
-      // Upload book PDF if a new file is selected
-      if (pdfFile) {
-        uploadedPdfUrl = await uploadFile(pdfFile, `books/${pdfFile.name}`);
-      }
-
-      const bookData = {
-        title,
-        author,
-        coverImage: uploadedCoverUrl,
-        price,
-        description,
-        fullPdfUrl: uploadedPdfUrl,
-        freePages,
-        categories,
-      };
-
-      const res = initialBook
-        ? await fetch(`/api/books/${initialBook._id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(bookData),
-          })
-        : await fetch("/api/books", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(bookData),
-          });
-
-      if (res.ok) {
-        const data = await res.json();
-        onSuccess && onSuccess(data);
-        router.push("/published-books");
-      } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Error saving book");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error saving book");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -92,7 +145,8 @@ export default function AddBookForm({ initialBook, onSuccess }) {
       <h1 className="text-2xl font-bold mb-4 text-center">
         {initialBook ? "Edit Book" : "Add New Book"}
       </h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <label className="font-semibold">Title</label>
         <input
           type="text"
           className="dark:bg-gray-800"
@@ -101,6 +155,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
+        <label className="font-semibold">Author</label>
         <input
           type="text"
           placeholder="Author"
@@ -132,7 +187,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             </button>
           </div>
         )}
-
+        <label className="font-semibold">Price</label>
         <input
           type="number"
           placeholder="Price"
@@ -141,7 +196,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           onChange={(e) => setPrice(e.target.value)}
           required
         />
-
+        <label className="font-semibold">Description</label>
         <textarea
           placeholder="Description"
           className="dark:bg-gray-800"
@@ -167,7 +222,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             </button>
           </div>
         )}
-
+        <label>Free Pages</label>
         <input
           type="number"
           className="dark:bg-gray-800"
@@ -176,9 +231,6 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           onChange={(e) => setFreePages(Number(e.target.value))}
           required
         />
-        <label className="font-semibold">
-          How many pages do you want to preview for free?
-        </label>
 
         {/* You can add a category selection component here if needed */}
 

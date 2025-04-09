@@ -41,10 +41,16 @@ export default function BookListingPage() {
       console.error("Error deleting book:", err);
     }
   };
+  const bookSaveSuccess = (book) => {
+    fetchBooks();
+    setShowModal(false);
+  };
 
   if (loading)
     return (
-      <p className="min-h-screen text-center flex items-center">Loading...</p>
+      <p className="min-h-screen place-content-center flex items-center">
+        Loading...
+      </p>
     );
   if (!books.length > 0)
     return <p className="min-h-screen text-center">No Books Published Yet!</p>;
@@ -127,7 +133,10 @@ export default function BookListingPage() {
               </svg>
             </button>
             <div className="mt-5">
-              <AddBookForm initialBook={editingBook} />
+              <AddBookForm
+                initialBook={editingBook}
+                onSuccess={bookSaveSuccess}
+              />
             </div>
           </div>
         </div>

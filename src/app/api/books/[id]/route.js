@@ -4,8 +4,23 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function PATCH(request, { params }) {
   await connect();
   try {
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
+    if (
+      !data.title ||
+      !data.author ||
+      !data.coverImage ||
+      !data.price ||
+      !data.fullPdfUrl
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
     const updatedBook = await Book.findByIdAndUpdate(id, data, { new: true });
     if (!updatedBook) {
       return new Response(JSON.stringify({ error: "Book not found" }), {

@@ -123,7 +123,7 @@ export default function Header() {
           </Navbar.Link>
         </Link>
         <AnimatedDropdown
-          title="ভিডিও "
+          title="ভিডিও  "
           id="videos"
           items={[
             { label: "তালিমের ভিডিও", href: "/taleem-videos" },
@@ -136,7 +136,7 @@ export default function Header() {
           </Navbar.Link>
         </Link>
         <AnimatedDropdown
-          title="আমাদের "
+          title="আমাদের  "
           id="about"
           items={[
             { label: "প্রকাশিত বইসমূহ", href: "/published-books" },
