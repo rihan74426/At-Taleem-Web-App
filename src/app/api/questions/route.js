@@ -7,7 +7,15 @@ export async function POST(request) {
   await connect();
   try {
     const data = await request.json();
-    const { title, description, category, userId, username, email } = data;
+    const {
+      title,
+      description,
+      category,
+      userId,
+      username,
+      email,
+      isAnonymous,
+    } = data;
 
     // Validate required fields
     if (!title || !email) {
@@ -22,7 +30,8 @@ export async function POST(request) {
       description,
       category, // expects an array of strings
       userId: userId || null,
-      username: username || "Anonymous",
+      username: username,
+      isAnonymous: isAnonymous,
       email: email || null,
     });
 

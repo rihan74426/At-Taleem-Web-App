@@ -6,6 +6,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import BookComments from "@/app/Components/BookComments";
+import Link from "next/link";
 
 // Set up the PDF worker to point to your public folder file
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
@@ -157,7 +158,14 @@ export default function BookDetailPage() {
             </div>
             <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
               Free preview: {book.freePages} page{book.freePages > 1 ? "s" : ""}
-              . Purchase the book to read more.
+              .{" "}
+              <Link
+                href={`/published-books/${book._id}/purchase`}
+                className="text-blue-500 hover:border-b hover:cursor-pointer"
+              >
+                Purchase the book
+              </Link>{" "}
+              to read more.
             </p>
           </div>
         </div>

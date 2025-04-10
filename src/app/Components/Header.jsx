@@ -64,6 +64,16 @@ export default function Header() {
       setSearchTerm(searchTermFromUrl);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (collapseRef.current && !collapseRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   return (
     <Navbar
       fluid
@@ -108,8 +118,14 @@ export default function Header() {
           </div>
         </SignedOut>
       </div>
-      <Navbar.Toggle />
-      <Navbar.Collapse>
+      <Navbar.Toggle onMouseEnter={() => setIsOpen(true)} />
+
+      <Navbar.Collapse
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        ref={collapseRef}
+        className={`${isOpen ? "block" : "hidden"} lg:flex`}
+      >
         <div
           onClick={toggleMode}
           className="flex py-2 sm:hidden place-content-center items-center pl-3 pr-4 md:p-0 border-b hover:cursor-pointer border-gray-100 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white md:border-0 md:hover:bg-transparent md:hover:text-cyan-700 md:dark:hover:bg-transparent md:dark:hover:text-white"
@@ -135,13 +151,17 @@ export default function Header() {
             প্রশ্নোত্তরসমূহ
           </Navbar.Link>
         </Link>
+        <Link href="/published-books" passHref>
+          <Navbar.Link active={path === "/published-books"} as={"div"}>
+            প্রকাশিত বইসমূহ{" "}
+          </Navbar.Link>
+        </Link>
         <AnimatedDropdown
           title="আমাদের  "
           id="about"
           items={[
-            { label: "প্রকাশিত বইসমূহ", href: "/published-books" },
-            { label: "কর্মসূচী", href: "/programme" },
-            { label: "সম্পর্কে", href: "/about-us" },
+            { label: "আমাদের কর্মসূচী", href: "/programme" },
+            { label: "আমাদের সম্পর্কে", href: "/about-us" },
           ]}
         />
         {isSignedIn && (
