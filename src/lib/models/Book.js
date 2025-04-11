@@ -8,7 +8,6 @@ const BookSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     description: { type: String },
     fullPdfUrl: { type: String, required: true },
-    freePages: { type: Number, default: 0 },
     categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
     publishedDate: { type: Date },
   },

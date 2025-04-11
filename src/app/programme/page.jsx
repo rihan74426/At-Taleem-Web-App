@@ -1,3 +1,7 @@
 export default function ProgrammesPage() {
-  return <div>Programmes Page</div>;
+  return (
+    <div className="flex items-center place-content-center min-h-screen">
+      Programmes Page
+    </div>
+  );
 }

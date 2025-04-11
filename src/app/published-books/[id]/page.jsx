@@ -2,14 +2,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+import { ProgressBar, Viewer, Worker } from "@react-pdf-viewer/core";
+import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import BookComments from "@/app/Components/BookComments";
 import Link from "next/link";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import { dark } from "@clerk/themes";
+import { theme } from "flowbite-react";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 
 // Set up the PDF worker to point to your public folder file
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
 export default function BookDetailPage() {
   const { id } = useParams();
@@ -21,6 +24,8 @@ export default function BookDetailPage() {
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(600);
   const [scale, setScale] = useState(1); // For zooming
+  const [numPages, setNumPages] = useState(null);
+  const [pdf, setPdf] = useState(null);
 
   // Fetch book details from your API
   useEffect(() => {
@@ -39,11 +44,7 @@ export default function BookDetailPage() {
     };
     if (id) fetchBook();
   }, [id]);
-  const options = useMemo(() => {
-    return {
-      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-    };
-  }, []);
+
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -56,6 +57,67 @@ export default function BookDetailPage() {
     window.addEventListener("resize", updateWidth);
     return () => window.removeEventListener("resize", updateWidth);
   }, [showPreview]);
+
+  const defaultLayoutPluginInstance = defaultLayoutPlugin({
+    renderPage: (props) => customRenderPage(props, book.freePages),
+
+    toolbarPlugin: {
+      renderToolbar: (Toolbar) => (
+        <Toolbar>
+          {(slots) => {
+            const {
+              CurrentPageInput,
+              GoToPreviousPage,
+              GoToNextPage,
+              ZoomOut,
+              ZoomIn,
+              NumberOfPages,
+              // Exclude Download and Print buttons from slots
+            } = slots;
+            return (
+              <div className="rpv-toolbar p-2 flex items-center space-x-2 bg-gray-100 dark:bg-gray-800">
+                <button
+                  type="button"
+                  onClick={GoToPreviousPage}
+                  className="px-2 py-1 rounded hover:bg-gray-200"
+                >
+                  Prev
+                </button>
+                <CurrentPageInput /> / <NumberOfPages />
+                <button
+                  type="button"
+                  onClick={GoToNextPage}
+                  className="px-2 py-1 rounded hover:bg-gray-200"
+                >
+                  Next
+                </button>
+                <button
+                  type="button"
+                  onClick={ZoomOut}
+                  className="px-2 py-1 rounded hover:bg-gray-200"
+                >
+                  -
+                </button>
+                <button
+                  type="button"
+                  onClick={ZoomIn}
+                  className="px-2 py-1 rounded hover:bg-gray-200"
+                >
+                  +
+                </button>
+              </div>
+            );
+          }}
+        </Toolbar>
+      ),
+    },
+  });
+  const onDocumentLoadSuccess = ({ numPages: loadedNumPages }) => {
+    setNumPages(book.freePages);
+  };
+  useEffect(() => {
+    if (book) setPdf(book.fullPdfUrl);
+  }, [book]);
 
   if (loading)
     return <p className="text-center text-gray-500 min-h-screen">Loading...</p>;
@@ -103,71 +165,31 @@ export default function BookDetailPage() {
       </div>
 
       {showPreview && (
-        <div className="fixed inset-0 flex items-center justify-center z-40">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowPreview(false)}
-          ></div>
-          {/* Modal Content */}
-          <div
-            ref={containerRef}
-            className="mb-6  overflow-y-auto relative bg-white dark:bg-gray-800 rounded shadow-lg p-4"
-            style={{ maxHeight: "80vh" }}
-          >
-            <button
-              className=" fixed z-50 right-8 p-2 rounded top-8 sm:right-56 bg-yellow-300 dark:text-white dark:bg-gray-800 "
-              onClick={() => setShowPreview(false)}
+        <div className="mb-6 border rounded shadow ">
+          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+            <div
+              className=" h-screen border rounded shadow"
+              style={{
+                border: "1px solid rgba(0, 0, 0, 0.3)",
+                height: "750px",
+              }}
             >
-              ✖
-            </button>
-            <div className="mb-4 sm:mb-6 overflow-y-auto rounded shadow  place-self-center dark:bg-gray-800">
-              <div className="flex justify-center items-center gap-4 mb-4">
-                <button
-                  onClick={() => setScale((prev) => Math.min(prev + 0.1, 3))}
-                  className="px-3 py-1 bg-green-600 text-white rounded"
-                >
-                  +
-                </button>
-                <span className="text-white dark:text-gray-300">
-                  Zoom: {(scale * 100).toFixed(0)}%
-                </span>
-                <button
-                  onClick={() => setScale((prev) => Math.max(prev - 0.1, 0.5))}
-                  className="px-3 py-1 bg-red-600 text-white rounded"
-                >
-                  −
-                </button>
-              </div>
-              <Document
-                file={book.fullPdfUrl}
-                onLoadError={(err) => console.error("Error loading PDF:", err)}
-                renderMode="canvas"
-              >
-                {Array.from({ length: book.freePages }).map((_, index) => (
-                  <Page
-                    key={`page_${index + 1}`}
-                    pageNumber={index + 1}
-                    width={containerWidth}
-                    scale={scale}
-                    className="border-b mb-2 overflow-auto"
-                    renderTextLayer={false}
-                  />
-                ))}
-              </Document>
+              <Viewer
+                onDocumentLoad={onDocumentLoadSuccess}
+                fileUrl={book.fullPdfUrl}
+                plugins={[defaultLayoutPluginInstance]}
+                theme="dark"
+                renderLoader={(percentages) => (
+                  <div className="">
+                    <ProgressBar progress={Math.round(percentages)} />
+                  </div>
+                )}
+              />
             </div>
-            <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-              Free preview: {book.freePages} page{book.freePages > 1 ? "s" : ""}
-              .{" "}
-              <Link
-                href={`/published-books/${book._id}/purchase`}
-                className="text-blue-500 hover:border-b hover:cursor-pointer"
-              >
-                Purchase the book
-              </Link>{" "}
-              to read more.
-            </p>
-          </div>
+          </Worker>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Free preview: {book.freePages} page{book.freePages > 1 ? "s" : ""}
+          </p>
         </div>
       )}
 

@@ -11,12 +11,10 @@ const OrderSchema = new mongoose.Schema(
     userId: { type: String, required: true },
     buyerName: { type: String, required: true },
     buyerEmail: { type: String, required: true },
+    deliveryAddress: { type: String, required: true },
+    deliveryPhone: { type: String, required: true },
     amount: { type: Number, required: true },
-    method: {
-      type: String,
-      enum: ["sslcommerz", "mobile-banking"],
-      required: true,
-    },
+
     status: {
       type: String,
       enum: ["pending", "paid", "failed"],

@@ -1,8 +1,9 @@
+// src/app/published-books/[id]/purchase/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
 
 export default function BookPurchasePage() {
   const { id } = useParams();
@@ -10,10 +11,11 @@ export default function BookPurchasePage() {
   const { user, isSignedIn } = useUser();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState("sslcommerz");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [useProfile, setUseProfile] = useState(true);
 
-  // Fetch book details
   useEffect(() => {
     const fetchBook = async () => {
       try {
@@ -31,41 +33,57 @@ export default function BookPurchasePage() {
     if (id) fetchBook();
   }, [id]);
 
+  useEffect(() => {
+    // if Clerk user has metadata address/phone, prefill:
+    if (user) {
+      const meta = user.publicMetadata;
+      if (meta.deliveryAddress) {
+        setAddress(meta.deliveryAddress);
+      } else {
+        setUseProfile(false);
+      }
+      if (meta.phoneNumber) {
+        setPhone(meta.phoneNumber);
+      }
+    }
+  }, [user]);
+
   const handlePurchase = async () => {
     if (!isSignedIn) {
-      alert("Please sign in to purchase.");
-      return;
+      return alert("Please sign in first.");
     }
-    try {
-      const orderData = {
-        bookId: id,
-        userId: user.id,
-        buyerName: user.fullName,
-        buyerEmail: user.primaryEmailAddress.emailAddress,
-        paymentMethod,
-      };
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Redirect user to payment gateway
-        router.push(data.paymentUrl);
-      } else {
-        const errData = await res.json();
-        setError(errData.error || "Failed to initiate purchase.");
-      }
-    } catch (err) {
-      console.error("Error purchasing book:", err);
-      setError("Error purchasing book.");
+    if (!address.trim() || !phone.trim()) {
+      return alert("Please provide address & phone.");
+    }
+
+    const orderData = {
+      bookId: id,
+      userId: user.id,
+      buyerName: user.fullName,
+      buyerEmail: user.primaryEmailAddress.emailAddress,
+      deliveryAddress: address,
+      deliveryPhone: phone,
+    };
+
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderData),
+    });
+
+    if (res.ok) {
+      const { paymentUrl } = await res.json();
+      router.push(paymentUrl);
+    } else {
+      const err = await res.json();
+      setError(err.error || "Failed to start purchase");
     }
   };
 
-  if (loading) return <p className="text-center">Loading...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
-  if (!book) return <p className="text-center">Book not found</p>;
+  if (loading) return <p className="text-center min-h-screen">Loading...</p>;
+  if (error)
+    return <p className="text-center text-red-500 min-h-screen">{error}</p>;
+  if (!book) return <p className="text-center min-h-screen">Book not found</p>;
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -88,28 +106,35 @@ export default function BookPurchasePage() {
         <p className="mt-2 text-lg font-semibold">Price: ${book.price}</p>
       </div>
 
-      {/* Payment Options */}
-      <div className="mb-6">
-        <label className="block mb-1 font-semibold">
-          Select Payment Method:
-        </label>
-        <select
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value)}
-          className="border p-2 rounded dark:bg-black"
-        >
-          <option value="sslcommerz">SSLCommerz</option>
-          <option value="mobile-banking">Mobile Banking</option>
-        </select>
-      </div>
-
       {/* Purchase Button */}
+      <h2 className="mt-6 text-lg font-semibold">Delivery Info</h2>
+
+      {!useProfile && (
+        <>
+          <textarea
+            className="w-full border p-2 mt-2 dark:bg-black"
+            placeholder="Delivery Address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required
+          />
+          <input
+            className="w-full border p-2 mt-2 dark:bg-black"
+            placeholder="Phone Number"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+        </>
+      )}
       <button
         onClick={handlePurchase}
-        className="bg-blue-500 text-white px-6 py-3 rounded text-xl"
+        className="mt-4 bg-blue-600 text-white px-6 py-2 rounded"
       >
-        Buy Now
+        Proceed to Payment
       </button>
+      {error && <p className="mt-2 text-red-500">{error}</p>}
     </div>
   );
 }

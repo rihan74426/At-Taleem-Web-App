@@ -21,7 +21,6 @@ export default function AddBookForm({ initialBook, onSuccess }) {
     initialBook?.description || ""
   );
   const [fullPdfUrl, setFullPdfUrl] = useState(initialBook?.fullPdfUrl || "");
-  const [freePages, setFreePages] = useState(initialBook?.freePages || 0);
   const [categories, setCategories] = useState(initialBook?.categories || []);
   const [loading, setLoading] = useState(false);
 
@@ -93,7 +92,6 @@ export default function AddBookForm({ initialBook, onSuccess }) {
         if (
           title === "" ||
           description === "" ||
-          freePages === "" ||
           author === "" ||
           price === ""
         ) {
@@ -106,7 +104,6 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             price,
             description,
             fullPdfUrl: uploadedPdfUrl,
-            freePages,
             categories,
           };
 
@@ -222,15 +219,6 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             </button>
           </div>
         )}
-        <label>Free Pages</label>
-        <input
-          type="number"
-          className="dark:bg-gray-800"
-          placeholder="Free Preview Pages"
-          value={freePages}
-          onChange={(e) => setFreePages(Number(e.target.value))}
-          required
-        />
 
         {/* You can add a category selection component here if needed */}
 

@@ -52,7 +52,6 @@ export async function POST(request) {
     price,
     description,
     fullPdfUrl,
-    freePages,
     categories,
   } = data;
 
@@ -71,7 +70,6 @@ export async function POST(request) {
       price,
       description,
       fullPdfUrl,
-      freePages,
       categories,
     });
     return new Response(JSON.stringify(newBook), {
