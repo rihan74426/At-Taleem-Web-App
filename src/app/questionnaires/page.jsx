@@ -225,7 +225,7 @@ export default function QuestionnairePage() {
             className="bg-black/80 absolute inset-0"
             onClick={() => setShowModal(false)}
           ></div>
-          <div className="relative p-5 overflow-auto h-4/5 sm:w-2/3 w-full lg:w-1/3 border rounded bg-white dark:bg-gray-900 text-white shadow-sm">
+          <div className="relative p-5 overflow-auto h-4/5 sm:w-2/3 w-screen lg:w-1/3 border rounded text-black bg-white dark:bg-gray-900 dark:text-white shadow-sm">
             <button
               className="ml-auto absolute right-5 top-2 items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-400 dark:hover:text-white"
               onClick={() => setShowModal(false)}
