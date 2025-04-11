@@ -118,7 +118,10 @@ export default function Header() {
           </div>
         </SignedOut>
       </div>
-      <Navbar.Toggle onMouseEnter={() => setIsOpen(true)} />
+      <Navbar.Toggle
+        onClick={() => setIsOpen((prev) => !prev)}
+        onMouseEnter={() => setIsOpen(true)}
+      />
 
       <Navbar.Collapse
         onMouseEnter={() => setIsOpen(true)}

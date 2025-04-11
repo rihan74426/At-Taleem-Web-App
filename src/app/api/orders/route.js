@@ -36,7 +36,7 @@ export async function POST(req) {
   const storeId = process.env.SSLCZ_STORE_ID;
   const storePasswd = process.env.SSLCZ_STORE_PASSWORD;
   const successUrl = `${process.env.APP_URL}/api/orders/ssl-success`;
-  const failUrl = `${process.env.APP_URL}/api/orders/ssl-fail`;
+  const failUrl = `${process.env.URL}/api/orders/ssl-fail`;
   const payload = {
     store_id: storeId,
     store_passwd: storePasswd,
