@@ -1,8 +1,8 @@
 // src/app/api/activities/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
-import User from "@/lib/models/User"; // your Mongoose user model
 import { currentUser, users } from "@clerk/nextjs/server";
+import User from "@/lib/models/user.model";
 
 export async function GET(req) {
   await connect();
