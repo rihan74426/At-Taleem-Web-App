@@ -28,20 +28,21 @@ export default function BookDetailPage() {
   const [pdf, setPdf] = useState(null);
 
   // Fetch book details from your API
+  const fetchBook = async () => {
+    try {
+      const res = await fetch(`/api/books?id=${id}`);
+      if (!res.ok) throw new Error("Failed to fetch book");
+      const data = await res.json();
+      if (!data.book) throw new Error("Book not found");
+      setBook(data.book);
+      setPdf(book.fullPdfUrl);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchBook = async () => {
-      try {
-        const res = await fetch(`/api/books?id=${id}`);
-        if (!res.ok) throw new Error("Failed to fetch book");
-        const data = await res.json();
-        if (!data.book) throw new Error("Book not found");
-        setBook(data.book);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     if (id) fetchBook();
   }, [id]);
 
@@ -176,7 +177,7 @@ export default function BookDetailPage() {
             >
               <Viewer
                 onDocumentLoad={onDocumentLoadSuccess}
-                fileUrl={book.fullPdfUrl}
+                fileUrl={pdf}
                 plugins={[defaultLayoutPluginInstance]}
                 theme="dark"
                 renderLoader={(percentages) => (

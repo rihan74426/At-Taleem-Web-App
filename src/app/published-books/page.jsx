@@ -18,6 +18,7 @@ export default function BookListingPage() {
       if (res.ok) {
         const data = await res.json();
         setBooks(data.books);
+        console.log(books);
       }
     } catch (err) {
       console.error("Error fetching books:", err);

@@ -21,7 +21,9 @@ export default clerkMiddleware((auth, req) => {
 // Apply to all non-static and API paths
 export const config = {
   matcher: [
-    // everything except static files under _next, public, etc.
-    "/((?!_next|_static|favicon.ico).*)",
+    // Skip Next.js internals and all static files, unless found in search params
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
+    "/(api|trpc)(.*)",
   ],
 };
