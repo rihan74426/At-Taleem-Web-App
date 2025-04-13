@@ -20,7 +20,7 @@ export default function BookListingPage() {
       if (res.ok) {
         const data = await res.json();
         setBooks(data.books);
-        console.log(books);
+        console.log(data.books);
       }
     } catch (err) {
       console.error("Error fetching books:", err);
@@ -51,6 +51,7 @@ export default function BookListingPage() {
   const add = (book) => {
     if (!items.find((b) => b._id === book._id)) {
       setItems([...items, book]);
+      console.log(items);
     }
   };
   const remove = (bookId) => {
@@ -86,75 +87,83 @@ export default function BookListingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {books.map((book) => {
           const inCart = items.some((b) => b._id === book._id);
-
-          <div key={book._id} className="border rounded shadow p-4">
-            <Image
-              src={book.coverImage}
-              alt={book.title}
-              width={500}
-              height={700}
-              className="object-cover"
-            />
-            <h2 className="mt-2 text-xl font-semibold">{book.title}</h2>
-            <p className="text-gray-600">{book.author}</p>
-            <p className="text-green-600 font-bold">
-              BDT: {book.price} Taka Only
-            </p>
-            <div>
-              <Link href={`/published-books/${book._id}`}>
-                <button className="mt-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">
-                  View Details
+          return (
+            <div key={book._id} className="border rounded shadow p-4">
+              <Image
+                src={book.coverImage}
+                alt={book.title}
+                width={500}
+                height={700}
+                className="object-cover"
+              />
+              <h2 className="mt-2 text-xl font-semibold">{book.title}</h2>
+              <p className="text-gray-600">{book.author}</p>
+              <p className="text-green-600 font-bold">
+                BDT: {book.price} Taka Only
+              </p>
+              <div className="flex gap-2 w-full justify-center sm:justify-end">
+                <button
+                  onClick={() => {
+                    setEditingBook(book);
+                    setShowModal(true);
+                  }}
+                  className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                  title="Edit book"
+                >
+                  <HiOutlinePencil size={20} />
                 </button>
-              </Link>
-              <div>
-                <div className="flex gap-2 w-full justify-center sm:justify-end">
-                  <button
-                    onClick={() => {
-                      setEditingBook(book);
-                      setShowModal(true);
-                    }}
-                    className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
-                    title="Edit book"
-                  >
-                    <HiOutlinePencil size={20} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteBook(book._id)}
-                    className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
-                    title="Delete book"
-                  >
-                    <AiOutlineDelete size={20} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDeleteBook(book._id)}
+                  className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                  title="Delete book"
+                >
+                  <AiOutlineDelete size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => add(book)}
-                disabled={inCart}
-                className={`mt-2 px-4 py-2 rounded ${
-                  inCart ? "bg-gray-400" : "bg-green-500"
-                }`}
-              >
-                {inCart ? "In Cart" : "Add to Cart"}
-              </button>
+              <div className="justify-between items-center">
+                <Link href={`/published-books/${book._id}`}>
+                  <button className="m-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">
+                    View Details
+                  </button>
+                </Link>
+                <button
+                  onClick={() => add(book)}
+                  disabled={inCart}
+                  className={`m-2 px-4 py-2 rounded ${
+                    inCart ? "bg-gray-400" : "bg-green-500"
+                  }`}
+                >
+                  {inCart ? "In Cart" : "Add to Cart"}
+                </button>
+              </div>
             </div>
-          </div>;
+          );
         })}
       </div>
       {items.length > 0 && (
         <>
-          <button className="relative" onClick={() => setShowCartModal(true)}>
-            🛒
-            <span className="absolute -top-1 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-              {items.length}
-            </span>
-          </button>
-          <button className="relative" onClick={clear}>
-            Clear
-          </button>
+          <div className="fixed top-20 right-4 bg-white text-gray-800 shadow p-3 rounded flex items-center gap-2 z-50">
+            <button
+              onClick={() => {
+                setShowCartModal(true);
+                console.log(items);
+              }}
+              title="Click to open"
+            >
+              🛒 ({items.length})<span> Total: {total} BDT</span>
+            </button>
+            <button
+              className="relative text-red-600"
+              onClick={clear}
+              title="Clear Cart"
+            >
+              X
+            </button>
+          </div>
         </>
       )}
 
-      {showCartModal && (
+      {showCartModal && items.length > 0 && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
             className="bg-black/80 absolute inset-0"
@@ -184,32 +193,42 @@ export default function BookListingPage() {
             </button>
             <div className="mt-5">
               <h2 className="text-xl font-bold mb-4">Your Cart</h2>
-              <ul className="space-y-2 mb-4">
-                {items.map(({ book }) => (
-                  <li key={book._id} className="flex justify-between">
-                    <span>{book.title}</span>
-                    <span>{book.price} BDT</span>
-                    <button onClick={remove}>remove</button>
+              <ul className="space-y-2 mb-4 border ">
+                {items.map((book) => (
+                  <li
+                    key={book._id}
+                    className="flex justify-between border items-center "
+                  >
+                    <p className="w-2/3 border">{book.title}</p>
+                    <p className="border-r text-center w-1/4">
+                      {book.price} BDT{" "}
+                    </p>
+                    <button
+                      className="self-center w-1/4"
+                      onClick={() => remove(book._id)}
+                    >
+                      X
+                    </button>
                   </li>
                 ))}
               </ul>
-              <div className="mb-4">
+              <div className="mb-4 border-t text-end">
                 <p>Subtotal: {total} BDT</p>
-                <p className="border-b">Bundle Price: {specialPrice} BDT</p>
-                <p>You save: {savings} BDT</p>
               </div>
-              <button
-                className="bg-green-500 text-white px-4 py-2 rounded mr-2"
-                onClick={() => {}}
-              >
-                Checkout
-              </button>
-              <button
-                className="bg-red-400 text-white px-4 py-2 rounded"
-                onClick={() => setShowCartModal(false)}
-              >
-                Close
-              </button>
+              <div className="flex place-content-end">
+                <button
+                  className="bg-red-400 text-white px-4 py-2 m-2 rounded"
+                  onClick={() => setShowCartModal(false)}
+                >
+                  Close
+                </button>
+                <button
+                  className="bg-green-500 text-white px-4 py-2 rounded m-2"
+                  onClick={() => {}}
+                >
+                  Checkout
+                </button>
+              </div>
             </div>
           </div>
         </div>
