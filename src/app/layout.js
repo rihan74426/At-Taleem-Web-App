@@ -48,7 +48,6 @@ export default function RootLayout({ children }) {
               <PageLoader />
               <Header />
               {children}
-
               <FooterCom />
             </ThemeCom>
           </ThemeProvider>
