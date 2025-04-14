@@ -57,7 +57,7 @@ export default function BookPurchasePage() {
     }
 
     const orderData = {
-      bookId: id,
+      bookIds: [id],
       userId: user.id,
       buyerName: user.fullName,
       buyerEmail: user.primaryEmailAddress.emailAddress,

@@ -5,6 +5,7 @@ import Image from "next/image";
 import AddBookForm from "../Components/AddBooks";
 import { AiOutlineDelete } from "react-icons/ai";
 import { HiOutlinePencil } from "react-icons/hi";
+import CheckoutModal from "../Components/CheckoutModal";
 
 export default function BookListingPage() {
   const [books, setBooks] = useState([]);
@@ -13,6 +14,7 @@ export default function BookListingPage() {
   const [editingBook, setEditingBook] = useState(null);
   const [items, setItems] = useState([]);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [checkoutModal, setCheckoutModal] = useState(false);
 
   const fetchBooks = async () => {
     try {
@@ -49,17 +51,23 @@ export default function BookListingPage() {
     setShowModal(false);
   };
   const add = (book) => {
-    if (!items.find((b) => b._id === book._id)) {
-      setItems([...items, book]);
-      console.log(items);
-    }
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.book._id === book._id);
+      if (idx === -1) {
+        return [...prev, { book, qty: 1 }];
+      } else {
+        const next = [...prev];
+        next[idx] = { book, qty: next[idx].qty + 1 };
+        return next;
+      }
+    });
   };
   const remove = (bookId) => {
-    setItems(items.filter((b) => b._id !== bookId));
+    setItems((prev) => prev.filter((i) => i.book._id !== bookId));
   };
   const clear = () => setItems([]);
 
-  const total = items.reduce((sum, b) => sum + b.price, 0);
+  const total = items.reduce((sum, b) => sum + b.book.price, 0);
   const specialPrice = 1000;
   const savings = total - specialPrice;
 
@@ -86,7 +94,7 @@ export default function BookListingPage() {
       </button>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {books.map((book) => {
-          const inCart = items.some((b) => b._id === book._id);
+          const inCart = items.some((b) => b.book._id === book._id);
           return (
             <div key={book._id} className="border rounded shadow p-4">
               <Image
@@ -194,18 +202,21 @@ export default function BookListingPage() {
             <div className="mt-5">
               <h2 className="text-xl font-bold mb-4">Your Cart</h2>
               <ul className="space-y-2 mb-4 border ">
-                {items.map((book) => (
+                {items.map((item) => (
                   <li
-                    key={book._id}
+                    key={item.book._id}
                     className="flex justify-between border items-center "
                   >
-                    <p className="w-2/3 border">{book.title}</p>
+                    <p className="w-2/3 border">{item.book.title}</p>
                     <p className="border-r text-center w-1/4">
-                      {book.price} BDT{" "}
+                      {item.qty} book
+                    </p>
+                    <p className="border-r text-center w-1/4">
+                      {item.book.price} BDT{" "}
                     </p>
                     <button
                       className="self-center w-1/4"
-                      onClick={() => remove(book._id)}
+                      onClick={() => remove(item.book._id)}
                     >
                       X
                     </button>
@@ -224,7 +235,10 @@ export default function BookListingPage() {
                 </button>
                 <button
                   className="bg-green-500 text-white px-4 py-2 rounded m-2"
-                  onClick={() => {}}
+                  onClick={() => {
+                    setShowCartModal(false);
+                    setCheckoutModal(true);
+                  }}
                 >
                   Checkout
                 </button>
@@ -233,6 +247,11 @@ export default function BookListingPage() {
           </div>
         </div>
       )}
+      <CheckoutModal
+        open={checkoutModal}
+        onClose={() => setCheckoutModal(false)}
+        items={items}
+      />
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
