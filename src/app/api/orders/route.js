@@ -3,10 +3,24 @@ import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
 import Book from "@/lib/models/Book";
 
+export async function GET(req) {
+  await connect();
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId"); // optional filter
+
+  const filter = {};
+  if (userId) filter.userId = userId;
+
+  const orders = await Order.find(filter).sort({ createdAt: -1 });
+  return new Response(JSON.stringify({ orders }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export async function POST(req) {
   await connect();
   const {
-    bookId,
+    bookIds,
     userId,
     buyerName,
     buyerEmail,
@@ -15,7 +29,8 @@ export async function POST(req) {
   } = await req.json();
 
   if (
-    !bookId ||
+    !Array.isArray(bookIds) ||
+    bookIds.length === 0 ||
     !userId ||
     !buyerName ||
     !buyerEmail ||
@@ -27,79 +42,80 @@ export async function POST(req) {
     });
   }
 
-  // load book to get price
-  const book = await Book.findById(bookId);
-  if (!book) {
-    return new Response(JSON.stringify({ error: "Book not found" }), {
-      status: 404,
-    });
+  // Fetch all books and compute total
+  const books = await Book.find({ _id: { $in: bookIds } });
+  if (books.length !== bookIds.length) {
+    return new Response(
+      JSON.stringify({ error: "One or more books not found" }),
+      {
+        status: 404,
+      }
+    );
   }
+  const totalAmount = books.reduce((sum, b) => sum + b.price, 0);
 
   // create order
   const order = await Order.create({
-    bookId,
+    bookIds,
     userId,
     buyerName,
     buyerEmail,
-    amount: book.price,
     deliveryAddress,
     deliveryPhone,
+    amount: totalAmount,
   });
 
-  // Prepare payload for SSLCommerz
+  // Prepare SSLCommerz payload
   const storeId = process.env.SSLCZ_STORE_ID;
   const storePasswd = process.env.SSLCZ_STORE_PASSWORD;
   const successUrl = `${process.env.URL}/api/orders/ssl-success`;
   const failUrl = `${process.env.URL}/api/orders/ssl-fail`;
 
-  const formBody = new URLSearchParams();
-  formBody.append("store_id", storeId);
-  formBody.append("store_passwd", storePasswd);
-  formBody.append("total_amount", book.price.toString());
-  formBody.append("currency", "BDT");
-  formBody.append("tran_id", order._id.toString());
-  formBody.append("success_url", successUrl);
-  formBody.append("fail_url", failUrl);
-  formBody.append("cus_name", buyerName);
-  formBody.append("cus_email", buyerEmail);
-  formBody.append("cus_phone", deliveryPhone);
-  formBody.append("cus_add1", deliveryAddress);
-  formBody.append("cus_city", deliveryAddress);
-  formBody.append("cus_postcode", "4000");
-  formBody.append("cus_country", "Bangladesh");
-  formBody.append("shipping_method", "No");
-  formBody.append("product_name", book.title);
-  formBody.append("product_category", "Book");
-  formBody.append("product_profile", "Physical-goods");
-  formBody.append("emi_option", 0);
-  formBody.append("value_a", order._id.toString());
+  const formBody = new URLSearchParams({
+    store_id: storeId,
+    store_passwd: storePasswd,
+    total_amount: totalAmount.toString(),
+    currency: "BDT",
+    tran_id: order._id.toString(),
+    success_url: successUrl,
+    fail_url: failUrl,
+    cus_name: buyerName,
+    cus_email: buyerEmail,
+    cus_phone: deliveryPhone,
+    cus_add1: deliveryAddress,
+    cus_city: deliveryAddress,
+    cus_postcode: "4000",
+    cus_country: "Bangladesh",
+    shipping_method: "No",
+    product_name: books.map((b) => b.title).join(", "),
+    product_category: "Books",
+    product_profile: "Physical-goods",
+    emi_option: "0",
+    value_a: order._id.toString(),
+  });
 
   // Call SSLCommerz init API
-  const response = await fetch(
+  const resp = await fetch(
     "https://sandbox.sslcommerz.com/gwprocess/v4/api.php",
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formBody.toString(),
     }
   );
-
-  const data = await response.json();
-  console.log("SSL init response:", data);
+  const data = await resp.json();
   if (data.GatewayPageURL) {
-    // save sessionKey & URL
     order.sessionKey = data.sessionkey;
     order.gatewayPageURL = data.GatewayPageURL;
     await order.save();
     return new Response(JSON.stringify({ paymentUrl: data.GatewayPageURL }), {
       status: 200,
+      headers: { "Content-Type": "application/json" },
     });
   } else {
     return new Response(
-      JSON.stringify({ error: "SSLCommerz init failed", detail: data }),
-      { status: 500 }
+      JSON.stringify({ error: "SSL init failed", detail: data }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

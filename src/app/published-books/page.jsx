@@ -80,7 +80,7 @@ export default function BookListingPage() {
           setEditingBook(null);
           setShowModal(true);
         }}
-        className="ml-2 flex justify-self-center px-4 py-2 border rounded-3xl hover:bg-blue-200 dark:hover:bg-blue-900 dark:bg-gray-800"
+        className="ml-2 mb-2 flex justify-self-center px-4 py-2 border rounded-3xl hover:bg-blue-200 dark:hover:bg-blue-900 dark:bg-gray-800"
       >
         Add New Book
       </button>
@@ -130,7 +130,7 @@ export default function BookListingPage() {
                   onClick={() => add(book)}
                   disabled={inCart}
                   className={`m-2 px-4 py-2 rounded ${
-                    inCart ? "bg-gray-400" : "bg-green-500"
+                    inCart ? "bg-gray-400" : "bg-green-500 text-white"
                   }`}
                 >
                   {inCart ? "In Cart" : "Add to Cart"}
