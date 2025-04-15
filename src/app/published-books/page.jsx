@@ -15,6 +15,7 @@ export default function BookListingPage() {
   const [items, setItems] = useState([]);
   const [showCartModal, setShowCartModal] = useState(false);
   const [checkoutModal, setCheckoutModal] = useState(false);
+  const [bundle, setBundle] = useState(false);
 
   const fetchBooks = async () => {
     try {
@@ -34,6 +35,12 @@ export default function BookListingPage() {
   useEffect(() => {
     fetchBooks();
   }, []);
+  useEffect(() => {
+    if (!items.length > 0) setShowCartModal(false);
+
+    if (items.length === books.length) setBundle(true);
+    else setBundle(false);
+  }, [items]);
 
   const handleDeleteBook = async (bookId) => {
     if (!confirm("Are you sure you want to delete this book?")) return;
@@ -57,17 +64,43 @@ export default function BookListingPage() {
         return [...prev, { book, qty: 1 }];
       } else {
         const next = [...prev];
-        next[idx] = { book, qty: next[idx].qty + 1 };
-        return next;
+        next.splice(idx, 1);
+        return [...next, { book, qty: 1 }];
       }
     });
   };
-  const remove = (bookId) => {
+
+  const increment = (book) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.book._id === book._id);
+      const next = [...prev];
+      next[idx] = { book, qty: next[idx].qty + 1 };
+      return next;
+    });
+  };
+  // remove one or all
+  const removeOne = (bookId) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.book._id === bookId);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      if (next[idx].qty > 1) {
+        next[idx] = { book: next[idx].book, qty: next[idx].qty - 1 };
+      } else {
+        if (confirm("Are you sure you want to remove the book from the cart?"))
+          next.splice(idx, 1);
+      }
+      return next;
+    });
+  };
+
+  // remove entire line
+  const removeAll = (bookId) => {
     setItems((prev) => prev.filter((i) => i.book._id !== bookId));
   };
   const clear = () => setItems([]);
 
-  const total = items.reduce((sum, b) => sum + b.book.price, 0);
+  const total = items.reduce((sum, b) => sum + b.qty * b.book.price, 0);
   const specialPrice = 1000;
   const savings = total - specialPrice;
 
@@ -173,72 +206,124 @@ export default function BookListingPage() {
 
       {showCartModal && items.length > 0 && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Backdrop */}
           <div
-            className="bg-black/80 absolute inset-0"
+            className="absolute inset-0 bg-black/70"
             onClick={() => setShowCartModal(false)}
-          ></div>
-          <div className="relative p-5 max-h-svh overflow-auto sm:w-2/3 w-full lg:w-1/3 border rounded bg-white dark:bg-gray-900 shadow-sm">
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl overflow-auto max-h-[90vh] w-full sm:w-3/4 lg:w-1/2">
+            {/* Close Button */}
             <button
-              className="ml-auto absolute right-5 top-2 items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-400 dark:hover:text-white"
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-900 dark:hover:text-white"
               onClick={() => setShowCartModal(false)}
-              title="Close"
+              aria-label="Close cart"
             >
-              <svg
-                stroke="currentColor"
-                fill="none"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                className="h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
+              ✖
             </button>
-            <div className="mt-5">
-              <h2 className="text-xl font-bold mb-4">Your Cart</h2>
-              <ul className="space-y-2 mb-4 border ">
-                {items.map((item) => (
-                  <li
-                    key={item.book._id}
-                    className="flex justify-between border items-center "
+
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Your Cart</h2>
+
+              <table className="w-full table-auto mb-6">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-800">
+                    <th className="p-2 text-left">Book</th>
+                    <th className="p-2 text-center">Qty</th>
+                    <th className="p-1 text-center"> Price </th>
+                    <th className="p-2 text-center">Del</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(({ book, qty }) => (
+                    <tr key={book._id} className="border-b justify-between">
+                      {/* Cover + Title */}
+                      <td className="p-2 flex items-center gap-2">
+                        <img
+                          src={book.coverImage}
+                          alt={book.title}
+                          className="w-12 h-16 object-cover rounded"
+                        />
+                        <span>{book.title}</span>
+                      </td>
+
+                      {/* Quantity Controls */}
+                      <td className="p-2 text-center w-1/5">
+                        <button
+                          onClick={() => removeOne(book._id)}
+                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-l dark:hover:bg-gray-500 hover:bg-gray-300"
+                        >
+                          –
+                        </button>
+                        <span className="px-3">{qty}</span>
+                        <button
+                          onClick={() => increment(book)}
+                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-r hover:bg-gray-300 dark:hover:bg-gray-500"
+                        >
+                          +
+                        </button>
+                      </td>
+
+                      {/* Line Price */}
+                      <td className="p-1 text-center">
+                        {book.price * qty} BDT
+                      </td>
+
+                      {/* Remove Button */}
+                      <td className="p-2 text-center">
+                        <button
+                          onClick={() => removeAll(book._id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div className="flex justify-between items-center mt-4">
+                <div className="text-left">
+                  <p className="text-lg">
+                    Complete Set Price:{" "}
+                    <span className="font-semibold">
+                      {specialPrice}
+                      BDT
+                    </span>
+                  </p>
+                  <button
+                    disabled={bundle}
+                    className={bundle ? "" : "bg-green-500 p-2 rounded"}
+                    onClick={() => books.map((book) => add(book))}
                   >
-                    <p className="w-2/3 border">{item.book.title}</p>
-                    <p className="border-r text-center w-1/4">
-                      {item.qty} book
-                    </p>
-                    <p className="border-r text-center w-1/4">
-                      {item.book.price} BDT{" "}
-                    </p>
-                    <button
-                      className="self-center w-1/4"
-                      onClick={() => remove(item.book._id)}
-                    >
-                      X
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <div className="mb-4 border-t text-end">
-                <p>Subtotal: {total} BDT</p>
+                    {bundle ? "You're buying a set" : "Buy A Complete Set"}
+                  </button>
+                </div>
+                <div className="text-right mb-6">
+                  <p className="text-lg">
+                    Subtotal:{" "}
+                    <span className="font-semibold text-xl">{total} BDT</span>
+                  </p>
+                </div>
               </div>
-              <div className="flex place-content-end">
+
+              {/* Actions */}
+              <div className="flex justify-end gap-4">
                 <button
-                  className="bg-red-400 text-white px-4 py-2 m-2 rounded"
                   onClick={() => setShowCartModal(false)}
+                  className="px-5 py-2 bg-gray-300 dark:bg-gray-700 rounded hover:bg-gray-400 dark:hover:bg-gray-800"
                 >
-                  Close
+                  Continue Shopping
                 </button>
                 <button
-                  className="bg-green-500 text-white px-4 py-2 rounded m-2"
                   onClick={() => {
                     setShowCartModal(false);
                     setCheckoutModal(true);
                   }}
+                  className="px-5 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                 >
                   Checkout
                 </button>
@@ -247,6 +332,7 @@ export default function BookListingPage() {
           </div>
         </div>
       )}
+
       <CheckoutModal
         open={checkoutModal}
         onClose={() => setCheckoutModal(false)}

@@ -130,14 +130,14 @@ export default function CheckoutModal({
         <div className="mb-4">
           <h3 className="font-semibold mb-2">Delivery Information</h3>
           <textarea
-            className="w-full border p-2 mb-2"
+            className="w-full border p-2 mb-2 dark:bg-black"
             placeholder="Delivery Address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             rows={2}
           />
           <input
-            className="w-full border p-2"
+            className="w-full border p-2 dark:bg-black"
             placeholder="Phone Number"
             type="tel"
             value={phone}
