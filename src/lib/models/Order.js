@@ -1,15 +1,26 @@
 // lib/models/Order.js
 import mongoose from "mongoose";
 
+const BookItemSchema = new mongoose.Schema({
+  bookId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Book",
+    required: true,
+  },
+  qty: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+});
+
 const OrderSchema = new mongoose.Schema(
   {
-    bookIds: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Book",
-        required: true,
-      },
-    ],
+    items: {
+      type: [BookItemSchema],
+      required: true,
+      validate: (v) => Array.isArray(v) && v.length > 0,
+    },
     userId: { type: String, required: true },
     buyerName: { type: String, required: true },
     buyerEmail: { type: String, required: true },
@@ -21,8 +32,8 @@ const OrderSchema = new mongoose.Schema(
       enum: ["pending", "delivery", "failed", "cancelled"],
       default: "pending",
     },
-    sessionKey: { type: String },
-    gatewayPageURL: { type: String },
+    sessionKey: String,
+    gatewayPageURL: String,
     paymentStatus: {
       type: String,
       enum: ["Unpaid", "Paid"],

@@ -250,19 +250,23 @@ export default function BookListingPage() {
 
                       {/* Quantity Controls */}
                       <td className="p-2 text-center w-1/5">
-                        <button
-                          onClick={() => removeOne(book._id)}
-                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-l dark:hover:bg-gray-500 hover:bg-gray-300"
-                        >
-                          –
-                        </button>
+                        {!bundle && (
+                          <button
+                            onClick={() => removeOne(book._id)}
+                            className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-l dark:hover:bg-gray-500 hover:bg-gray-300"
+                          >
+                            –
+                          </button>
+                        )}
                         <span className="px-3">{qty}</span>
-                        <button
-                          onClick={() => increment(book)}
-                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-r hover:bg-gray-300 dark:hover:bg-gray-500"
-                        >
-                          +
-                        </button>
+                        {!bundle && (
+                          <button
+                            onClick={() => increment(book)}
+                            className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-r hover:bg-gray-300 dark:hover:bg-gray-500"
+                          >
+                            +
+                          </button>
+                        )}
                       </td>
 
                       {/* Line Price */}
@@ -305,7 +309,10 @@ export default function BookListingPage() {
                 <div className="text-right mb-6">
                   <p className="text-lg">
                     Subtotal:{" "}
-                    <span className="font-semibold text-xl">{total} BDT</span>
+                    <span className="font-semibold text-xl">
+                      {bundle && total > specialPrice ? specialPrice : total}{" "}
+                      BDT
+                    </span>
                   </p>
                 </div>
               </div>
@@ -337,6 +344,7 @@ export default function BookListingPage() {
         open={checkoutModal}
         onClose={() => setCheckoutModal(false)}
         items={items}
+        bundlePrice={bundle && total > specialPrice ? specialPrice : null}
       />
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">

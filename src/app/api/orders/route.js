@@ -20,17 +20,18 @@ export async function GET(req) {
 export async function POST(req) {
   await connect();
   const {
-    bookIds,
+    items,
     userId,
     buyerName,
     buyerEmail,
     deliveryAddress,
     deliveryPhone,
+    bundlePrice, // optional
   } = await req.json();
 
   if (
-    !Array.isArray(bookIds) ||
-    bookIds.length === 0 ||
+    !Array.isArray(items) ||
+    items.length === 0 ||
     !userId ||
     !buyerName ||
     !buyerEmail ||
@@ -43,20 +44,25 @@ export async function POST(req) {
   }
 
   // Fetch all books and compute total
+  const bookIds = items.map((i) => i.bookId);
   const books = await Book.find({ _id: { $in: bookIds } });
   if (books.length !== bookIds.length) {
-    return new Response(
-      JSON.stringify({ error: "One or more books not found" }),
-      {
-        status: 404,
-      }
-    );
+    return new Response(JSON.stringify({ error: "Some books not found" }), {
+      status: 404,
+    });
   }
-  const totalAmount = books.reduce((sum, b) => sum + b.price, 0);
+
+  // Compute total = sum(book.price * qty)
+  const totalAmount = bundlePrice
+    ? bundlePrice
+    : items.reduce((sum, { bookId, qty }) => {
+        const b = books.find((x) => x._id.toString() === bookId);
+        return sum + b.price * qty;
+      }, 0);
 
   // create order
   const order = await Order.create({
-    bookIds,
+    items,
     userId,
     buyerName,
     buyerEmail,

@@ -22,7 +22,7 @@ export default function CheckoutModal({
     (sum, { book, qty }) => sum + book.price * qty,
     0
   );
-  const total = bundlePrice != null ? bundlePrice : subtotal;
+  const total = bundlePrice ? bundlePrice : subtotal;
   const savings = subtotal - total;
 
   // Reset when opened
@@ -43,14 +43,17 @@ export default function CheckoutModal({
     setLoading(true);
     try {
       const orderData = {
-        bookIds: items.map(({ book }) => book._id),
+        items: items.map(({ book, qty }) => ({
+          bookId: book._id,
+          qty,
+        })),
         userId: user.id,
         buyerName: user.fullName,
         buyerEmail: user.primaryEmailAddress.emailAddress,
         deliveryAddress: address,
         deliveryPhone: phone,
-        bundlePrice: total,
       };
+      if (bundlePrice) orderData.bundlePrice = bundlePrice;
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,7 +121,7 @@ export default function CheckoutModal({
         {/* Summary */}
         <div className="mb-4">
           <p>Subtotal: {subtotal} BDT</p>
-          {bundlePrice != null && (
+          {!bundlePrice && (
             <>
               <p>Bundle Price: {total} BDT</p>
               <p className="text-green-600">You save: {savings} BDT</p>
