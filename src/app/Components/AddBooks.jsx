@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getStorage,
@@ -10,6 +10,7 @@ import {
 import { useAuth, useUser } from "@clerk/nextjs";
 import { app } from "@/firebase"; // your firebase.js
 import { getAuth, signInWithCustomToken } from "firebase/auth";
+import ResponseModal from "./ResponseModal";
 
 export default function AddBookForm({ initialBook, onSuccess }) {
   const router = useRouter();
@@ -21,12 +22,110 @@ export default function AddBookForm({ initialBook, onSuccess }) {
     initialBook?.description || ""
   );
   const [fullPdfUrl, setFullPdfUrl] = useState(initialBook?.fullPdfUrl || "");
-  const [categories, setCategories] = useState(initialBook?.categories || []);
+  const [categories, setCategories] = useState([]); // All available categories from the store
+  const [categoryInput, setCategoryInput] = useState("");
+  const [bookCategories, setBookCategories] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef(null);
 
   const [coverFile, setCoverFile] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const user = useUser().user;
+  const [resModal, setResModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+
+  const showResModal = (message, status) => {
+    setResModal({ isOpen: true, message, status });
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // Update suggestions when categoryInput, categories, or bookCategories change
+  useEffect(() => {
+    const input = categoryInput.trim().toLowerCase();
+    const filtered = categories.filter(
+      (cat) =>
+        cat.name.toLowerCase().includes(input) &&
+        !bookCategories.some((qc) => qc._id === cat._id)
+    );
+    setSuggestions(filtered);
+  }, [categoryInput, categories, bookCategories]);
+
+  // Handlers for input focus and blur
+  const handleFocus = () => {
+    setShowSuggestions(true);
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => setShowSuggestions(false), 100);
+  };
+
+  const handleChange = (e) => {
+    setCategoryInput(e.target.value);
+  };
+
+  // Handle selecting an existing category
+  const handleSelect = (cat) => {
+    if (!bookCategories.some((c) => c._id === cat._id)) {
+      const updated = [...bookCategories, cat];
+      setBookCategories(updated);
+    }
+    setCategoryInput("");
+    setShowSuggestions(false);
+  };
+
+  // Create a new category if none match the input and select it
+  const handleAddNewCategory = async () => {
+    if (!user?.publicMetadata?.isAdmin) {
+      resModal.isOpen = true;
+      showResModal(
+        "You have to be an Admin to change anything restricted",
+        "error"
+      );
+    } else {
+      if (!categoryInput.trim()) return;
+      try {
+        const res = await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: categoryInput.trim() }),
+        });
+        if (res.ok) {
+          const newCat = await res.json();
+          setCategories((prev) => [...prev, newCat]);
+          setBookCategories((prev) => [...prev, newCat]);
+          setCategoryInput("");
+          setShowSuggestions(false);
+        }
+      } catch (err) {
+        console.error("Error adding new category:", err);
+      }
+    }
+  };
+
+  // Remove a category from the question
+  const removeCategory = (catId) => {
+    setBookCategories((prev) => prev.filter((cat) => cat._id !== catId));
+  };
 
   let firebaseSignedIn = false;
 
@@ -67,10 +166,14 @@ export default function AddBookForm({ initialBook, onSuccess }) {
   };
 
   const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!user?.publicMetadata?.isAdmin) {
-      alert("You are not an admin");
+      resModal.isOpen = true;
+      showResModal(
+        "You have to be an Admin to change anything restricted",
+        "error"
+      );
     } else {
-      e.preventDefault();
       setLoading(true);
 
       try {
@@ -104,7 +207,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             price,
             description,
             fullPdfUrl: uploadedPdfUrl,
-            categories,
+            categories: bookCategories.map((c) => c._id),
           };
 
           const res = initialBook
@@ -161,7 +264,57 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           onChange={(e) => setAuthor(e.target.value)}
           required
         />
-
+        {/* Category Section */}
+        <div className="mb-4 relative">
+          <label className="block mb-1 text-sm font-semibold">
+            Assign Categories:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {bookCategories.map((cat) => (
+              <div
+                key={cat._id}
+                className="flex items-center gap-1 bg-slate-700 text-blue-200 px-2 py-1 rounded hover:bg-red-500 hover:cursor-pointer"
+                onClick={() => removeCategory(cat._id)}
+                title="Click to remove"
+              >
+                <span>{cat.name}</span>
+                <span className="text-red-600">&times;</span>
+              </div>
+            ))}
+          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Add a category..."
+            value={categoryInput}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            className="w-full border p-2 rounded mt-2 dark:bg-black"
+          />
+          {showSuggestions && (
+            <div className="absolute top-full left-0 right-0 border rounded bg-white dark:bg-gray-800 mt-1 z-10 max-h-48 overflow-auto">
+              {suggestions.length > 0 ? (
+                suggestions.map((cat) => (
+                  <div
+                    key={cat._id}
+                    onMouseDown={() => handleSelect(cat)}
+                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    {cat.name}
+                  </div>
+                ))
+              ) : (
+                <div
+                  onMouseDown={handleAddNewCategory}
+                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                >
+                  Add "{categoryInput}" as a new category
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <label className="font-semibold">Cover Image</label>
         {!coverImage ? (
           <input
@@ -221,7 +374,6 @@ export default function AddBookForm({ initialBook, onSuccess }) {
         )}
 
         {/* You can add a category selection component here if needed */}
-
         <button
           type="submit"
           disabled={loading}
@@ -230,6 +382,12 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           {loading ? "Saving..." : "Save Book"}
         </button>
       </form>
+      <ResponseModal
+        isOpen={resModal.isOpen}
+        message={resModal.message}
+        status={resModal.status}
+        onClose={() => setResModal({ ...resModal, isOpen: false })}
+      />
     </div>
   );
 }

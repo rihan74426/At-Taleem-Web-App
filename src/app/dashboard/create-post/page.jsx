@@ -72,7 +72,10 @@ export default function CreatePostPage() {
     e.preventDefault();
     if (!user?.publicMetadata?.isAdmin) {
       modal.isOpen = true;
-      showModal("Please be an Admin first to change anything", "error");
+      showModal(
+        "You have to be an Admin to change anything restricted",
+        "error"
+      );
     } else {
       try {
         const res = await fetch("/api/post/create", {
