@@ -1,17 +1,10 @@
 import User from "../../../../lib/models/user.model";
 import { connect } from "../../../../lib/mongodb/mongoose";
-import { currentUser } from "@clerk/nextjs/server";
 
 export const POST = async (req) => {
-  const user = await currentUser();
-
   try {
     await connect();
     const data = await req.json();
-
-    if (!user?.publicMetadata.isAdmin) {
-      return new Response("Unauthorized", { status: 401 });
-    }
 
     const startIndex = parseInt(data.startIndex) || 0;
     const limit = parseInt(data.limit) || 9;

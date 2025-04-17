@@ -17,56 +17,53 @@ export default function DashboardComp() {
   const [lastMonthUsers, setLastMonthUsers] = useState(0);
   const [lastMonthPosts, setLastMonthPosts] = useState(0);
   const { user } = useUser();
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/user/get", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            limit: 5,
-          }),
-        });
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/user/get", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          limit: 5,
+        }),
+      });
 
-        const data = await res.json();
-        if (res.ok) {
-          setUsers(data.users);
-          setTotalUsers(data.totalUsers);
-          setLastMonthUsers(data.lastMonthUsers);
-        }
-      } catch (error) {
-        console.log(error.message);
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users);
+        setTotalUsers(data.totalUsers);
+        setLastMonthUsers(data.lastMonthUsers);
       }
-    };
-    const fetchPosts = async () => {
-      try {
-        const res = await fetch("/api/post/get", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            limit: 5,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setPosts(data.posts);
-          setTotalPosts(data.totalPosts);
-          setLastMonthPosts(data.lastMonthPosts);
-        }
-      } catch (error) {
-        console.log(error.message);
-      }
-    };
-
-    if (user?.publicMetadata?.isAdmin) {
-      fetchUsers();
-      fetchPosts();
+    } catch (error) {
+      console.log(error.message);
     }
-  }, [user]);
+  };
+  const fetchPosts = async () => {
+    try {
+      const res = await fetch("/api/post/get", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          limit: 5,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPosts(data.posts);
+        setTotalPosts(data.totalPosts);
+        setLastMonthPosts(data.lastMonthPosts);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+  useEffect(() => {
+    fetchUsers();
+    fetchPosts();
+  }, []);
   return (
     <div className="p-3 md:mx-auto">
       <div className="flex-wrap flex gap-4 justify-center">

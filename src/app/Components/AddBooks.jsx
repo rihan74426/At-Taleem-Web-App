@@ -246,7 +246,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
         {initialBook ? "Edit Book" : "Add New Book"}
       </h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <label className="font-semibold">Title</label>
+        <label className="font-semibold">Title *</label>
         <input
           type="text"
           className="dark:bg-gray-800"
@@ -255,7 +255,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <label className="font-semibold">Author</label>
+        <label className="font-semibold">Author *</label>
         <input
           type="text"
           placeholder="Author"
@@ -315,12 +315,13 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             </div>
           )}
         </div>
-        <label className="font-semibold">Cover Image</label>
+        <label className="font-semibold">Cover Image *</label>
         {!coverImage ? (
           <input
             type="file"
             accept="image/*"
             onChange={(e) => setCoverFile(e.target.files[0])}
+            required
           />
         ) : (
           <div className="flex items-center">
@@ -337,7 +338,7 @@ export default function AddBookForm({ initialBook, onSuccess }) {
             </button>
           </div>
         )}
-        <label className="font-semibold">Price</label>
+        <label className="font-semibold">Price *</label>
         <input
           type="number"
           placeholder="Price"
@@ -354,12 +355,13 @@ export default function AddBookForm({ initialBook, onSuccess }) {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        <label className="font-semibold">Upload Full Book (PDF)</label>
+        <label className="font-semibold">Upload Full Book (PDF) *</label>
         {!fullPdfUrl ? (
           <input
             type="file"
             accept="application/pdf"
             onChange={(e) => setPdfFile(e.target.files[0])}
+            required
           />
         ) : (
           <div className="flex items-center">

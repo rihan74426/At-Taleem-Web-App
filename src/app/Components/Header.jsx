@@ -174,6 +174,13 @@ export default function Header() {
             </Navbar.Link>
           </Link>
         )}
+        {user?.publicMetadata.isAdmin && (
+          <Link href="/orders" passHref>
+            <Navbar.Link active={path === "/orders"} as={"div"}>
+              অর্ডারসমূহ
+            </Navbar.Link>
+          </Link>
+        )}
         <div className="inline w-full sm:hidden place-content-center self-center items-center">
           <SignedIn
             children={

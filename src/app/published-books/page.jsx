@@ -17,6 +17,8 @@ export default function BookListingPage() {
   const [checkoutModal, setCheckoutModal] = useState(false);
   const [bundle, setBundle] = useState(false);
 
+  const [categories, setCategories] = useState([]);
+
   const fetchBooks = async () => {
     try {
       const res = await fetch("/api/books");
@@ -31,14 +33,27 @@ export default function BookListingPage() {
       setLoading(false);
     }
   };
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
 
   useEffect(() => {
     fetchBooks();
+    fetchCategories();
   }, []);
   useEffect(() => {
     if (!items.length > 0) setShowCartModal(false);
-
-    if (items.length === books.length) setBundle(true);
+    console.log(items.every((item) => item.qty === 1));
+    if (items.length === books.length && items.every((item) => item.qty === 1))
+      setBundle(true);
     else setBundle(false);
   }, [items]);
 
@@ -138,29 +153,51 @@ export default function BookListingPage() {
                 className="object-cover"
               />
               <h2 className="mt-2 text-xl font-semibold">{book.title}</h2>
-              <p className="text-gray-600">{book.author}</p>
-              <p className="text-green-600 font-bold">
-                BDT: {book.price} Taka Only
-              </p>
-              <div className="flex gap-2 w-full justify-center sm:justify-end">
-                <button
-                  onClick={() => {
-                    setEditingBook(book);
-                    setShowModal(true);
-                  }}
-                  className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
-                  title="Edit book"
-                >
-                  <HiOutlinePencil size={20} />
-                </button>
-                <button
-                  onClick={() => handleDeleteBook(book._id)}
-                  className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
-                  title="Delete book"
-                >
-                  <AiOutlineDelete size={20} />
-                </button>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="col-span-3">
+                  <p className="text-gray-600">{book.author}</p>
+                  <p className="text-green-600 font-bold">
+                    BDT: {book.price} Taka Only
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full justify-center sm:justify-end">
+                  <button
+                    onClick={() => {
+                      setEditingBook(book);
+                      setShowModal(true);
+                    }}
+                    className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                    title="Edit book"
+                  >
+                    <HiOutlinePencil size={20} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBook(book._id)}
+                    className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                    title="Delete book"
+                  >
+                    <AiOutlineDelete size={20} />
+                  </button>
+                </div>
               </div>
+              <div className="mt-2">
+                <div className="flex flex-wrap items-center">
+                  <span className="mr-1 font-semibold  text-gray-700 dark:text-gray-300">
+                    Categories:
+                  </span>
+                  {categories
+                    .filter((cat) => book.categories.includes(cat._id))
+                    .map((cat) => (
+                      <span
+                        key={cat._id}
+                        className="m-1 bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 px-3 py-1 rounded-lg text-sm"
+                      >
+                        {cat.name}
+                      </span>
+                    ))}
+                </div>
+              </div>
+
               <div className="justify-between items-center">
                 <Link href={`/published-books/${book._id}`}>
                   <button className="m-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">
@@ -250,23 +287,19 @@ export default function BookListingPage() {
 
                       {/* Quantity Controls */}
                       <td className="p-2 text-center w-1/5">
-                        {!bundle && (
-                          <button
-                            onClick={() => removeOne(book._id)}
-                            className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-l dark:hover:bg-gray-500 hover:bg-gray-300"
-                          >
-                            –
-                          </button>
-                        )}
+                        <button
+                          onClick={() => removeOne(book._id)}
+                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-l dark:hover:bg-gray-500 hover:bg-gray-300"
+                        >
+                          –
+                        </button>
                         <span className="px-3">{qty}</span>
-                        {!bundle && (
-                          <button
-                            onClick={() => increment(book)}
-                            className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-r hover:bg-gray-300 dark:hover:bg-gray-500"
-                          >
-                            +
-                          </button>
-                        )}
+                        <button
+                          onClick={() => increment(book)}
+                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-r hover:bg-gray-300 dark:hover:bg-gray-500"
+                        >
+                          +
+                        </button>
                       </td>
 
                       {/* Line Price */}
