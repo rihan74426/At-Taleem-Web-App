@@ -80,7 +80,8 @@ export default function OrderListPage() {
   // Map bookId to details for quick lookup
   const bookMap = books.reduce((acc, b) => ({ ...acc, [b._id]: b }), {});
 
-  if (loading) return <p className="p-6 text-center">Loading orders...</p>;
+  if (loading)
+    return <p className="p-6 text-center min-h-screen">Loading orders...</p>;
 
   return (
     <div className="p-6 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-800 min-h-screen">
