@@ -70,7 +70,7 @@ export function EditOrderModal({ order, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6 relative">
+      <div className="bg-white overflow-auto h-5/6 dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6 relative">
         <button
           className="absolute top-3 right-3 text-gray-500 hover:text-gray-900"
           onClick={onClose}
@@ -83,7 +83,7 @@ export function EditOrderModal({ order, onClose, onSaved }) {
           <select
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
-            className="w-full border px-2 py-1 rounded mt-1"
+            className="w-full border dark:bg-black px-2 py-1 rounded mt-1"
           >
             <option>pending</option>
             <option>delivery</option>
@@ -98,7 +98,7 @@ export function EditOrderModal({ order, onClose, onSaved }) {
             onChange={(e) =>
               setForm({ ...form, paymentStatus: e.target.value })
             }
-            className="w-full border px-2 py-1 rounded mt-1"
+            className="w-full border dark:bg-black px-2 py-1 rounded mt-1"
           >
             <option>Unpaid</option>
             <option>Paid</option>
@@ -112,7 +112,7 @@ export function EditOrderModal({ order, onClose, onSaved }) {
             onChange={(e) =>
               setForm({ ...form, deliveryAddress: e.target.value })
             }
-            className="w-full border px-2 py-1 rounded mt-1"
+            className="w-full border dark:bg-black px-2 py-1 rounded mt-1"
           />
         </label>
         <label className="block mb-4">
@@ -123,7 +123,7 @@ export function EditOrderModal({ order, onClose, onSaved }) {
             onChange={(e) =>
               setForm({ ...form, deliveryPhone: e.target.value })
             }
-            className="w-full border px-2 py-1 rounded mt-1"
+            className="w-full border dark:bg-black px-2 py-1 rounded mt-1"
           />
         </label>
         <button

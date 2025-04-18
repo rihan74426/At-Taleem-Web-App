@@ -121,7 +121,7 @@ export default function CheckoutModal({
         {/* Summary */}
         <div className="mb-4">
           <p>Subtotal: {subtotal} BDT</p>
-          {!bundlePrice && (
+          {bundlePrice && (
             <>
               <p>Bundle Price: {total} BDT</p>
               <p className="text-green-600">You save: {savings} BDT</p>

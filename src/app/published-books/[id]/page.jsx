@@ -11,6 +11,7 @@ import { dark } from "@clerk/themes";
 import { theme } from "flowbite-react";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+import CheckoutModal from "@/app/Components/CheckoutModal";
 
 // Set up the PDF worker to point to your public folder file
 
@@ -26,6 +27,7 @@ export default function BookDetailPage() {
   const [scale, setScale] = useState(1); // For zooming
   const [numPages, setNumPages] = useState(null);
   const [pdf, setPdf] = useState(null);
+  const [checkoutModal, setCheckoutModal] = useState(false);
 
   // Fetch book details from your API
   const fetchBook = async () => {
@@ -35,7 +37,6 @@ export default function BookDetailPage() {
       const data = await res.json();
       if (!data.book) throw new Error("Book not found");
       setBook(data.book);
-      setPdf(book.fullPdfUrl);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -43,7 +44,8 @@ export default function BookDetailPage() {
     }
   };
   useEffect(() => {
-    if (id) fetchBook();
+    fetchBook();
+    if (book) setPdf(book.fullPdfUrl);
   }, [id]);
 
   useEffect(() => {
@@ -159,12 +161,16 @@ export default function BookDetailPage() {
         </button>
         <button
           className="bg-blue-500 my-5 text-white px-4 py-2 rounded text-xl"
-          onClick={() => router.push(`/published-books/${book._id}/purchase`)}
+          onClick={() => setCheckoutModal(true)}
         >
           Buy Now
         </button>
       </div>
-
+      <CheckoutModal
+        open={checkoutModal}
+        onClose={() => setCheckoutModal(false)}
+        items={[{ book, qty: 1 }]}
+      />
       {showPreview && (
         <div className="mb-6 border rounded shadow ">
           <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
