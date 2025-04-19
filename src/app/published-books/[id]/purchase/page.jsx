@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
+import Loader from "@/app/Components/Loader";
 
 export default function BookPurchasePage() {
   const { id } = useParams();
@@ -80,7 +81,12 @@ export default function BookPurchasePage() {
     }
   };
 
-  if (loading) return <p className="text-center min-h-screen">Loading...</p>;
+  if (loading)
+    return (
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
+      </div>
+    );
   if (error)
     return <p className="text-center text-red-500 min-h-screen">{error}</p>;
   if (!book) return <p className="text-center min-h-screen">Book not found</p>;

@@ -6,6 +6,7 @@ import AddBookForm from "../Components/AddBooks";
 import { AiOutlineDelete } from "react-icons/ai";
 import { HiOutlinePencil } from "react-icons/hi";
 import CheckoutModal from "../Components/CheckoutModal";
+import Loader from "../Components/Loader";
 
 export default function BookListingPage() {
   const [books, setBooks] = useState([]);
@@ -121,9 +122,9 @@ export default function BookListingPage() {
 
   if (loading)
     return (
-      <p className="min-h-screen place-content-center flex items-center">
-        Loading...
-      </p>
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
+      </div>
     );
   if (!books.length > 0)
     return <p className="min-h-screen text-center">No Books Published Yet!</p>;

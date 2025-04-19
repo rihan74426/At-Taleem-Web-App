@@ -11,6 +11,7 @@ import {
   SendEmailModal,
 } from "../components/orderModals";
 import { FiChevronDown } from "react-icons/fi";
+import Loader from "../Components/Loader";
 
 export default function OrderListPage() {
   // States to manage orders, books, loading, and filters
@@ -81,7 +82,11 @@ export default function OrderListPage() {
   const bookMap = books.reduce((acc, b) => ({ ...acc, [b._id]: b }), {});
 
   if (loading)
-    return <p className="p-6 text-center min-h-screen">Loading orders...</p>;
+    return (
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
+      </div>
+    );
 
   return (
     <div className="p-6 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-800 min-h-screen">

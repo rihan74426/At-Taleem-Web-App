@@ -7,6 +7,7 @@ import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import AdminVideosPage from "@/app/dashboard/videos/page";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "@/app/Components/ResponseModal";
+import Loader from "@/app/Components/Loader";
 
 export default function VideoDetailPage() {
   const params = useParams();
@@ -82,8 +83,8 @@ export default function VideoDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-xl">Loading...</p>
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
       </div>
     );
   }

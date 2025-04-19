@@ -12,6 +12,7 @@ import { theme } from "flowbite-react";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import CheckoutModal from "@/app/Components/CheckoutModal";
+import Loader from "@/app/Components/Loader";
 
 // Set up the PDF worker to point to your public folder file
 
@@ -123,7 +124,11 @@ export default function BookDetailPage() {
   }, [book]);
 
   if (loading)
-    return <p className="text-center text-gray-500 min-h-screen">Loading...</p>;
+    return (
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
+      </div>
+    );
   if (error)
     return <p className="text-center text-red-500 min-h-screen">{error}</p>;
   if (!book)

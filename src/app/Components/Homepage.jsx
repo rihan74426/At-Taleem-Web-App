@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "./ResponseModal";
+import Loader from "./Loader";
 
 const Editor = dynamic(() => import("./Editor"), { ssr: false });
 
@@ -84,7 +85,9 @@ export default function Homepage() {
           )}
         </div>
       ) : (
-        <p className="text-center text-gray-500">Loading...</p>
+        <div className="flex place-content-center text-gray-500">
+          <Loader />
+        </div>
       )}
 
       {/* Website Under Construction Message */}

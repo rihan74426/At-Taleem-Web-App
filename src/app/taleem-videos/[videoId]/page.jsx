@@ -31,6 +31,7 @@ export default function VideoDetailPage() {
   // Function to fetch video details
   const fetchVideo = async () => {
     try {
+      setLoading(true);
       const res = await fetch(`/api/videos?videoId=${videoId}`);
       if (!res.ok) throw new Error("Failed to fetch video");
       const data = await res.json();
@@ -83,8 +84,8 @@ export default function VideoDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-xl">Loading...</p>
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
       </div>
     );
   }

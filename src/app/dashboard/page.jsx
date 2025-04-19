@@ -21,6 +21,7 @@ export default function Dashboard() {
     if (tabFromUrl) {
       setTab(tabFromUrl);
     }
+    if (tab === "") setTab("dash");
   }, [searchParams]);
   return (
     <div className="min-h-screen flex flex-col md:flex-row">

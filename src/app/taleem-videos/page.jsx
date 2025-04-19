@@ -8,9 +8,11 @@ import { Modal } from "flowbite-react";
 import { VideoCard } from "../Components/VideoCard";
 import { VideoListItem } from "../Components/VideoList";
 import ResponseModal from "../Components/ResponseModal";
+import Loader from "../Components/Loader";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("card"); // "card" or "list"
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -35,6 +37,7 @@ export default function VideosPage() {
         setTotalPages(totalPages);
         setCurrentPage(currentPage);
       }
+      setLoading(false);
     }
     fetchVideos();
   }, [currentPage]);
@@ -61,6 +64,13 @@ export default function VideosPage() {
       }
     }
   };
+
+  if (loading)
+    return (
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
+      </div>
+    );
 
   return (
     <div className="max-w-6xl flex flex-col mx-auto p-4 min-h-screen">

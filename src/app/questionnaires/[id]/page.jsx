@@ -13,6 +13,7 @@ import "react-quill-new/dist/quill.snow.css";
 import { HiOutlinePencil } from "react-icons/hi";
 import ResponseModal from "@/app/Components/ResponseModal";
 import QuestionComments from "@/app/Components/QuestionComment";
+import Loader from "@/app/Components/Loader";
 
 export default function QuestionDetailPage() {
   const { id } = useParams();
@@ -234,7 +235,11 @@ export default function QuestionDetailPage() {
   };
 
   if (loading)
-    return <p className="text-center text-gray-500 min-h-screen">Loading...</p>;
+    return (
+      <div className="flex items-center place-content-center min-h-screen">
+        <Loader />
+      </div>
+    );
   if (error)
     return <p className="text-center text-red-500 min-h-screen">{error}</p>;
   if (!question)

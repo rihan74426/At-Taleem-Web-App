@@ -9,61 +9,71 @@ import {
 import { Button, Table } from "flowbite-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import Loader from "./Loader";
 export default function DashboardComp() {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalPosts, setTotalPosts] = useState(0);
   const [lastMonthUsers, setLastMonthUsers] = useState(0);
   const [lastMonthPosts, setLastMonthPosts] = useState(0);
   const { user } = useUser();
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/user/get", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          limit: 5,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setUsers(data.users);
-        setTotalUsers(data.totalUsers);
-        setLastMonthUsers(data.lastMonthUsers);
-      }
-    } catch (error) {
-      console.log(error.message);
-    }
-  };
-  const fetchPosts = async () => {
-    try {
-      const res = await fetch("/api/post/get", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          limit: 5,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPosts(data.posts);
-        setTotalPosts(data.totalPosts);
-        setLastMonthPosts(data.lastMonthPosts);
-      }
-    } catch (error) {
-      console.log(error.message);
-    }
-  };
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch("/api/user/get", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            limit: 5,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setUsers(data.users);
+          setTotalUsers(data.totalUsers);
+          setLastMonthUsers(data.lastMonthUsers);
+        }
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
+    const fetchPosts = async () => {
+      try {
+        const res = await fetch("/api/post/get", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            limit: 5,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setPosts(data.posts);
+          setTotalPosts(data.totalPosts);
+          setLastMonthPosts(data.lastMonthPosts);
+        }
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
     fetchUsers();
     fetchPosts();
+    if ((posts, users)) setLoading(false);
   }, []);
+
+  if (loading)
+    return (
+      <div className=" p-3 md:mx-auto items-center flex min-h-screen">
+        <Loader />
+      </div>
+    );
   return (
     <div className="p-3 md:mx-auto">
       <div className="flex-wrap flex gap-4 justify-center">
