@@ -20,8 +20,7 @@ export default function Dashboard() {
     const tabFromUrl = urlParams.get("tab");
     if (tabFromUrl) {
       setTab(tabFromUrl);
-    }
-    if (tab === "") setTab("dash");
+    } else setTab("dash");
   }, [searchParams]);
   return (
     <div className="min-h-screen flex flex-col md:flex-row">

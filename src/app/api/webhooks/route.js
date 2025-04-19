@@ -48,6 +48,7 @@ export async function POST(req) {
 
   // Do something with payload
   // For this guide, log payload to console
+  const evt = wh.verify(payload);
   const { id } = evt.data;
   const eventType = evt.type;
   console.log(`Received webhook with ID ${id} and event type of ${eventType}`);
@@ -71,7 +72,7 @@ export async function POST(req) {
 
       if (user && eventType === "user.created") {
         try {
-          const clerk = await clerkClient();
+          const clerk = clerkClient;
           clerk.users.updateUserMetadata(id, {
             publicMetadata: {
               userMongoId: user._id,
@@ -104,3 +105,4 @@ export async function POST(req) {
 
   return new Response("Webhook received", { status: 200 });
 }
+export const config = { api: { bodyParser: false } };

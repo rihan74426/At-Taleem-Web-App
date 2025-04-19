@@ -22,20 +22,18 @@ export default function DashboardComp() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("/api/user/get", {
-          method: "POST",
+        const res = await fetch("/api/user", {
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            limit: 5,
-          }),
         });
 
         const data = await res.json();
+        console.log(data);
         if (res.ok) {
-          setUsers(data.users);
-          setTotalUsers(data.totalUsers);
+          setUsers(data.users.data);
+          setTotalUsers(data.users.totalCount);
           setLastMonthUsers(data.lastMonthUsers);
         }
       } catch (error) {
@@ -126,17 +124,17 @@ export default function DashboardComp() {
             </Table.Head>
             {users &&
               users.map((user) => (
-                <Table.Body key={user._id} className="divide-y">
+                <Table.Body key={user.id} className="divide-y">
                   <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
                     <Table.Cell>
                       <img
-                        src={user.profilePicture}
+                        src={user.imageUrl}
                         alt="user"
                         className="w-10 h-10 rounded-full bg-gray-500"
                       />
                     </Table.Cell>
                     <Table.Cell>
-                      {user.firstname + " " + user.lastname}
+                      {user.firstName + " " + user.lastName}
                     </Table.Cell>
                   </Table.Row>
                 </Table.Body>
