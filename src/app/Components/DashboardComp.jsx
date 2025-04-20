@@ -30,7 +30,6 @@ export default function DashboardComp() {
         });
 
         const data = await res.json();
-        console.log(data);
         if (res.ok) {
           setUsers(data.users.data);
           setTotalUsers(data.users.totalCount);

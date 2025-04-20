@@ -4,6 +4,8 @@ import { Table } from "flowbite-react";
 import { useEffect, useState } from "react";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import { useUser } from "@clerk/nextjs";
+import { format } from "date-fns";
+import Loader from "./Loader";
 export default function DashUsers() {
   const { user, isLoaded } = useUser();
   const [users, setUsers] = useState([]);
@@ -28,7 +30,6 @@ export default function DashUsers() {
 
     fetchUsers();
   }, []);
-  if (isLoaded) console.log(users);
 
   if (!user?.publicMetadata?.isAdmin && isLoaded) {
     return (
@@ -43,43 +44,90 @@ export default function DashUsers() {
         <>
           <Table hoverable className="shadow-md">
             <Table.Head>
-              <Table.HeadCell>Date created</Table.HeadCell>
-              <Table.HeadCell>User image</Table.HeadCell>
+              <Table.HeadCell>Date Created</Table.HeadCell>
+              <Table.HeadCell>User Image</Table.HeadCell>
               <Table.HeadCell>Username</Table.HeadCell>
               <Table.HeadCell>Email</Table.HeadCell>
               <Table.HeadCell>Admin</Table.HeadCell>
+              <Table.HeadCell>Actions</Table.HeadCell>
             </Table.Head>
-            {users.map((user) => (
-              <Table.Body className="divide-y" key={user.id}>
-                <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
-                  <Table.Cell>
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <img
-                      src={user.imageUrl}
-                      alt={user.username}
-                      className="w-10 h-10 object-cover bg-gray-500 rounded-full"
-                    />
-                  </Table.Cell>
-                  <Table.Cell>
-                    {user.firstName + " " + user.lastName}
-                  </Table.Cell>
-                  <Table.Cell>{user.emailAddresses[0].emailAddress}</Table.Cell>
-                  <Table.Cell>
-                    {user.publicMetadata.isAdmin ? (
-                      <FaCheck className="text-green-500" />
-                    ) : (
-                      <FaTimes className="text-red-500" />
-                    )}
-                  </Table.Cell>
-                </Table.Row>
-              </Table.Body>
-            ))}
+
+            <Table.Body className="divide-y">
+              {users.map((user) => {
+                // Consider a user "active" if they signed in within the last 5 minutes
+                const isActive =
+                  Date.now() - new Date(user.lastActiveAt).getTime() <
+                  5 * 60 * 1000;
+                const email = user.emailAddresses[0]?.emailAddress || "";
+
+                return (
+                  <Table.Row
+                    key={user.id}
+                    className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                  >
+                    {/* Date created */}
+                    <Table.Cell>
+                      {format(new Date(parseInt(user.createdAt, 10)), "PP p")}
+                    </Table.Cell>
+
+                    {/* Profile image with active status indicator */}
+                    <Table.Cell>
+                      <div className="relative w-10 h-10">
+                        <img
+                          src={user.imageUrl}
+                          alt={`${user.firstName ?? ""} ${user.lastName ?? ""}`}
+                          className="w-10 h-10 object-cover bg-gray-500 rounded-full"
+                        />
+                        <span
+                          className={
+                            `absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ` +
+                            (isActive ? "bg-green-400" : "bg-gray-400")
+                          }
+                        />
+                      </div>
+                    </Table.Cell>
+
+                    {/* Username (first & last name) */}
+                    <Table.Cell>
+                      {`${user.firstName ?? ""} ${
+                        user.lastName ?? ""
+                      }`.trim() || "—"}
+                    </Table.Cell>
+
+                    {/* Primary email */}
+                    <Table.Cell>{email || "—"}</Table.Cell>
+
+                    {/* Admin status */}
+                    <Table.Cell>
+                      {user.publicMetadata?.isAdmin ? (
+                        <FaCheck className="text-green-500" />
+                      ) : (
+                        <FaTimes className="text-red-500" />
+                      )}
+                    </Table.Cell>
+
+                    {/* Email button */}
+                    <Table.Cell>
+                      <button
+                        onClick={() =>
+                          (window.location.href = `mailto:${email}`)
+                        }
+                        className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        disabled={!email}
+                      >
+                        Email
+                      </button>
+                    </Table.Cell>
+                  </Table.Row>
+                );
+              })}
+            </Table.Body>
           </Table>
         </>
       ) : (
-        <p>You have no users yet!</p>
+        <div className="flex items-center place-content-center min-h-screen">
+          <Loader />
+        </div>
       )}
     </div>
   );
