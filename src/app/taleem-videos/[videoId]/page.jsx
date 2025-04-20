@@ -7,6 +7,7 @@ import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import AdminVideosPage from "@/app/dashboard/videos/page";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "@/app/Components/ResponseModal";
+import Loader from "@/app/Components/Loader";
 
 export default function VideoDetailPage() {
   const params = useParams();
