@@ -65,13 +65,6 @@ export default function VideosPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex items-center place-content-center min-h-screen">
-        <Loader />
-      </div>
-    );
-
   return (
     <div className="max-w-6xl flex flex-col mx-auto p-4 min-h-screen">
       <h1 className="text-3xl text-center font-bold mb-4" id="main-container">
@@ -106,6 +99,11 @@ export default function VideosPage() {
           Add New Video
         </button>
       </div>
+      {loading && (
+        <div className="flex items-center place-content-center">
+          <Loader />
+        </div>
+      )}
       {viewMode === "card" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-5">
           {videos.map((video) => (

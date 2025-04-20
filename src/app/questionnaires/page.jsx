@@ -6,6 +6,7 @@ import AskQuestionForm from "../Components/AskQuestions";
 import { HiOutlinePencil } from "react-icons/hi";
 import { AiOutlineDelete } from "react-icons/ai";
 import ResponseModal from "../Components/ResponseModal";
+import Loader from "../Components/Loader";
 
 export default function QuestionnairePage() {
   const { user, isSignedIn } = useUser();
@@ -20,6 +21,7 @@ export default function QuestionnairePage() {
   const [categories, setCategories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [resModal, setResModal] = useState({
     isOpen: false,
     message: "",
@@ -31,6 +33,7 @@ export default function QuestionnairePage() {
   };
   // Fetch questions from the API
   const fetchQuestions = async () => {
+    setLoading(true);
     try {
       let url = `/api/questions?page=${page}&limit=10`;
       if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -43,7 +46,10 @@ export default function QuestionnairePage() {
         setQuestions(data.questions);
         setTotalPages(data.totalPages);
       }
+      setLoading(false);
     } catch (err) {
+      setLoading(false);
+
       console.error("Error fetching questions:", err);
     }
   };
@@ -76,6 +82,7 @@ export default function QuestionnairePage() {
   // Handle question deletion
   const handleDeleteQuestion = async (question) => {
     if (!confirm("Are you sure you want to delete this question?")) return;
+
     if (!user?.publicMetadata?.isAdmin || user?.id === question.userId) {
       resModal.isOpen = true;
       showResModal(
@@ -84,13 +91,16 @@ export default function QuestionnairePage() {
       );
     } else {
       try {
+        setLoading(true);
         const res = await fetch(`/api/questions/${question.questionId}`, {
           method: "DELETE",
         });
         if (res.ok) fetchQuestions();
       } catch (err) {
+        setLoading(false);
         console.error("Error deleting question:", err);
       }
+      setLoading(false);
     }
   };
 
@@ -155,39 +165,44 @@ export default function QuestionnairePage() {
         </div>
 
         {/* Question List */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {questions.map((q) => (
-            <QuestionCard
-              key={q._id}
-              question={q}
-              categories={categories}
-              isSignedIn={isSignedIn}
-              user={user}
-              onEdit={() => {
-                setEditingQuestion(q);
-                setShowModal(true);
-              }}
-              onDelete={() => handleDeleteQuestion(q)}
-            />
-          ))}
-        </div>
-
-        {/* Pagination */}
-        <div className="flex justify-center space-x-2">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 border rounded ${
-                page === i + 1
-                  ? "bg-blue-600 text-white"
-                  : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
+        {loading ? (
+          <div className=" p-3 flex place-content-center items-center">
+            <Loader />
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {questions.map((q) => (
+              <QuestionCard
+                key={q._id}
+                question={q}
+                categories={categories}
+                isSignedIn={isSignedIn}
+                user={user}
+                onEdit={() => {
+                  setEditingQuestion(q);
+                  setShowModal(true);
+                }}
+                onDelete={() => handleDeleteQuestion(q)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Pagination */}
+      <div className="flex mt-auto justify-center gap-2 space-x-2">
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            onClick={() => setPage(i + 1)}
+            className={`px-3 py-1 mt-5 border rounded ${
+              page === i + 1
+                ? "bg-blue-600 text-white"
+                : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
       </div>
 
       {/* Modal for Ask/Edit */}

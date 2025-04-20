@@ -120,15 +120,6 @@ export default function BookListingPage() {
   const specialPrice = 1000;
   const savings = total - specialPrice;
 
-  if (loading)
-    return (
-      <div className="flex items-center place-content-center min-h-screen">
-        <Loader />
-      </div>
-    );
-  if (!books.length > 0)
-    return <p className="min-h-screen text-center">No Books Published Yet!</p>;
-
   return (
     <div className="max-w-6xl min-h-screen mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4">Books</h1>
@@ -141,84 +132,94 @@ export default function BookListingPage() {
       >
         Add New Book
       </button>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {books.map((book) => {
-          const inCart = items.some((b) => b.book._id === book._id);
-          return (
-            <div key={book._id} className="border rounded shadow p-4">
-              <Image
-                src={book.coverImage}
-                alt={book.title}
-                width={500}
-                height={700}
-                className="object-cover"
-              />
-              <h2 className="mt-2 text-xl font-semibold">{book.title}</h2>
-              <div className="grid grid-cols-4 gap-4">
-                <div className="col-span-3">
-                  <p className="text-gray-600">{book.author}</p>
-                  <p className="text-green-600 font-bold">
-                    BDT: {book.price} Taka Only
-                  </p>
-                </div>
-                <div className="flex gap-2 w-full justify-center sm:justify-end">
-                  <button
-                    onClick={() => {
-                      setEditingBook(book);
-                      setShowModal(true);
-                    }}
-                    className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
-                    title="Edit book"
-                  >
-                    <HiOutlinePencil size={20} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteBook(book._id)}
-                    className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
-                    title="Delete book"
-                  >
-                    <AiOutlineDelete size={20} />
-                  </button>
-                </div>
-              </div>
-              <div className="mt-2">
-                <div className="flex flex-wrap items-center">
-                  <span className="mr-1 font-semibold  text-gray-700 dark:text-gray-300">
-                    Categories:
-                  </span>
-                  {categories
-                    .filter((cat) => book.categories.includes(cat._id))
-                    .map((cat) => (
-                      <span
-                        key={cat._id}
-                        className="m-1 bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 px-3 py-1 rounded-lg text-sm"
-                      >
-                        {cat.name}
-                      </span>
-                    ))}
-                </div>
-              </div>
 
-              <div className="justify-between items-center">
-                <Link href={`/published-books/${book._id}`}>
-                  <button className="m-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">
-                    View Details
+      {loading ? (
+        <div className="flex items-center place-content-center min-h-screen">
+          <Loader />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {books.map((book) => {
+            const inCart = items.some((b) => b.book._id === book._id);
+            return (
+              <div key={book._id} className="border rounded shadow p-4">
+                <Image
+                  src={book.coverImage}
+                  alt={book.title}
+                  width={500}
+                  height={700}
+                  className="object-cover"
+                />
+                <h2 className="mt-2 text-xl font-semibold">{book.title}</h2>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3">
+                    <p className="text-gray-600">{book.author}</p>
+                    <p className="text-green-600 font-bold">
+                      BDT: {book.price} Taka Only
+                    </p>
+                  </div>
+                  <div className="flex gap-2 w-full justify-center sm:justify-end">
+                    <button
+                      onClick={() => {
+                        setEditingBook(book);
+                        setShowModal(true);
+                      }}
+                      className="text-blue-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                      title="Edit book"
+                    >
+                      <HiOutlinePencil size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBook(book._id)}
+                      className="text-red-500 p-2 rounded hover:bg-slate-300 dark:hover:bg-slate-800"
+                      title="Delete book"
+                    >
+                      <AiOutlineDelete size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <div className="flex flex-wrap items-center">
+                    <span className="mr-1 font-semibold  text-gray-700 dark:text-gray-300">
+                      Categories:
+                    </span>
+                    {categories
+                      .filter((cat) => book.categories.includes(cat._id))
+                      .map((cat) => (
+                        <span
+                          key={cat._id}
+                          className="m-1 bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 px-3 py-1 rounded-lg text-sm"
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="justify-between items-center">
+                  <Link href={`/published-books/${book._id}`}>
+                    <button className="m-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">
+                      View Details
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => add(book)}
+                    disabled={inCart}
+                    className={`m-2 px-4 py-2 rounded ${
+                      inCart ? "bg-gray-400" : "bg-green-500 text-white"
+                    }`}
+                  >
+                    {inCart ? "In Cart" : "Add to Cart"}
                   </button>
-                </Link>
-                <button
-                  onClick={() => add(book)}
-                  disabled={inCart}
-                  className={`m-2 px-4 py-2 rounded ${
-                    inCart ? "bg-gray-400" : "bg-green-500 text-white"
-                  }`}
-                >
-                  {inCart ? "In Cart" : "Add to Cart"}
-                </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
+      {!books.length > 0 && (
+        <p className="min-h-screen text-center">No Books Published Yet!</p>
+      )}
       {items.length > 0 && (
         <>
           <div className="fixed top-20 right-4 bg-white text-gray-800 shadow p-3 rounded flex items-center gap-2 z-50">
