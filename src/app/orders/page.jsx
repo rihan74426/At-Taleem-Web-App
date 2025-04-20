@@ -9,9 +9,9 @@ import {
   OrderDetailsModal,
   EditOrderModal,
   SendEmailModal,
-} from "../components/orderModals";
+} from "@/app/Components/orderModals";
 import { FiChevronDown } from "react-icons/fi";
-import Loader from "../Components/Loader";
+import Loader from "@/app/Components/Loader";
 
 export default function OrderListPage() {
   // States to manage orders, books, loading, and filters
