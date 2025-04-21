@@ -85,9 +85,9 @@ export default function DashUsers() {
             <Table.Body className="divide-y text-center">
               {users.map((user) => {
                 // Consider a user "active" if they signed in within the last 5 minutes
+                const lastSeen = user.lastActiveAt;
                 const isActive =
-                  Date.now() - new Date(user.lastActiveAt).getTime() <
-                  5 * 60 * 1000;
+                  Date.now() - new Date(lastSeen).getTime() < 60 * 60 * 1000; // 1 hour
                 const email = user.emailAddresses[0]?.emailAddress || "";
 
                 return (
