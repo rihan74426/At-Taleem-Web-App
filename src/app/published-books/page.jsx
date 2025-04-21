@@ -130,7 +130,7 @@ export default function BookListingPage() {
         }}
         className="ml-2 mb-2 flex justify-self-center px-4 py-2 border rounded-3xl hover:bg-blue-200 dark:hover:bg-blue-900 dark:bg-gray-800"
       >
-        Add New Book
+        নতুন বই যুক্ত করুন
       </button>
 
       {loading ? (
@@ -142,7 +142,10 @@ export default function BookListingPage() {
           {books.map((book) => {
             const inCart = items.some((b) => b.book._id === book._id);
             return (
-              <div key={book._id} className="border rounded shadow p-4">
+              <div
+                key={book._id}
+                className="border rounded shadow p-4 flex flex-col justify-between"
+              >
                 <Image
                   src={book.coverImage}
                   alt={book.title}
@@ -180,9 +183,6 @@ export default function BookListingPage() {
                 </div>
                 <div className="mt-2">
                   <div className="flex flex-wrap items-center">
-                    <span className="mr-1 font-semibold  text-gray-700 dark:text-gray-300">
-                      Categories:
-                    </span>
                     {categories
                       .filter((cat) => book.categories.includes(cat._id))
                       .map((cat) => (
@@ -199,7 +199,7 @@ export default function BookListingPage() {
                 <div className="justify-between items-center">
                   <Link href={`/published-books/${book._id}`}>
                     <button className="m-2 inline-block bg-blue-500 text-white px-4 py-2 rounded">
-                      View Details
+                      বিস্তারিত দেখুন
                     </button>
                   </Link>
                   <button
@@ -209,7 +209,7 @@ export default function BookListingPage() {
                       inCart ? "bg-gray-400" : "bg-green-500 text-white"
                     }`}
                   >
-                    {inCart ? "In Cart" : "Add to Cart"}
+                    {inCart ? "কার্টে আছে" : "কার্টে যুক্ত করুন"}
                   </button>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function BookListingPage() {
         </div>
       )}
       {!books.length > 0 && (
-        <p className="min-h-screen text-center">No Books Published Yet!</p>
+        <p className="min-h-screen text-center">এখনো কোন বই প্রকাশিত হয় নি!</p>
       )}
       {items.length > 0 && (
         <>

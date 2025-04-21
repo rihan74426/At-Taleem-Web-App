@@ -1,7 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { clerkClient } from "@clerk/nextjs/server";
-import { createAndUpdateUser, deleteUser } from "@/lib/actions/user";
+import { createAndUpdateUser } from "@/lib/actions/user";
 
 export async function POST(req) {
   const SIGNING_SECRET = process.env.SIGNING_SECRET;
@@ -91,18 +91,7 @@ export async function POST(req) {
     }
   }
 
-  if (eventType === "user.deleted") {
-    const { id } = evt?.data;
-    const safeId = id ?? "";
-
-    try {
-      await deleteUser(safeId);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      return new Response("Error: Could not delete user", { status: 200 });
-    }
-  }
-
   return new Response("Webhook received", { status: 200 });
 }
+
 export const config = { api: { bodyParser: false } };

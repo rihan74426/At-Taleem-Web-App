@@ -27,6 +27,18 @@ export default function VideosPage() {
   const showModal = (message, status) => {
     setModal({ isOpen: true, message, status });
   };
+
+  // Callbacks for edit and delete actions
+  const handleEdit = (video) => {
+    setEditingVideo(video);
+    setVideoModal(true); // Open modal for editing
+  };
+  const onUpdate = (newVideo) => {
+    setVideos((prev) =>
+      prev.map((v) => (v._id === newVideo._id ? newVideo : v))
+    );
+  };
+
   useEffect(() => {
     async function fetchVideos() {
       let url = `/api/videos?page=${currentPage}&category=Taleem`;
@@ -40,14 +52,7 @@ export default function VideosPage() {
       setLoading(false);
     }
     fetchVideos();
-  }, [currentPage]);
-
-  // Callbacks for edit and delete actions
-  const handleEdit = (video) => {
-    setEditingVideo(video);
-    setVideoModal(true); // Open modal for editing
-  };
-
+  }, [currentPage, onUpdate]);
   const handleDelete = async (videoId) => {
     if (!user?.user.publicMetadata?.isAdmin) {
       modal.isOpen = true;
@@ -177,6 +182,7 @@ export default function VideosPage() {
             <div className="mt-5">
               <AdminVideosPage
                 initialVideo={editingVideo}
+                onUpdate={onUpdate}
                 onClose={() => setVideoModal(false)}
               />
             </div>

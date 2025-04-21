@@ -56,7 +56,7 @@ export default function AnimatedDropdown({ title, id, items }) {
             <motion.span
               animate={{ left }}
               transition={{ duration: 0.2 }}
-              className="absolute top-0 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
+              className="absolute top-0 h-4 w-4 -translate-x-1/4 -translate-y-1/4 rotate-45 border-l border-t border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900"
             />
           </motion.div>
         )}

@@ -67,7 +67,7 @@ export default function AdminVideosPage({
 
       if (res.ok) {
         showModal("Successfully saved video!", "success");
-        onUpdate(payload);
+        if (initialVideo) onUpdate(payload);
         onClose();
       } else {
         showModal("Failed to save video! Please try again...", "error");

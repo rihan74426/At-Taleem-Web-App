@@ -10,27 +10,57 @@ export default function DashUsers() {
   const { user, isLoaded } = useUser();
   const [users, setUsers] = useState([]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/user", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setUsers(data.users.data);
-        }
-      } catch (error) {
-        console.log(error.message);
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users.data);
       }
-    };
-
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+  useEffect(() => {
     fetchUsers();
   }, []);
-
+  const makeAdmin = async (id) => {
+    try {
+      const user = await fetch(`/api/user/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicMetadata: { isAdmin: true },
+        }),
+      });
+      if (user.ok) {
+        fetchUsers();
+      }
+    } catch (error) {
+      console.log("Error making user an admin:", error.message);
+    }
+  };
+  const dismissAdmin = async (id) => {
+    try {
+      const user = await fetch(`/api/user/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicMetadata: { isAdmin: false },
+        }),
+      });
+      if (user.ok) {
+        fetchUsers();
+      }
+    } catch (error) {
+      console.log("Error making user an admin:", error.message);
+    }
+  };
   if (!user?.publicMetadata?.isAdmin && isLoaded) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full py-7">
@@ -39,11 +69,11 @@ export default function DashUsers() {
     );
   }
   return (
-    <div className="table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
+    <div className="table-auto md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       {users.length > 0 ? (
         <>
-          <Table hoverable className="shadow-md">
-            <Table.Head>
+          <Table hoverable className="shadow-md ">
+            <Table.Head className="bg-gray-100 text-gray-600 text-sm uppercase leading-normal text-center">
               <Table.HeadCell>Date Created</Table.HeadCell>
               <Table.HeadCell>User Image</Table.HeadCell>
               <Table.HeadCell>Username</Table.HeadCell>
@@ -52,7 +82,7 @@ export default function DashUsers() {
               <Table.HeadCell>Actions</Table.HeadCell>
             </Table.Head>
 
-            <Table.Body className="divide-y">
+            <Table.Body className="divide-y text-center">
               {users.map((user) => {
                 // Consider a user "active" if they signed in within the last 5 minutes
                 const isActive =
@@ -71,7 +101,7 @@ export default function DashUsers() {
                     </Table.Cell>
 
                     {/* Profile image with active status indicator */}
-                    <Table.Cell>
+                    <Table.Cell className="justify-items-center">
                       <div className="relative w-10 h-10">
                         <img
                           src={user.imageUrl}
@@ -98,11 +128,27 @@ export default function DashUsers() {
                     <Table.Cell>{email || "—"}</Table.Cell>
 
                     {/* Admin status */}
-                    <Table.Cell>
+                    <Table.Cell className="justify-items-center p-1">
                       {user.publicMetadata?.isAdmin ? (
-                        <FaCheck className="text-green-500" />
+                        <>
+                          <FaCheck className="text-green-500 m-1" />
+                          <button
+                            onClick={() => dismissAdmin(user.id)}
+                            className="p-1 bg-blue-500 text-white rounded"
+                          >
+                            Dismiss Admin
+                          </button>
+                        </>
                       ) : (
-                        <FaTimes className="text-red-500" />
+                        <>
+                          <FaTimes className="text-red-500 m-1" />
+                          <button
+                            onClick={() => makeAdmin(user.id)}
+                            className="p-1 bg-green-500 text-white rounded"
+                          >
+                            Make Admin
+                          </button>
+                        </>
                       )}
                     </Table.Cell>
 
