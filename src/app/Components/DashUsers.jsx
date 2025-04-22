@@ -6,9 +6,13 @@ import { FaCheck, FaTimes } from "react-icons/fa";
 import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import Loader from "./Loader";
+import { SendEmailModal } from "./orderModals";
+import SendEmail from "./sendEmail";
 export default function DashUsers() {
   const { user, isLoaded } = useUser();
   const [users, setUsers] = useState([]);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState([]);
 
   const fetchUsers = async () => {
     try {
@@ -155,9 +159,10 @@ export default function DashUsers() {
                     {/* Email button */}
                     <Table.Cell>
                       <button
-                        onClick={() =>
-                          (window.location.href = `mailto:${email}`)
-                        }
+                        onClick={() => {
+                          setShowEmailModal(true);
+                          setRecipientEmail(email);
+                        }}
                         className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                         disabled={!email}
                       >
@@ -174,6 +179,12 @@ export default function DashUsers() {
         <div className="flex items-center place-content-center min-h-screen">
           <Loader />
         </div>
+      )}
+      {showEmailModal && (
+        <SendEmail
+          recipientEmail={recipientEmail}
+          onClose={() => setShowEmailModal(false)}
+        />
       )}
     </div>
   );
