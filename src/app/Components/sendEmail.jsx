@@ -1,7 +1,9 @@
 "use client";
-"use client";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { IoMdMail } from "react-icons/io";
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+import "react-quill-new/dist/quill.snow.css";
 
 export default function SendEmailModal({ recipientEmail, onClose }) {
   // State for modal inputs
@@ -84,12 +86,12 @@ export default function SendEmailModal({ recipientEmail, onClose }) {
             {/* Message body input */}
             <label className="block mb-2">
               <span className="text-gray-700 dark:text-gray-300">Message</span>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={4}
+              <ReactQuill
+                theme="snow"
                 placeholder="Your custom message here"
+                value={body}
                 className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 resize-none"
+                onChange={setBody}
               />
             </label>
             {/* Footer text input */}
@@ -130,32 +132,98 @@ export const buildEmailTemplate = ({
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f4f7; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
-    .header { background: #1e40af; padding: 20px; text-align: center; }
-    .header img { max-width: 120px; }
-    .content { padding: 30px; color: #333333; }
-    .headline { font-size: 24px; margin-bottom: 20px; }
-    .message { font-size: 16px; line-height: 1.5; margin-bottom: 30px; }
-    .footer { background: #f4f4f7; padding: 20px; text-align: center; font-size: 12px; color: #888888; }
-    .btn { display: inline-block; padding: 12px 24px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 4px; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body>
-  <div class="container">
-    <div style="background:#1e40af;padding:20px;text-align:center;">
-      <img src="${logoUrl}"     alt="At‑Taleem Logo" style="max-width: 120px; height: auto; display: inline-block;"/>
-    </div>
-    <div class="content">
-      <div class="headline">${headline}</div>
-      <div class="message">${message}</div>
-      <a href="#" class="btn">Visit Our Site</a>
-    </div>
-    <div class="footer">${footerText}</div>
-  </div>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
+  <!-- outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:20px;">
+        <!-- main container -->
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:8px;overflow:hidden;">
+          
+          <!-- header row -->
+          <tr>
+            <td style="background:#1e40af;padding:10px 20px;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <!-- logo (CID embedded) -->
+                    <img src="cid:logo" width="40" height="40" alt="Logo" style="display:block;border:none; color:#09fc05" />
+                  </td>
+                  <td style="color:#fff;font-size:20px;font-weight:bold;padding-left:10px;vertical-align:middle;">
+                    At-Taleem Official
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+         <tr>
+  <td
+    style="
+      padding:30px;
+      color:#333;
+      line-height:1.5;
+      /* remove pre-wrap here so the inner table can size to its content */
+      white-space: normal !important;
+      word-wrap: break-word;
+      text-align: center;            /* center inline-table children */
+    "
+  >
+    <h1 style="font-size:24px;margin:0 0 20px;">${headline}</h1>
+    <h6 style="margin:0 0 30px;font-size:16px;">${message}</h6>
+
+    <!-- standalone inline-table wrapper -->
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      align="center"
+      style="
+        display: inline-table;        /* allow the table to shrink to its contents */
+        margin: 0 auto 30px;
+      "
+    >
+      <tr>
+        <td
+          align="center"
+          bgcolor="#2563eb"
+          style="border-radius:4px;"
+        >
+          <a
+            href="https://at-taleem.vercel.app/"
+            target="_blank"
+            style="
+              display: inline-block;
+              padding: 12px 24px;
+              font-size: 16px;
+              color: #ffffff;
+              text-decoration: none;
+              border-radius: 4px;
+            "
+          >
+            Visit Site
+          </a>
+        </td>
+      </tr>
+    </table>
+
+  </td>
+</tr>
+          
+          <!-- footer row -->
+          <tr>
+            <td style="background:#f4f4f7;padding:20px;text-align:center;font-size:12px;color:#888;">
+              ${footerText}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;

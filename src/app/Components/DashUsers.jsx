@@ -13,6 +13,35 @@ export default function DashUsers() {
   const [users, setUsers] = useState([]);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+
+  const toggleSelect = (id) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+    if (newSet.size !== users.length) setSelectAll(false);
+    else setSelectAll(true);
+  };
+  const selectedEmails = users
+    .filter((u) => selectedIds.has(u.id))
+    .map((u) => u.emailAddresses[0]?.emailAddress)
+    .filter(Boolean);
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(users.map((u) => u.id)));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const emailAll = () => {
+    setRecipientEmail(selectedEmails);
+    setShowEmailModal(true);
+  };
 
   const fetchUsers = async () => {
     try {
@@ -75,9 +104,32 @@ export default function DashUsers() {
   return (
     <div className="table-auto md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       {users.length > 0 ? (
-        <>
-          <Table hoverable className="shadow-md ">
-            <Table.Head className="bg-gray-100 text-gray-600 text-sm uppercase leading-normal text-center">
+        <div className="overflow-x-auto">
+          <h1 className=" font-bold text-3xl text-center p-6">
+            Users Management
+          </h1>
+          {selectedIds.size > 0 && (
+            <div className="fixed top-20 right-4 shadow p-3  z-50">
+              <button
+                onClick={emailAll}
+                disabled={selectedIds.size === 0}
+                className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+              >
+                Email Selected ({selectedIds.size})
+              </button>
+            </div>
+          )}
+          <Table hoverable className="shadow-md w-full table-auto">
+            <Table.Head className="bg-gray-100 text-gray-600 text-sm uppercase leading-normal text-center ">
+              {selectedIds.size > 0 && (
+                <Table.HeadCell>
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                  />
+                </Table.HeadCell>
+              )}
               <Table.HeadCell>Date Created</Table.HeadCell>
               <Table.HeadCell>User Image</Table.HeadCell>
               <Table.HeadCell>Username</Table.HeadCell>
@@ -97,15 +149,27 @@ export default function DashUsers() {
                 return (
                   <Table.Row
                     key={user.id}
-                    className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                    className="bg-white dark:border-gray-700 dark:bg-gray-800 cursor-pointer"
                   >
+                    {selectedIds.size > 0 && (
+                      <Table.Cell>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(user.id)}
+                          onChange={() => toggleSelect(user.id)}
+                        />
+                      </Table.Cell>
+                    )}
                     {/* Date created */}
-                    <Table.Cell>
+                    <Table.Cell onClick={() => toggleSelect(user.id)}>
                       {format(new Date(parseInt(user.createdAt, 10)), "PP p")}
                     </Table.Cell>
 
                     {/* Profile image with active status indicator */}
-                    <Table.Cell className="justify-items-center">
+                    <Table.Cell
+                      className="justify-items-center"
+                      onClick={() => toggleSelect(user.id)}
+                    >
                       <div className="relative w-10 h-10">
                         <img
                           src={user.imageUrl}
@@ -122,14 +186,16 @@ export default function DashUsers() {
                     </Table.Cell>
 
                     {/* Username (first & last name) */}
-                    <Table.Cell>
+                    <Table.Cell onClick={() => toggleSelect(user.id)}>
                       {`${user.firstName ?? ""} ${
                         user.lastName ?? ""
                       }`.trim() || "—"}
                     </Table.Cell>
 
                     {/* Primary email */}
-                    <Table.Cell>{email || "—"}</Table.Cell>
+                    <Table.Cell onClick={() => toggleSelect(user.id)}>
+                      {email || "—"}
+                    </Table.Cell>
 
                     {/* Admin status */}
                     <Table.Cell className="justify-items-center p-1">
@@ -174,7 +240,7 @@ export default function DashUsers() {
               })}
             </Table.Body>
           </Table>
-        </>
+        </div>
       ) : (
         <div className="flex items-center place-content-center min-h-screen">
           <Loader />

@@ -1,4 +1,5 @@
 // src/app/api/emails/route.js
+import path from "path";
 import nodemailer from "nodemailer";
 
 export async function POST(req) {
@@ -36,12 +37,19 @@ export async function POST(req) {
     // Send the email
     await transporter.sendMail({
       from: {
-        name: "At-Taleem",
-        address: process.env.APP_MAIL,
+        name: "At-Taleem Support",
+        address: `noreply@${process.env.URL}`,
       },
       to,
       subject,
       html,
+      attachments: [
+        {
+          filename: "favicon.png",
+          path: path.join(process.cwd(), "public", "favicon.png"),
+          cid: "logo", // same cid value referenced in HTML
+        },
+      ],
     });
 
     return new Response(JSON.stringify({ success: true }), {
