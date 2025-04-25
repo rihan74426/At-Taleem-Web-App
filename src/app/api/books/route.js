@@ -5,6 +5,7 @@ export async function GET(request) {
   await connect();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id"); // Use "id" here
+  const limit = searchParams.get("limit");
 
   // If an id is provided, fetch that single question.
   if (id) {
@@ -29,7 +30,7 @@ export async function GET(request) {
     }
   }
   try {
-    const books = await Book.find({}).sort({ createdAt: -1 });
+    const books = await Book.find({}).sort({ createdAt: -1 }).limit(limit);
     return new Response(JSON.stringify({ books }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

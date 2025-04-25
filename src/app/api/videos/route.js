@@ -36,7 +36,7 @@ export async function GET(request) {
 
   // Handle pagination for the video list, with optional category filtering.
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = 10;
+  const limit = searchParams.get("limit");
   const skip = (page - 1) * limit;
   const category = searchParams.get("category");
 

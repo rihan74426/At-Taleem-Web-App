@@ -139,6 +139,7 @@ export async function GET(request) {
 
 export async function PUT(request) {
   await connect();
+
   try {
     const data = await request.json();
     const { questionId, title, description, category, isAnonymous, email } =
