@@ -4,17 +4,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { FiChevronDown } from "react-icons/fi";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { Navbar } from "flowbite-react";
 
 export default function AnimatedDropdown({ title, id, items }) {
   const [isOpen, setIsOpen] = useState(false);
   const [left, setLeft] = useState(0);
+  const path = usePathname();
 
   useEffect(() => {
     if (isOpen) {
       const tab = document.getElementById(`tab-${id}`);
       const tabRect = tab?.getBoundingClientRect();
       if (tabRect) {
-        const tabCenter = tabRect.left + tabRect.width / 2;
+        const tabCenter = tabRect.width / 2 - 10;
         setLeft(tabCenter);
       }
     }
@@ -48,7 +51,9 @@ export default function AnimatedDropdown({ title, id, items }) {
                   href={item.href}
                   className="block px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
-                  {item.label}
+                  <Navbar.Link active={path === item.href} as={"div"}>
+                    {item.label}
+                  </Navbar.Link>
                 </Link>
               ))}
             </div>
