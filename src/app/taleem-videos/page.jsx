@@ -52,7 +52,7 @@ export default function VideosPage() {
       setLoading(false);
     }
     fetchVideos();
-  }, [currentPage, onUpdate]);
+  }, [currentPage]);
   const handleDelete = async (videoId) => {
     if (!user?.user.publicMetadata?.isAdmin) {
       modal.isOpen = true;

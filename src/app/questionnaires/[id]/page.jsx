@@ -178,6 +178,7 @@ export default function QuestionDetailPage() {
           setQuestion(updatedQuestion);
           setAnswer("");
           setShowAnswerEditor(false);
+          fetchQuestion();
         } else {
           alert("Failed to submit answer.");
         }

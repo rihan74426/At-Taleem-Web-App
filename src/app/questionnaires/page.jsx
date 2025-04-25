@@ -240,7 +240,7 @@ export default function QuestionnairePage() {
   );
 }
 
-function QuestionCard({
+export function QuestionCard({
   question,
   categories,
   isSignedIn,

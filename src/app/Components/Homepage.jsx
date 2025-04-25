@@ -55,6 +55,16 @@ export default function Homepage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
+      <div className="relative ">
+        <h2 className="font-bold text-center text-4xl text-gray-900 dark:text-white">
+          Welcome to the At-Taleem's Official Webpage. (Greetings)
+        </h2>
+        <h5 className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+          Hello! This is a Short introduction and the greeting section of the
+          page
+        </h5>
+      </div>
+
       {data ? (
         <div className="relative bg-white dark:bg-gray-900 shadow-md p-6 rounded-lg ">
           {isEditing ? (
@@ -65,6 +75,11 @@ export default function Homepage() {
             />
           ) : (
             <>
+              <div className="relative flex place-content-center">
+                <h3 className="bg-black text-center p-2 rounded">
+                  Web Notice Section
+                </h3>
+              </div>
               <div className="flex justify-end mb-2">
                 <button
                   className="bg-blue-600 dark:bg-green-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-all"
@@ -73,8 +88,7 @@ export default function Homepage() {
                   Edit
                 </button>
               </div>
-
-              <h1 className="font-bold text-center text-4xl text-gray-900 dark:text-white">
+              <h1 className="font-bold text-center text-2xl ">
                 {data.greeting}
               </h1>
               <div

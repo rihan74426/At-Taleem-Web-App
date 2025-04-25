@@ -6,7 +6,7 @@ export async function PATCH(request, { params }) {
   await connect();
   try {
     const { id } = await params; // id from URL params
-    const { userId } = await request.json();
+    const { userId, answer, category } = await request.json();
 
     if (!userId) {
       return new Response(JSON.stringify({ error: "Missing userId" }), {
@@ -24,9 +24,14 @@ export async function PATCH(request, { params }) {
       });
     }
 
-    // Check if the user already voted helpful
     const index = question.helpfulVotes.indexOf(userId);
-    if (index === -1) {
+    if (answer && category) {
+      question.answer = answer;
+      question.category = category;
+      question.status = "answered";
+      question.answeredAt = new Date();
+      question.helpfulVotes = [];
+    } else if (index === -1) {
       // Not voted yet, add the user's vote
       question.helpfulVotes.push(userId);
     } else {
