@@ -19,7 +19,7 @@ export default async function Home() {
     <div className="flex flex-col justify-center items-center">
       <Homepage />
 
-      <div className="w-full max-w-6xl space-y-12 py-8">
+      <div className="w-full max-w-6xl space-y-12">
         <RecentPosts />
       </div>
     </div>

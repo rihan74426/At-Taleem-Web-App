@@ -66,6 +66,10 @@ export default function Header() {
   }, [searchParams]);
 
   useEffect(() => {
+    setIsOpen(false);
+  }, [path]);
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (collapseRef.current && !collapseRef.current.contains(e.target)) {
         setIsOpen(false);

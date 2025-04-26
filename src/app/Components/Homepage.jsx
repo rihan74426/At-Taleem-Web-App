@@ -46,7 +46,7 @@ export default function Homepage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="space-y-12 min-h-screen">
       {/* Hero Section */}
       <header className="relative bg-gradient-to-r from-blue-600 to-teal-400 text-white py-20 px-6 text-center">
         <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
@@ -62,10 +62,22 @@ export default function Homepage() {
 
         <div className="mt-8 flex justify-center gap-4">
           <a
-            href="#features"
+            href="/questionnaires"
             className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
           >
-            Explore Features
+            প্রশ্ন করুন
+          </a>
+          <a
+            href="/taleem-videos"
+            className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
+          >
+            ভিডিও দেখুন
+          </a>
+          <a
+            href="/published-books"
+            className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
+          >
+            বই পড়ুন
           </a>
           {!isSignedIn && (
             <div className="bg-transparent border border-white px-6 py-3 rounded-lg hover:bg-white hover:text-blue-600 transition">
@@ -88,49 +100,51 @@ export default function Homepage() {
         className="flex-grow bg-white dark:bg-gray-900 py-16 px-6"
         id="features"
       >
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+        {data ? (
+          <div className="max-w-5xl justify-self-center items-center text-center border p-10 rounded">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white p-5">
               Web Notice Section
             </h2>
-            {data ? (
-              isEditing ? (
-                <Editor
-                  initialData={data}
-                  onSave={handleUpdate}
-                  onCancel={() => setIsEditing(false)}
-                />
-              ) : (
-                <>
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {data.greeting}
-                  </p>
-                  <div
-                    className="text-gray-600 dark:text-gray-400 prose max-w-none"
-                    dangerouslySetInnerHTML={{ __html: data.description }}
-                  />
-                  {user?.publicMetadata?.isAdmin && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                    >
-                      Edit Content
-                    </button>
-                  )}
-                </>
-              )
+            {isEditing ? (
+              <Editor
+                initialData={data}
+                onSave={handleUpdate}
+                onCancel={() => setIsEditing(false)}
+              />
             ) : (
-              <Loader />
+              <>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap p-3">
+                  {data.greeting}
+                </p>
+                <div
+                  className="text-gray-600 dark:text-gray-400 prose max-w-none p-3"
+                  dangerouslySetInnerHTML={{ __html: data.description }}
+                />
+                {user?.publicMetadata?.isAdmin && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Edit Content
+                  </button>
+                )}
+              </>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="justify-self-center ">
+            <Loader />
+          </div>
+        )}
       </main>
 
       {/* Under Construction Banner */}
-      <div className="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 p-6 text-center">
-        <h3 className="text-2xl font-semibold">🚧 Under Construction 🚧</h3>
-        <p className="mt-2">
-          Stay tuned! Sign up to get notified when we launch.
+      <div className="bg-red-100 border dark:bg-red-900 text-red-600 w-2/3 justify-self-center dark:text-red-300 p-4 rounded-lg shadow-md text-center">
+        <h2 className="text-2xl font-semibold">🚧 Under Construction 🚧</h2>
+        <p className="mt-2 text-gray-600 dark:text-gray-200">
+          Thank you for visiting us! Please sign up by your gmail or facebook in
+          one tap. We'll notify you via email once the website will be ready to
+          launch.
         </p>
       </div>
 

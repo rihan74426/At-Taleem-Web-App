@@ -58,6 +58,16 @@ export default function DashSidebar() {
               Profile
             </Sidebar.Item>
           </Link>
+          <Link href="/dashboard?tab=review">
+            <Sidebar.Item
+              active={tab === "review"}
+              icon={HiUser}
+              labelColor="dark"
+              as="div"
+            >
+              My Review
+            </Sidebar.Item>
+          </Link>
           {user?.publicMetadata?.isAdmin && (
             <Link href="/dashboard?tab=posts">
               <Sidebar.Item

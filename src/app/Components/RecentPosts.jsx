@@ -57,7 +57,10 @@ export default function RecentPosts({
       >
         {videos.map((v, i) => (
           <Card key={v._id} i={i} variants={cardVariant}>
-            <Link href={`/videos/${v._id}`} className="block">
+            <Link
+              href={`/${v.category.toLowerCase()}-videos/${v._id}`}
+              className="block"
+            >
               <div className="relative h-40 w-full overflow-hidden rounded-lg">
                 <Image
                   src="/thumbnail.png" // Your default thumbnail image
