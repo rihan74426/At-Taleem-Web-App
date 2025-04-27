@@ -28,7 +28,11 @@ export default function Homepage() {
   const showModal = (message, status) =>
     setModal({ isOpen: true, message, status });
   const handleUpdate = async (updated) => {
-    if (!user?.publicMetadata?.isAdmin) return showModal("Admin only", "error");
+    if (!user?.publicMetadata?.isAdmin)
+      return showModal(
+        "You have to be an admin first to change anything restricted",
+        "error"
+      );
     const res = await fetch("/api/homepage/get", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -42,10 +46,10 @@ export default function Homepage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col w-full place-content-center">
       {/* Full‑width Animated Hero */}
       <motion.div
-        className="w-screen h-screen bg-gradient-to-br from-blue-700 to-teal-500 dark:from-blue-950 dark:to-teal-500 flex flex-col justify-center items-center text-center text-white overflow-hidden"
+        className="h-screen bg-gradient-to-br from-blue-700 to-teal-500 dark:from-blue-950 dark:to-teal-500 flex flex-col justify-center items-center text-center text-white"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
@@ -115,14 +119,12 @@ export default function Homepage() {
                   className="prose dark:prose-invert max-w-none mb-6"
                   dangerouslySetInnerHTML={{ __html: data.description }}
                 />
-                {user?.publicMetadata?.isAdmin && (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                  >
-                    Edit Content
-                  </button>
-                )}
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Edit Content
+                </button>
               </>
             )
           ) : (
