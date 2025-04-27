@@ -16,7 +16,7 @@ export default async function Home() {
     console.log("Error getting post:", error);
   }
   return (
-    <div className="flex flex-col justify-center items-center">
+    <div className="flex w-full flex-col justify-center items-center">
       <Homepage />
 
       <div className="w-full max-w-6xl space-y-12">

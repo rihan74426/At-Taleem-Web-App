@@ -1,31 +1,59 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiCheckCircle, FiXCircle } from "react-icons/fi";
 
 export default function ResponseModal({ message, status, isOpen, onClose }) {
+  // Auto-close after 3 seconds
   useEffect(() => {
     if (isOpen) {
-      const timer = setTimeout(onClose, 3000); // Auto close after 3s
+      const timer = setTimeout(onClose, 3000);
       return () => clearTimeout(timer);
     }
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="bg-black/50 absolute inset-0" onClick={onClose}></div>
-      <div
-        className={`relative p-10 rounded-lg shadow-lg text-white ${
-          status === "success" ? "bg-green-500" : "bg-red-500"
-        }`}
-      >
-        <p>{message}</p>
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 text-white font-bold"
+    <AnimatePresence>
+      {isOpen && (
+        // Container that animates in/out
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 50 }}
+          transition={{ duration: 0.3 }}
+          className="fixed top-5 right-5 z-50"
         >
-          ✖
-        </button>
-      </div>
-    </div>
+          {/* Toast box */}
+          <div
+            className={`max-w-sm w-full ${
+              status === "success" ? "bg-green-600" : "bg-red-600"
+            } text-white rounded-lg shadow-lg overflow-hidden`}
+          >
+            {/* Icon + message + close button */}
+            <div className="flex items-center p-4">
+              {status === "success" ? (
+                <FiCheckCircle className="text-2xl mr-2" />
+              ) : (
+                <FiXCircle className="text-2xl mr-2" />
+              )}
+              <p className="flex-1">{message}</p>
+              <button onClick={onClose} className="text-white text-xl">
+                &times;
+              </button>
+            </div>
+            {/* Progress bar that shrinks over 3s */}
+            <div className="h-1 bg-white/50">
+              <motion.div
+                className="h-full bg-white"
+                initial={{ width: "100%" }}
+                animate={{ width: "0%" }}
+                transition={{ duration: 3, ease: "linear" }}
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

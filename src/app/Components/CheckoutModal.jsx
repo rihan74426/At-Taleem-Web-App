@@ -36,39 +36,43 @@ export default function CheckoutModal({
   }, [open]);
 
   const handleCheckout = async () => {
-    if (!address.trim() || !phone.trim()) {
-      setError("Please provide address and phone.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const orderData = {
-        items: items.map(({ book, qty }) => ({
-          bookId: book._id,
-          qty,
-        })),
-        userId: user.id,
-        buyerName: user.fullName,
-        buyerEmail: user.primaryEmailAddress.emailAddress,
-        deliveryAddress: address,
-        deliveryPhone: phone,
-      };
-      if (bundlePrice) orderData.bundlePrice = bundlePrice;
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-      if (!res.ok) {
-        const { error: msg } = await res.json().catch(() => ({}));
-        throw new Error(msg || "Failed to create order");
+    if (!isSignedIn) {
+      setError("Please Login First with a valid account!");
+    } else {
+      if (!address.trim() || !phone.trim()) {
+        setError("Please provide address and phone.");
+        return;
       }
-      const { paymentUrl } = await res.json();
-      onClose();
-      router.push(paymentUrl);
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
+      setLoading(true);
+      try {
+        const orderData = {
+          items: items.map(({ book, qty }) => ({
+            bookId: book._id,
+            qty,
+          })),
+          userId: user.id,
+          buyerName: user.fullName,
+          buyerEmail: user.primaryEmailAddress.emailAddress,
+          deliveryAddress: address,
+          deliveryPhone: phone,
+        };
+        if (bundlePrice) orderData.bundlePrice = bundlePrice;
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderData),
+        });
+        if (!res.ok) {
+          const { error: msg } = await res.json().catch(() => ({}));
+          throw new Error(msg || "Failed to create order");
+        }
+        const { paymentUrl } = await res.json();
+        onClose();
+        router.push(paymentUrl);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
     }
   };
 
