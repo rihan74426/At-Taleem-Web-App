@@ -11,6 +11,7 @@ import DashboardComp from "../Components/DashboardComp";
 import AdminVideosPage from "./videos/page";
 import AskQuestionForm from "../Components/AskQuestions";
 import AddBookForm from "../Components/AddBooks";
+import ReviewInputPage from "../Components/ReviewInput";
 
 export default function Dashboard() {
   const searchParams = useSearchParams();
@@ -38,6 +39,7 @@ export default function Dashboard() {
       {tab === "dash" && <DashboardComp />}
       {tab === "askQuestion" && <AskQuestionForm />}
       {tab === "addBooks" && <AddBookForm />}
+      {tab === "review" && <ReviewInputPage />}
     </div>
   );
 }

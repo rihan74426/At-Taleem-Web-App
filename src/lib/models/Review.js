@@ -5,7 +5,8 @@ const reviewSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true },
     userName: { type: String, required: true },
-    userProfilePic: { type: String, required: true },
+    profession: { type: String },
+    userProfilePic: { type: String },
     reviewText: { type: String, required: true, maxlength: 2000 },
     likes: { type: [String], default: [] },
     status: {
