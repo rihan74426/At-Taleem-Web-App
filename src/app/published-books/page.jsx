@@ -26,7 +26,6 @@ export default function BookListingPage() {
       if (res.ok) {
         const data = await res.json();
         setBooks(data.books);
-        console.log(data.books);
       }
     } catch (err) {
       console.error("Error fetching books:", err);
@@ -52,7 +51,6 @@ export default function BookListingPage() {
   }, []);
   useEffect(() => {
     if (!items.length > 0) setShowCartModal(false);
-    console.log(items.every((item) => item.qty === 1));
     if (items.length === books.length && items.every((item) => item.qty === 1))
       setBundle(true);
     else setBundle(false);
@@ -226,7 +224,6 @@ export default function BookListingPage() {
             <button
               onClick={() => {
                 setShowCartModal(true);
-                console.log(items);
               }}
               title="Click to open"
             >

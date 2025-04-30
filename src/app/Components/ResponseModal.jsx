@@ -8,7 +8,7 @@ export default function ResponseModal({ message, status, isOpen, onClose }) {
   // Auto-close after 3 seconds
   useEffect(() => {
     if (isOpen) {
-      const timer = setTimeout(onClose, 3000);
+      const timer = setTimeout(onClose, 5000);
       return () => clearTimeout(timer);
     }
   }, [isOpen, onClose]);
@@ -48,7 +48,7 @@ export default function ResponseModal({ message, status, isOpen, onClose }) {
                 className="h-full bg-white"
                 initial={{ width: "100%" }}
                 animate={{ width: "0%" }}
-                transition={{ duration: 3, ease: "linear" }}
+                transition={{ duration: 5, ease: "linear" }}
               />
             </div>
           </div>

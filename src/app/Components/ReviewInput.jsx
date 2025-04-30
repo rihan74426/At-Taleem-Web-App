@@ -164,7 +164,7 @@ export default function ReviewInputPage() {
         </div>
 
         <div>
-          <label className="block text-gray-700  dark:bg-black dark:text-gray-100 font-semibold mb-2">
+          <label className="block text-gray-700  dark:text-gray-100 font-semibold mb-2">
             আপনি কী ছবি যুক্ত করতে ইচ্ছুক?
           </label>
           <select
@@ -185,9 +185,9 @@ export default function ReviewInputPage() {
               type="file"
               {...register("image")}
               accept="image/*"
-              className="w-full p-2 border  dark:bg-black rounded-md"
+              className="w-full p-2 rounded-md"
             />
-            <label className="block text-gray-700  dark:bg-black dark:text-gray-100 font-semibold mb-2">
+            <label className="block text-gray-700  dark:text-gray-100 font-semibold mb-2">
               <input
                 type="checkbox"
                 checked={makePP}
