@@ -2,174 +2,230 @@
 
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
+import imageCompression from "browser-image-compression";
 import {
-  uploadBytes,
+  uploadBytesResumable,
   ref,
   getDownloadURL,
-  uploadBytesResumable,
   getStorage,
 } from "firebase/storage";
-import { app, storage } from "@/firebase"; // your firebase config
-import { currentUser, updateUser, useUser } from "@clerk/nextjs"; // Clerk
-import { useRouter } from "next/navigation";
-import { getAuth } from "firebase/auth";
+import { app } from "@/firebase";
+import { useUser } from "@clerk/nextjs";
 import ResponseModal from "./ResponseModal";
 
 export default function ReviewInputPage() {
-  const { register, handleSubmit, watch, reset } = useForm();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm();
+  const [loadingReview, setLoadingReview] = useState(true);
+  const [existingReview, setExistingReview] = useState(null);
+  const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [makePP, setMakePP] = useState(false);
   const [modal, setModal] = useState({
     isOpen: false,
     message: "",
     status: "",
   });
+  const [makePP, setMakePP] = useState(false);
+
+  const showPicture = watch("showPicture");
+  const { user, isLoaded } = useUser();
+
   const showModal = (message, status) =>
     setModal({ isOpen: true, message, status });
 
-  const showPicture = watch("showPicture");
-  const user = useUser();
+  // 1. on mount, fetch this user's review
+  useEffect(() => {
+    if (!isLoaded) return;
+    (async () => {
+      const res = await fetch(`/api/reviews`);
+      if (res.ok) {
+        const { reviews } = await res.json();
 
-  let firebaseSignedIn = false;
+        setExistingReview(
+          reviews.map((item) => {
+            item.userId === user.id;
+          })
+        );
+      }
+      setLoadingReview(false);
+    })();
+  }, [isLoaded, user]);
 
-  const ensureFirebaseSignedIn = async () => {
-    if (firebaseSignedIn) return;
-    const auth = getAuth(app);
-    if (!auth.currentUser) {
-      const res = await fetch("/api/firebase-token");
-      const { token } = await res.json();
-
-      await signInWithCustomToken(auth, token);
+  // 2. when entering edit mode, populate form
+  useEffect(() => {
+    if (editing && existingReview) {
+      setValue("name", existingReview.userName);
+      setValue("profession", existingReview.profession);
+      setValue("review", existingReview.reviewText);
+      setValue("showPicture", existingReview.userProfilePic ? "true" : "false");
     }
-    firebaseSignedIn = true;
-  };
+  }, [editing, existingReview, setValue]);
 
-  const uploadFile = async (file, path) => {
-    await ensureFirebaseSignedIn();
-
-    return new Promise((resolve, reject) => {
-      const storage = getStorage(app);
-      const fileRef = ref(storage, path);
-      const uploadTask = uploadBytesResumable(fileRef, file);
-
-      uploadTask.on(
-        "state_changed",
-        null,
-        (err) => reject(err),
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve(downloadURL);
-          } catch (err) {
-            reject(err);
-          }
-        }
-      );
+  // utility: compress if >1MB
+  const compressIfNeeded = async (file) => {
+    if (file.size <= 1024 * 1024) return file;
+    return await imageCompression(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
     });
   };
 
+  // utility: upload to Firebase
+  const uploadFile = async (file) => {
+    const storage = getStorage(app);
+    const path = `profile-pictures/${Date.now()}_${file.name}`;
+    const uploadTask = uploadBytesResumable(ref(storage, path), file);
+    return new Promise((resolve, reject) => {
+      uploadTask.on("state_changed", null, reject, async () => {
+        resolve(await getDownloadURL(uploadTask.snapshot.ref));
+      });
+    });
+  };
+
+  // 3. form submission handles both create & update
   const onSubmit = async (data) => {
-    if (!user?.isSignedIn)
-      return showModal("মন্তব্য প্রকাশের জন্য দয়া করে লগিন করুন!", "error");
+    if (!user) return showModal("অনুগ্রহ করে প্রথমে লগইন করুন।", "error");
+    setUploading(true);
 
     try {
-      setUploading(true);
+      let imageUrl = existingReview?.userProfilePic || "";
 
-      let imageUrl = "";
-
-      // if user wants to show a picture
-      if (data.showPicture && data.image && data.image.length > 0) {
-        const fileObj = data.image[0];
-
+      if (data.showPicture === "true" && data.image?.length) {
+        let file = data.image[0];
+        file = await compressIfNeeded(file);
         if (makePP) {
-          const res = await user.user.setProfileImage({ file: fileObj });
-          if (res.publicUrl) imageUrl = res.publicUrl;
-        } else {
-          imageUrl = await uploadFile(
-            fileObj,
-            `profile-pictures/${Date.now()}_${fileObj.name}`
-          );
+          if (makePP) {
+            const res = await user.setProfileImage({ file });
+            imageUrl = res.publicUrl || imageUrl;
+          } else {
+            imageUrl = await uploadFile(file);
+          }
         }
-      }
 
-      // now imageUrl is definitely a string (or empty string)
-      const reviewPayload = {
-        userId: user.user.id,
-        userName: data.name,
-        profession: data.profession,
-        reviewText: data.review,
-        userProfilePic: imageUrl || null,
-      };
+        const payload = {
+          userName: data.name,
+          profession: data.profession,
+          reviewText: data.review,
+          userProfilePic: imageUrl || null,
+        };
 
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reviewPayload),
-      });
+        const endpoint = "/api/reviews";
 
-      if (res.ok) {
+        const method = editing ? "PUT" : "POST";
+
+        const res = await fetch(endpoint, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, userId: user.id }),
+        });
+
+        if (!res.ok) throw new Error("Server error");
+
+        showModal("মন্তব্য সফলভাবে জমা হয়েছে!", "success");
         reset();
-        showModal("আপনার মন্তব্যটি গৃহিত হয়েছে!", "success");
-      } else {
-        throw new Error("Server rejected the review");
+        setEditing(false);
+        // refresh the displayed review
+        setExistingReview((prev) => ({
+          ...prev,
+          ...payload,
+        }));
       }
     } catch (err) {
       console.error(err);
-      setError("Something went wrong!");
-      showModal("কিছু সমস্যা হয়েছে, পরে আবার চেষ্টা করুন।", "error");
+      showModal("কিছু ভুল হয়েছে, আবার চেষ্টা করুন।", "error");
     } finally {
       setUploading(false);
     }
   };
 
+  if (!isLoaded || loadingReview) {
+    return <p className="p-8 text-center">লোড হচ্ছে…</p>;
+  }
+
+  // if user already has a review and is not an admin & not editing, show read-only
+  const isAdmin = user.publicMetadata?.isAdmin;
+  if (existingReview && !isAdmin && !editing) {
+    return (
+      <div className="max-w-xl mx-auto p-6 bg-white dark:bg-gray-800 rounded shadow">
+        <h2 className="text-2xl font-bold mb-4">আপনার মন্তব্য</h2>
+        <p className="mb-2">
+          <strong>নাম:</strong> {existingReview.userName}
+        </p>
+        <p className="mb-2">
+          <strong>পেশা:</strong> {existingReview.profession}
+        </p>
+        <p className="mb-4">{existingReview.reviewText}</p>
+        <button
+          onClick={() => setEditing(true)}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Edit Your Review
+        </button>
+      </div>
+    );
+  }
+
+  // otherwise show the form (new or admin or editing)
   return (
-    <div className="max-w-3xl mx-auto mt-10 p-6 bg-gray-200 dark:bg-gray-800 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center text-teal-600 dark:text-teal-300">
-        তালিম সম্পর্কে আপনার মন্তব্য ও ফলাফল
+    <div className="max-w-3xl mx-auto p-6 bg-gray-100 dark:bg-gray-800 rounded shadow">
+      <h2 className="text-2xl font-bold mb-6 text-center">
+        {editing
+          ? "Edit Your Review"
+          : existingReview
+          ? "Submit Another Review"
+          : "Share Your Review"}
       </h2>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-2">
-            নামঃ
-          </label>
+          <label className="block mb-1">নাম</label>
           <input
             {...register("name", { required: true })}
-            className="w-full border rounded-md p-3 dark:bg-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="আপনার নাম"
+            className="w-full p-3 border rounded"
+            disabled={uploading}
           />
+          {errors.name && (
+            <span className="text-red-500 text-sm">প্রয়োজন</span>
+          )}
         </div>
 
         <div>
-          <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-2">
-            পেশাঃ
-          </label>
+          <label className="block mb-1">পেশা</label>
           <input
             {...register("profession", { required: true })}
-            className="w-full border rounded-md p-3  dark:bg-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="আপনার পেশা"
+            className="w-full p-3 border rounded"
+            disabled={uploading}
           />
+          {errors.profession && (
+            <span className="text-red-500 text-sm">প্রয়োজন</span>
+          )}
         </div>
 
         <div>
-          <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-2">
-            আপনার কথাঃ
-          </label>
+          <label className="block mb-1">আপনার মন্তব্য</label>
           <textarea
             {...register("review", { required: true })}
-            className="w-full border rounded-md p-3 h-32  dark:bg-black resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="তালিমে আসার পর আপনার পরিবর্তনের কথা সবিস্তারে লিখুন..."
-          ></textarea>
+            className="w-full p-3 border rounded h-28"
+            disabled={uploading}
+          />
+          {errors.review && (
+            <span className="text-red-500 text-sm">প্রয়োজন</span>
+          )}
         </div>
 
         <div>
-          <label className="block text-gray-700  dark:text-gray-100 font-semibold mb-2">
-            আপনি কী ছবি যুক্ত করতে ইচ্ছুক?
-          </label>
+          <label className="block mb-1">ছবি যুক্ত করবেন?</label>
           <select
             {...register("showPicture")}
-            className="w-full border rounded-md p-3  dark:bg-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border rounded"
+            disabled={uploading}
           >
             <option value="false">না</option>
             <option value="true">হ্যাঁ</option>
@@ -178,37 +234,40 @@ export default function ReviewInputPage() {
 
         {showPicture === "true" && (
           <div>
-            <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-2">
-              আপনার ছবি যুক্ত করুন
-            </label>
+            <label className="block mb-1">ছবি আপলোড</label>
             <input
               type="file"
               {...register("image")}
               accept="image/*"
-              className="w-full p-2 rounded-md"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const compressed = await compressIfNeeded(file);
+                  setValue("image", [compressed], { shouldValidate: true });
+                }
+              }}
             />
-            <label className="block text-gray-700  dark:text-gray-100 font-semibold mb-2">
+            <label className="inline-flex items-center mt-2">
               <input
                 type="checkbox"
                 checked={makePP}
                 onChange={(e) => setMakePP(e.target.checked)}
-                className="m-3"
+                className="mr-2"
               />
-              ছবিটি প্রোফাইল পিক হিসেবে সেট করতে চান?
+              প্রোফাইল পিক হিসেবে সেট করুন
             </label>
           </div>
         )}
 
-        {error && <p className="text-red-500">{error}</p>}
-
         <button
           type="submit"
           disabled={uploading}
-          className="w-full bg-blue-500 text-white p-3  rounded-md hover:bg-blue-600 transition duration-300 font-semibold"
+          className="w-full py-3 bg-blue-600 text-white rounded disabled:opacity-50"
         >
-          {uploading ? "Submitting..." : "Submit Review"}
+          {uploading ? "জমা হচ্ছে…" : editing ? "আপডেট করুন" : "জমা দিন"}
         </button>
       </form>
+
       <ResponseModal
         isOpen={modal.isOpen}
         message={modal.message}

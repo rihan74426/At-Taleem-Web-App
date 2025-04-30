@@ -5,7 +5,7 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function GET(req) {
   await connect();
   const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id"); // Use "id" here
+  const id = searchParams.get("id");
   if (id) {
     try {
       const review = await Review.findById(id);
@@ -48,7 +48,10 @@ export async function POST(req) {
 
   await newReview.save();
 
-  return Response.json({ message: "Review submitted successfully." });
+  return Response.json({
+    message: "Review submitted successfully.",
+    review: newReview,
+  });
 }
 
 export async function PUT(req) {
@@ -66,8 +69,8 @@ export async function PUT(req) {
   }
   if (newText) {
     review.reviewText = newText;
-    await review.save();
-    return Response.json({ message: "Review updated." });
+    const newReview = await review.save();
+    return Response.json({ message: "Review updated.", review: newReview });
   } else {
     const liked = review.likes.includes(userId);
     if (liked) {
@@ -93,5 +96,5 @@ export async function DELETE(req) {
 
   await Review.findByIdAndDelete(reviewId);
 
-  return Response.json({ message: "Review deleted successfully." });
+  return new Response(null, { status: 204 });
 }

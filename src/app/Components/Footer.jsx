@@ -13,7 +13,10 @@ import {
 
 export default function FooterCom() {
   return (
-    <Footer container className="bg-gray-900 text-gray-300 pt-12">
+    <Footer
+      container
+      className="bg-gray-900 border-t-2 border-teal-500 text-gray-300 pt-12"
+    >
       <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 pb-8">
         {/* Branding */}
         <div className="space-y-4">
