@@ -1,5 +1,3 @@
-// app/api/reviews/create/route.js
-
 import Review from "@/lib/models/Review";
 import { connect } from "@/lib/mongodb/mongoose";
 export async function GET(req) {
@@ -33,7 +31,8 @@ export async function GET(req) {
 
 export async function POST(req) {
   await connect();
-  const { userId, reviewText, userName, userProfilePic } = await req.json();
+  const { userId, reviewText, profession, userName, userProfilePic } =
+    await req.json();
 
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
@@ -42,6 +41,7 @@ export async function POST(req) {
   const newReview = new Review({
     userId,
     userName,
+    profession,
     userProfilePic,
     reviewText,
   });
@@ -56,7 +56,8 @@ export async function POST(req) {
 
 export async function PUT(req) {
   await connect();
-  const { userId, reviewId, newText } = await req.json();
+  const { userId, reviewId, reviewText, profession, userName, userProfilePic } =
+    await req.json();
 
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
@@ -67,21 +68,24 @@ export async function PUT(req) {
   if (!review) {
     return new Response("Review not found", { status: 404 });
   }
-  if (newText) {
-    review.reviewText = newText;
-    const newReview = await review.save();
-    return Response.json({ message: "Review updated.", review: newReview });
-  } else {
-    const liked = review.likes.includes(userId);
-    if (liked) {
-      review.likes.pull(userId); // Unlike
-    } else {
-      review.likes.push(userId); // Like
-    }
+  review.userName = userName;
+  review.reviewText = reviewText;
+  review.userProfilePic = userProfilePic;
+  review.profession = profession;
+  const newReview = await review.save();
+  return Response.json({ message: "Review updated.", review: newReview });
+  // if () {
+  // } else {
+  //   const liked = review.likes.includes(userId);
+  //   if (liked) {
+  //     review.likes.pull(userId); // Unlike
+  //   } else {
+  //     review.likes.push(userId); // Like
+  // //   }
 
-    await review.save();
-    return Response.json({ message: liked ? "Unliked" : "Liked" });
-  }
+  //   await review.save();
+  //   return Response.json({ message: liked ? "Unliked" : "Liked" });
+  // }
 }
 
 export async function DELETE(req) {
