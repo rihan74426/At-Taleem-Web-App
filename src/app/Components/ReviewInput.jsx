@@ -41,21 +41,19 @@ export default function ReviewInputPage() {
     setModal({ isOpen: true, message, status });
 
   // fetch this user's review once
-  const fetchReview =
-    (async () => {
-      const res = await fetch("/api/reviews");
-      if (res.ok) {
-        const { reviews } = await res.json();
-        const my = reviews.filter((r) => r.userId === user.id) || null;
-        setExistingReview([...my]);
-      }
-      useEffect(() => {
-        if (!isLoaded) return;
-        fetchReview();
-        setLoadingReview(false);
-      })();
-    },
-    [isLoaded, user]);
+  const fetchReview = async () => {
+    const res = await fetch("/api/reviews");
+    if (res.ok) {
+      const { reviews } = await res.json();
+      const my = reviews.filter((r) => r.userId === user.id) || null;
+      setExistingReview([...my]);
+    }
+  };
+  useEffect(() => {
+    if (!isLoaded) return;
+    fetchReview();
+    setLoadingReview(false);
+  }, [isLoaded, user]);
 
   // when editing, prefill form
   useEffect(() => {
@@ -163,7 +161,9 @@ export default function ReviewInputPage() {
               <p className="mb-2">
                 <strong>পেশা:</strong> {item.profession}
               </p>
-              <p className="mb-4">{item.reviewText}</p>
+              <p className="mb-4 whitespace-pre-wrap text-justify">
+                “{item.reviewText}”
+              </p>
 
               <button
                 onClick={() => {
