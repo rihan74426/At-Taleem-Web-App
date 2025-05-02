@@ -90,12 +90,14 @@ export async function PUT(req) {
 
 export async function DELETE(req) {
   await connect();
-  const { userId, reviewId } = await req.json();
+  const { reviewId } = await req.json();
 
-  const review = await Review.findById(reviewId);
-
-  if (!review || review.userId !== userId) {
-    return new Response("Unauthorized or not found", { status: 403 });
+  const review = await Review.findByIdAndDelete(reviewId);
+  if (!review) {
+    return new Response(JSON.stringify({ error: "Review not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   await Review.findByIdAndDelete(reviewId);

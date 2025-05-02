@@ -12,6 +12,7 @@ import {
 import { app } from "@/firebase";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "./ResponseModal";
+import { getAuth } from "firebase/auth";
 
 export default function ReviewInputPage() {
   const {
@@ -74,8 +75,23 @@ export default function ReviewInputPage() {
       useWebWorker: true,
     });
   };
+  let firebaseSignedIn = false;
+
+  const ensureFirebaseSignedIn = async () => {
+    if (firebaseSignedIn) return;
+    const auth = getAuth(app);
+    if (!auth.currentUser) {
+      const res = await fetch("/api/firebase-token");
+      const { token } = await res.json();
+
+      await signInWithCustomToken(auth, token);
+    }
+    firebaseSignedIn = true;
+  };
 
   const uploadFile = async (file) => {
+    await ensureFirebaseSignedIn();
+
     const storage = getStorage(app);
     const path = `profile-pictures/${Date.now()}_${file.name}`;
     const task = uploadBytesResumable(ref(storage, path), file);
@@ -143,46 +159,157 @@ export default function ReviewInputPage() {
   }
 
   // read-only view if user has review and not editing
-  if (existingReview && !editing) {
+  if ((existingReview && !editing) || user.publicMetadata.isAdmin) {
     return (
       <div className="container">
-        {existingReview.length > 0 &&
-          existingReview.map((item) => (
-            <div
-              key={item._id}
-              className="p-6 bg-white border m-5 dark:bg-gray-800 rounded shadow"
-            >
-              <h2 className="text-2xl font-bold text-center mb-4">
-                আপনার মন্তব্য
-              </h2>
-              <p className="mb-2">
-                <strong>নাম:</strong> {item.userName}
-              </p>
-              <p className="mb-2">
-                <strong>পেশা:</strong> {item.profession}
-              </p>
-              <p className="mb-4 whitespace-pre-wrap text-justify">
-                “{item.reviewText}”
-              </p>
+        {existingReview.map((item) => (
+          <div
+            key={item._id}
+            className="p-6 bg-white border m-5 dark:bg-gray-800 rounded shadow"
+          >
+            <h2 className="text-2xl font-bold text-center mb-4">
+              আপনার মন্তব্য
+            </h2>
+            <p className="mb-2">
+              <strong>নাম:</strong> {item.userName}
+            </p>
+            <p className="mb-2">
+              <strong>পেশা:</strong> {item.profession}
+            </p>
+            <p className="mb-4 whitespace-pre-wrap text-justify">
+              “{item.reviewText}”
+            </p>
 
-              <button
-                onClick={() => {
-                  setEditing(true);
-                  setReviewEditing(item);
-                }}
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-              >
-                Edit Your Review
-              </button>
-            </div>
-          ))}
+            <button
+              onClick={() => {
+                setEditing(true);
+                setReviewEditing(item);
+              }}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Edit Your Review
+            </button>
+          </div>
+        ))}
+        {user.publicMetadata.isAdmin && (
+          <div className="max-w-3xl mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow">
+            <h2 className="text-2xl font-bold mb-6 text-center text-teal-600 dark:text-teal-300">
+              {editing
+                ? "Edit Your Review"
+                : existingReview
+                ? "Submit Another Review"
+                : "Share Your Review"}
+            </h2>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div>
+                <label className="block mb-1">নাম</label>
+                <input
+                  {...register("name", { required: true })}
+                  className="w-full dark:bg-black p-3 border rounded"
+                  disabled={uploading}
+                />
+                {errors.name && (
+                  <span className="text-red-500 text-sm">প্রয়োজন</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block mb-1">পেশা</label>
+                <input
+                  {...register("profession", { required: true })}
+                  className="w-full p-3 dark:bg-black border rounded"
+                  disabled={uploading}
+                />
+                {errors.profession && (
+                  <span className="text-red-500 text-sm">প্রয়োজন</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block mb-1">আপনার মন্তব্য</label>
+                <textarea
+                  {...register("review", { required: true })}
+                  className="w-full p-3 dark:bg-black border rounded h-28"
+                  disabled={uploading}
+                />
+                {errors.review && (
+                  <span className="text-red-500 text-sm">প্রয়োজন</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block mb-1">ছবি যুক্ত করতে চান?</label>
+                <select
+                  {...register("showPicture")}
+                  className="w-full p-3 dark:bg-black border rounded"
+                  disabled={uploading}
+                >
+                  <option value="false">না</option>
+                  <option value="true">হ্যাঁ</option>
+                </select>
+              </div>
+
+              {showPicture === "true" && (
+                <div>
+                  <label className="block mb-1">ছবি আপলোড</label>
+                  <input
+                    type="file"
+                    {...register("image")}
+                    accept="image/*"
+                    className="w-full p-2 rounded-md"
+                  />
+                  <label className="inline-flex items-center mt-2">
+                    <input
+                      type="checkbox"
+                      checked={makePP}
+                      onChange={(e) => setMakePP(e.target.checked)}
+                      className="mr-2"
+                    />
+                    প্রোফাইল পিক হিসেবে সেট
+                  </label>
+                </div>
+              )}
+              <div className="flex">
+                <button
+                  type=" cancel"
+                  onClick={() => {
+                    reset();
+                    setEditing(false);
+                  }}
+                  className="w-full m-3 py-3 bg-red-600 text-white rounded disabled:opacity-50"
+                >
+                  বাতিল করুন
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className=" w-full m-3 py-3 bg-blue-600 text-white rounded disabled:opacity-50"
+                >
+                  {uploading
+                    ? "জমা হচ্ছে…"
+                    : editing
+                    ? "আপডেট করুন"
+                    : "জমা দিন"}
+                </button>
+              </div>
+            </form>
+
+            <ResponseModal
+              isOpen={modal.isOpen}
+              message={modal.message}
+              status={modal.status}
+              onClose={() => setModal({ ...modal, isOpen: false })}
+            />
+          </div>
+        )}
       </div>
     );
   }
 
   // form for new or editing
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-gray-100 dark:bg-gray-800 rounded shadow">
+    <div className="max-w-3xl mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow">
       <h2 className="text-2xl font-bold mb-6 text-center text-teal-600 dark:text-teal-300">
         {editing
           ? "Edit Your Review"
@@ -256,7 +383,7 @@ export default function ReviewInputPage() {
                 onChange={(e) => setMakePP(e.target.checked)}
                 className="mr-2"
               />
-              প্রোফাইল পিক হিসেবে সেট
+              ছবিটি প্রোফাইলের ছবি হিসেবে সেট করুন
             </label>
           </div>
         )}

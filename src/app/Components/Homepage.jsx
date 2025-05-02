@@ -49,7 +49,7 @@ export default function Homepage() {
     <div className="flex flex-col w-full place-content-center">
       {/* Full‑width Animated Hero */}
       <motion.div
-        className="h-screen bg-gradient-to-br from-blue-700 to-teal-500 dark:from-blue-950 dark:to-teal-500 flex flex-col justify-center items-center text-center text-white"
+        className="h-screen bg-gradient-to-br from-blue-700 to-teal-500 dark:from-gray-950 dark:to-blue-900 flex flex-col justify-center items-center text-center text-white"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}

@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: "firebasestorage.googleapis.com",
         pathname: "/**", // Allow all images from this domain
       },
+      {
+        protocol: "https",
+        hostname: "images.clerk.dev",
+        pathname: "/**", // Allow all images from this domain
+      },
     ],
   },
   webpack: (config) => {
