@@ -124,7 +124,7 @@ export default function ReviewInputPage() {
       }
 
       const payload = {
-        reviewId: reviewEditing._id,
+        reviewId: reviewEditing?._id,
         userId: user.id,
         userName: data.name,
         profession: data.profession,
@@ -162,35 +162,36 @@ export default function ReviewInputPage() {
   if ((existingReview && !editing) || user.publicMetadata.isAdmin) {
     return (
       <div className="container">
-        {existingReview.map((item) => (
-          <div
-            key={item._id}
-            className="p-6 bg-white border m-5 dark:bg-gray-800 rounded shadow"
-          >
-            <h2 className="text-2xl font-bold text-center mb-4">
-              আপনার মন্তব্য
-            </h2>
-            <p className="mb-2">
-              <strong>নাম:</strong> {item.userName}
-            </p>
-            <p className="mb-2">
-              <strong>পেশা:</strong> {item.profession}
-            </p>
-            <p className="mb-4 whitespace-pre-wrap text-justify">
-              “{item.reviewText}”
-            </p>
-
-            <button
-              onClick={() => {
-                setEditing(true);
-                setReviewEditing(item);
-              }}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        {existingReview?.length > 0 &&
+          existingReview.map((item) => (
+            <div
+              key={item._id}
+              className="p-6 bg-white border m-5 dark:bg-gray-800 rounded shadow"
             >
-              Edit Your Review
-            </button>
-          </div>
-        ))}
+              <h2 className="text-2xl font-bold text-center mb-4">
+                আপনার মন্তব্য
+              </h2>
+              <p className="mb-2">
+                <strong>নাম:</strong> {item.userName}
+              </p>
+              <p className="mb-2">
+                <strong>পেশা:</strong> {item.profession}
+              </p>
+              <p className="mb-4 whitespace-pre-wrap text-justify">
+                “{item.reviewText}”
+              </p>
+
+              <button
+                onClick={() => {
+                  setEditing(true);
+                  setReviewEditing(item);
+                }}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+              >
+                Edit Your Review
+              </button>
+            </div>
+          ))}
         {user.publicMetadata.isAdmin && (
           <div className="max-w-3xl mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow">
             <h2 className="text-2xl font-bold mb-6 text-center text-teal-600 dark:text-teal-300">

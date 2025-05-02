@@ -48,13 +48,13 @@ export default function AboutUsPage() {
   // Delete review function (adjusted to use review._id)
   const deleteReview = async (id) => {
     if (
-      user.user.id !== reviews.find({ _id: id }).userId &&
+      user.user.id !== reviews.find((i) => i._id === id).userId &&
       !user.user.publicMetadata.isAdmin
     ) {
       Alert("You are not authorized to delete this review");
       return null;
     }
-    console.log(reviews.find({ _id: id }).userId);
+    console.log(reviews.find((i) => i._id === id).userId);
     if (confirm("Are you sure you want to delete this review?"))
       try {
         await fetch(`/api/reviews`, {
@@ -82,21 +82,21 @@ export default function AboutUsPage() {
         {reviews.map((r) => (
           <div
             key={r._id}
-            className="relative p-6 bg-amber-100 dark:bg-blue-950 border"
+            className="relative p-6 bg-amber-100 dark:bg-[#0B192C] border"
             style={{
               borderBottomRightRadius: "50%",
               minHeight: "200px", // Ensures enough space for content
             }}
           >
             {/* Text Container */}
-            <div className=" grid grid-cols-5">
+            <div className="grid grid-cols-5 flex-wrap">
               <div className="col-span-4">
                 <p className="text-2xl font-bold mb-2">{r.userName}</p>
                 <p className="italic text-justify mb-4">“{r.reviewText}”</p>
               </div>
-              <div className="items-end text-center ml-5 mt-10">
-                {r.userProfilePic && (
-                  <div className="">
+              <div className="items-end text-center ml-5">
+                {r.userProfilePic ? (
+                  <div>
                     <Image
                       src={r.userProfilePic}
                       width={100}
@@ -105,10 +105,14 @@ export default function AboutUsPage() {
                       alt={r.userName}
                     />
                   </div>
+                ) : (
+                  <div className=" p-3 sm:p-6 border rounded-full text-center">
+                    ছবি নেই
+                  </div>
                 )}
                 <p className=" ">পেশাঃ {r.profession}</p>
                 <p className="text-xs  text-gray-500">
-                  {format(new Date(parseInt(r.createdAt, 10)), "PP p")}
+                  {format(new Date(r.createdAt).toLocaleString(), "PP p")}
                 </p>
               </div>
             </div>
