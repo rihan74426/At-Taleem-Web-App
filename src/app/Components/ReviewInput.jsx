@@ -33,21 +33,20 @@ export default function ReviewInputPage() {
     message: "",
     status: "",
   });
+  const showModal = (message, status) =>
+    setModal({ isOpen: true, message, status });
+
   const [makePP, setMakePP] = useState(false);
 
   const showPicture = watch("showPicture");
   const { user, isLoaded } = useUser();
-
-  const showModal = (message, status) =>
-    setModal({ isOpen: true, message, status });
-
   // fetch this user's review once
   const fetchReview = async () => {
     const res = await fetch("/api/reviews");
     if (res.ok) {
       const { reviews } = await res.json();
       const my = reviews.filter((r) => r.userId === user.id) || null;
-      setExistingReview([...my]);
+      setExistingReview(my.length > 0 ? [...my] : null);
     }
   };
   useEffect(() => {
@@ -177,7 +176,7 @@ export default function ReviewInputPage() {
               <p className="mb-2">
                 <strong>পেশা:</strong> {item.profession}
               </p>
-              <p className="mb-4 whitespace-pre-wrap text-justify">
+              <p className="mb-4 whitespace-pre-wrap italic text-justify">
                 “{item.reviewText}”
               </p>
 
@@ -295,22 +294,21 @@ export default function ReviewInputPage() {
                 </button>
               </div>
             </form>
-
-            <ResponseModal
-              isOpen={modal.isOpen}
-              message={modal.message}
-              status={modal.status}
-              onClose={() => setModal({ ...modal, isOpen: false })}
-            />
           </div>
         )}
+        <ResponseModal
+          isOpen={modal.isOpen}
+          message={modal.message}
+          status={modal.status}
+          onClose={() => setModal({ ...modal, isOpen: false })}
+        />
       </div>
     );
   }
 
   // form for new or editing
   return (
-    <div className="max-w-3xl mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow">
+    <div className=" w-[40rem] mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow">
       <h2 className="text-2xl font-bold mb-6 text-center text-teal-600 dark:text-teal-300">
         {editing
           ? "Edit Your Review"

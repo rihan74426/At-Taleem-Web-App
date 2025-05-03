@@ -128,7 +128,9 @@ export default function Homepage() {
               </>
             )
           ) : (
-            <Loader />
+            <div className="flex place-content-center">
+              <Loader />
+            </div>
           )}
         </div>
       </section>
