@@ -56,8 +56,15 @@ export async function POST(req) {
 
 export async function PUT(req) {
   await connect();
-  const { userId, reviewId, reviewText, profession, userName, userProfilePic } =
-    await req.json();
+  const {
+    userId,
+    reviewId,
+    reviewText,
+    profession,
+    userName,
+    status,
+    userProfilePic,
+  } = await req.json();
 
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
@@ -72,6 +79,7 @@ export async function PUT(req) {
   review.reviewText = reviewText;
   review.userProfilePic = userProfilePic;
   review.profession = profession;
+  review.status = status;
   const newReview = await review.save();
   return Response.json({ message: "Review updated.", review: newReview });
   // if () {

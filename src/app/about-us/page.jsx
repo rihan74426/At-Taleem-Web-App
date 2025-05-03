@@ -66,6 +66,7 @@ export default function AboutUsPage() {
   const toggleStatus = async (review) => {
     if (!user.user.publicMetadata.isAdmin) {
       showModal("You are not authorized to perform this action", "error");
+      return;
     }
     try {
       const res = await fetch(`/api/reviews`, {
@@ -75,10 +76,12 @@ export default function AboutUsPage() {
         },
         body: JSON.stringify({
           ...review,
-          status: review.status === "pending" ? "approved" : "rejected",
+          reviewId: review._id,
+          status: review.status === "approved" ? "rejected" : "approved",
         }),
       });
       if (res.ok) {
+        fetchReview();
         const { review } = await res.json();
         showModal(
           `মন্তব্যটি যথাযথভাবে ${
@@ -88,7 +91,7 @@ export default function AboutUsPage() {
         );
       }
     } catch (error) {
-      console.log("Error deleting review", error);
+      console.log("Error Updating review", error);
     }
   };
 
@@ -189,14 +192,16 @@ export default function AboutUsPage() {
                     Date: {new Date(r.createdAt).toLocaleDateString()}
                   </p>
                   <button
-                    onClick={toggleStatus}
-                    className={`p-1  text-white rounded  ${
-                      r.status === "pending"
-                        ? "bg-green-500 hover:bg-green-600"
-                        : "bg-yellow-500 hover:bg-yellow-600"
+                    onClick={() => toggleStatus(r)}
+                    className={`p-1 text-white rounded ${
+                      // green for “approve”, red for “reject”
+                      r.status === "approved"
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-green-500 hover:bg-green-600"
                     }`}
                   >
-                    {r.status === "pending" ? "Approve" : "Hold"}
+                    {/* show “Reject” when approved, otherwise “Approve” */}
+                    {r.status === "approved" ? "Reject" : "Approve"}
                   </button>
                 </div>
               </div>
