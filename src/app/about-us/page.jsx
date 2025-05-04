@@ -193,14 +193,12 @@ export default function AboutUsPage() {
                   </p>
                   <button
                     onClick={() => toggleStatus(r)}
-                    className={`p-1 text-white rounded ${
-                      // green for “approve”, red for “reject”
+                    className={`p-1 text-white rounded my-2 ${
                       r.status === "approved"
                         ? "bg-red-500 hover:bg-red-600"
                         : "bg-green-500 hover:bg-green-600"
                     }`}
                   >
-                    {/* show “Reject” when approved, otherwise “Approve” */}
                     {r.status === "approved" ? "Reject" : "Approve"}
                   </button>
                 </div>
