@@ -281,7 +281,7 @@ export default function AboutUsPage() {
   };
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6 min-h-screen overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 m-10">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           তালিমের সদস্যদের মন্তব্য
