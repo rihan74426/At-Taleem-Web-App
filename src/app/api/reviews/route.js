@@ -82,18 +82,32 @@ export async function PUT(req) {
   review.status = status;
   const newReview = await review.save();
   return Response.json({ message: "Review updated.", review: newReview });
-  // if () {
-  // } else {
-  //   const liked = review.likes.includes(userId);
-  //   if (liked) {
-  //     review.likes.pull(userId); // Unlike
-  //   } else {
-  //     review.likes.push(userId); // Like
-  // //   }
+}
 
-  //   await review.save();
-  //   return Response.json({ message: liked ? "Unliked" : "Liked" });
-  // }
+export async function PATCH(req) {
+  const { reviewId, userId } = await req.json();
+  const review = await Review.findById(reviewId);
+  if (!userId) {
+    return new Response(JSON.stringify({ error: "Missing userId" }), {
+      status: 400,
+    });
+  }
+
+  if (!review) {
+    return new Response(JSON.stringify({ error: "Not found" }), {
+      status: 404,
+    });
+  }
+
+  const liked = review.likes.includes(userId);
+  if (liked) {
+    review.likes.pull(userId); // Unlike
+  } else {
+    review.likes.push(userId); // Like
+  }
+
+  await review.save();
+  return Response.json({ message: liked ? "Unliked" : "Liked" });
 }
 
 export async function DELETE(req) {

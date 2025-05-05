@@ -9,6 +9,8 @@ import Link from "next/link";
 import Loader from "../Components/Loader";
 import ResponseModal from "../Components/ResponseModal";
 import { useRouter } from "next/navigation";
+import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
+import { motion } from "framer-motion";
 
 export default function AboutUsPage() {
   const [reviews, setReviews] = useState([]);
@@ -62,6 +64,43 @@ export default function AboutUsPage() {
   useEffect(() => {
     fetchReview();
   }, []);
+
+  const toggleLove = async (review) => {
+    // optimistically update UI
+    const updated = reviews.map((r) =>
+      r._id === review._id
+        ? {
+            ...r,
+            likes: r.likes?.includes(user.user.id)
+              ? r.likes.filter((id) => id !== user.user.id)
+              : [...(r.likes || []), user.user.id],
+          }
+        : r
+    );
+    setReviews(updated);
+
+    // call backend
+    const res = await fetch(`/api/reviews`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.user.id, reviewId: review._id }),
+    });
+
+    if (res.ok) {
+      const { message } = await res.json();
+      showModal(
+        `আপনি মন্তব্যটি ${
+          message === "Liked" ? "পছন্দ করেছেন" : "থেকে পছন্দ তুলেছেন"
+        }!`,
+        "success"
+      );
+    } else {
+      showModal(
+        "কিছু একটা সমস্যা হয়েছে! দয়া করে একটু পর আবার চেষ্টা করুন!",
+        "error"
+      );
+    }
+  };
 
   const toggleStatus = async (review) => {
     if (!user.user.publicMetadata.isAdmin) {
@@ -141,84 +180,108 @@ export default function AboutUsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {reviews.map((r) => (
-            <div
-              key={r._id}
-              className="relative p-6 bg-amber-100 dark:bg-[#0B192C] border"
-              style={{
-                borderBottomRightRadius: "50%",
-                minHeight: "200px", // Ensures enough space for content
-              }}
-            >
-              {/* Text Container */}
-              <div className="grid grid-cols-5 flex-wrap">
-                <div className="col-span-4">
-                  <p className="text-2xl font-bold mb-2">
-                    {r.userName} -{" "}
-                    <span className="text-sm" style={{ fontWeight: "normal" }}>
-                      পেশাঃ {r.profession}
-                    </span>
-                    <span
-                      className={`p-1 text-sm m-2 rounded ${
+          {reviews.map((r) => {
+            const loved = r.likes?.includes(user.user.id);
+            return (
+              <div
+                key={r._id}
+                className="relative p-6 bg-amber-100 dark:bg-[#0B192C] border"
+                style={{
+                  borderBottomRightRadius: "50%",
+                  minHeight: "200px", // Ensures enough space for content
+                }}
+              >
+                {/* Text Container */}
+                <div className="grid grid-cols-5 flex-wrap">
+                  <div className="col-span-4">
+                    <div className="flex items-center gap-2">
+                      <p className="text-2xl font-bold mb-2">{r.userName} - </p>
+                      <span
+                        className="text-sm"
+                        style={{ fontWeight: "normal" }}
+                      >
+                        পেশাঃ {r.profession}
+                      </span>
+                      <span
+                        className={`p-1 text-sm m-2 rounded ${
+                          r.status === "approved"
+                            ? "bg-green-200 text-green-800"
+                            : "bg-yellow-200 text-yellow-800"
+                        }`}
+                      >
+                        {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                      </span>
+                      <div className="flex space-x-2">
+                        {/* Love button */}
+                        <motion.button
+                          onClick={() => toggleLove(r)}
+                          whileTap={{ scale: 0.8 }} // shrink on tap :contentReference[oaicite:1]{index=1}
+                          whileHover={{ scale: 1.2 }} // grow on hover
+                          className="text-xl p-1 focus:outline-none"
+                          aria-label={loved ? "পছন্দ তুলে নিন" : "পছন্দ করুন"}
+                        >
+                          {loved ? (
+                            <AiFillHeart className="text-red-500" />
+                          ) : (
+                            <AiOutlineHeart className="text-gray-500" />
+                          )}
+                        </motion.button>
+                        <span className="pt-1"> {r.likes.length}</span>
+                      </div>
+                    </div>
+
+                    <p className="italic text-justify mb-4 whitespace-pre-wrap">
+                      “{r.reviewText}”
+                    </p>
+                  </div>
+                  <div className="items-end text-center ml-5">
+                    {r.userProfilePic ? (
+                      <div>
+                        <Image
+                          src={r.userProfilePic}
+                          width={100}
+                          height={100}
+                          className="rounded-full"
+                          alt={r.userName}
+                        />
+                      </div>
+                    ) : (
+                      <div className=" p-3 sm:p-6 border rounded-full text-center">
+                        ছবি নেই
+                      </div>
+                    )}
+                    <p className="text-xs mt-10 text-gray-500">
+                      Date: {new Date(r.createdAt).toLocaleDateString()}
+                    </p>
+                    <button
+                      onClick={() => toggleStatus(r)}
+                      className={`p-1 text-white rounded my-2 ${
                         r.status === "approved"
-                          ? "bg-green-200 text-green-800"
-                          : "bg-yellow-200 text-yellow-800"
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-green-500 hover:bg-green-600"
                       }`}
                     >
-                      {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
-                    </span>
-                  </p>
-                  <p className="italic text-justify mb-4 whitespace-pre-wrap">
-                    “{r.reviewText}”
-                  </p>
+                      {r.status === "approved" ? "Reject" : "Approve"}
+                    </button>
+                  </div>
                 </div>
-                <div className="items-end text-center ml-5">
-                  {r.userProfilePic ? (
-                    <div>
-                      <Image
-                        src={r.userProfilePic}
-                        width={100}
-                        height={100}
-                        className="rounded-full"
-                        alt={r.userName}
-                      />
-                    </div>
-                  ) : (
-                    <div className=" p-3 sm:p-6 border rounded-full text-center">
-                      ছবি নেই
-                    </div>
-                  )}
-                  <p className="text-xs mt-10 text-gray-500">
-                    Date: {new Date(r.createdAt).toLocaleDateString()}
-                  </p>
+
+                {/* Profile Picture */}
+
+                {/* Delete Button */}
+                {(user.user?.publicMetadata?.isAdmin ||
+                  user.user?.id === r.userId) && (
                   <button
-                    onClick={() => toggleStatus(r)}
-                    className={`p-1 text-white rounded my-2 ${
-                      r.status === "approved"
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-green-500 hover:bg-green-600"
-                    }`}
+                    onClick={() => deleteReview(r._id)}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                    title="Delete review"
                   >
-                    {r.status === "approved" ? "Reject" : "Approve"}
+                    <FiTrash2 />
                   </button>
-                </div>
+                )}
               </div>
-
-              {/* Profile Picture */}
-
-              {/* Delete Button */}
-              {(user.user?.publicMetadata?.isAdmin ||
-                user.user?.id === r.userId) && (
-                <button
-                  onClick={() => deleteReview(r._id)}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                  title="Delete review"
-                >
-                  <FiTrash2 />
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <ResponseModal
