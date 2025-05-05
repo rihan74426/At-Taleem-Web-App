@@ -16,16 +16,16 @@ import { useUser } from "@clerk/nextjs";
 
 export default function Dashboard() {
   const user = useUser();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState("");
+  useEffect(() => {
+    const urlParams = new URLSearchParams(searchParams);
+    const tabFromUrl = urlParams.get("tab");
+    if (tabFromUrl) {
+      setTab(tabFromUrl);
+    } else setTab("dash");
+  }, [searchParams]);
   if (user.isSignedIn) {
-    const searchParams = useSearchParams();
-    const [tab, setTab] = useState("");
-    useEffect(() => {
-      const urlParams = new URLSearchParams(searchParams);
-      const tabFromUrl = urlParams.get("tab");
-      if (tabFromUrl) {
-        setTab(tabFromUrl);
-      } else setTab("dash");
-    }, [searchParams]);
     return (
       <div className="min-h-screen flex flex-col md:flex-row">
         <div className="md:w-56">

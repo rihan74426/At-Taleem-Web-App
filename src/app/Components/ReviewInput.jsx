@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
 import {
   uploadBytesResumable,
@@ -28,6 +28,7 @@ export default function ReviewInputPage() {
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reviewEditing, setReviewEditing] = useState(null);
+  const formRef = useRef(null);
   const [modal, setModal] = useState({
     isOpen: false,
     message: "",
@@ -63,7 +64,7 @@ export default function ReviewInputPage() {
       setValue("review", reviewEditing.reviewText);
       setValue("showPicture", reviewEditing.userProfilePic ? "true" : "false");
     }
-    console.log(existingReview);
+    formRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [editing, existingReview, setValue]);
 
   const compressIfNeeded = async (file) => {
@@ -160,7 +161,7 @@ export default function ReviewInputPage() {
   // read-only view if user has review and not editing
   if ((existingReview && !editing) || user.publicMetadata.isAdmin) {
     return (
-      <div className="container">
+      <div className="container" ref={formRef}>
         {existingReview?.length > 0 &&
           existingReview.map((item) => (
             <div
@@ -201,7 +202,11 @@ export default function ReviewInputPage() {
                 : "Share Your Review"}
             </h2>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form
+              ref={formRef}
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6"
+            >
               <div>
                 <label className="block mb-1">নাম</label>
                 <input
