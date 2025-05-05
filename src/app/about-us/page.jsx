@@ -4,13 +4,132 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { FiTrash2 } from "react-icons/fi";
 import { useUser } from "@clerk/nextjs";
-import { format } from "date-fns";
-import Link from "next/link";
 import Loader from "../Components/Loader";
 import ResponseModal from "../Components/ResponseModal";
 import { useRouter } from "next/navigation";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
-import { motion } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
+
+// Review Component
+function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
+  const animation = useAnimation();
+  const loved = review.likes?.includes(user.user.id);
+
+  return (
+    <div
+      key={review._id}
+      className="relative p-6 bg-amber-100 dark:bg-[#0B192C] border"
+      style={{
+        borderBottomRightRadius: "50%",
+        minHeight: "200px", // Ensures enough space for content
+      }}
+    >
+      {/* Animation overlay */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+        initial={{ opacity: 0, scale: 0 }}
+        animate={animation}
+      >
+        <AiFillHeart className="text-red-500" style={{ fontSize: "50px" }} />
+      </motion.div>
+
+      {/* Content */}
+      <div className="grid grid-cols-5 flex-wrap">
+        <div className="col-span-4">
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold mb-2">{review.userName} - </p>
+            <span className="text-sm" style={{ fontWeight: "normal" }}>
+              পেশাঃ {review.profession}
+            </span>
+            <span
+              className={`p-1 text-sm m-2 rounded ${
+                review.status === "approved"
+                  ? "bg-green-200 text-green-800"
+                  : "bg-yellow-200 text-yellow-800"
+              }`}
+            >
+              {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
+            </span>
+            <div className="flex space-x-2">
+              {/* Love button */}
+              <motion.button
+                onClick={async () => {
+                  toggleLove(review);
+                  await animation.start({
+                    opacity: 1,
+                    scale: 1,
+                    transition: { duration: 0.5, ease: "easeOut" },
+                  });
+                  await animation.start({
+                    opacity: 0,
+                    scale: 10,
+                    transition: { duration: 0.5, ease: "easeIn" },
+                  });
+                }}
+                whileTap={{ scale: 0.8 }}
+                whileHover={{ scale: 2 }}
+                className="text-xl focus:outline-none"
+                aria-label={loved ? "পছন্দ তুলে নিন" : "পছন্দ করুন"}
+              >
+                {loved ? (
+                  <AiFillHeart size={20} className="text-red-500" />
+                ) : (
+                  <AiOutlineHeart size={20} className="text-gray-500" />
+                )}
+              </motion.button>
+              <span>{review.likes.length}</span>
+            </div>
+          </div>
+          <p className="italic text-justify mb-4 whitespace-pre-wrap">
+            “{review.reviewText}”
+          </p>
+        </div>
+        <div className="items-end text-center ml-5">
+          {review.userProfilePic ? (
+            <div>
+              <Image
+                src={review.userProfilePic}
+                width={100}
+                height={100}
+                className="rounded-full"
+                alt={review.userName}
+              />
+            </div>
+          ) : (
+            <div className="p-3 sm:p-6 border rounded-full text-center">
+              ছবি নেই
+            </div>
+          )}
+          <p className="text-xs mt-10 text-gray-500">
+            Date: {new Date(review.createdAt).toLocaleDateString()}
+          </p>
+          <button
+            onClick={() => toggleStatus(review)}
+            className={`p-1 text-white rounded my-2 ${
+              review.status === "approved"
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-green-500 hover:bg-green-600"
+            }`}
+          >
+            {review.status === "approved" ? "Reject" : "Approve"}
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Button */}
+      {(user.user?.publicMetadata?.isAdmin ||
+        user.user?.id === review.userId) && (
+        <button
+          onClick={() => deleteReview(review._id)}
+          className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+          title="Delete review"
+        >
+          <FiTrash2 />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function AboutUsPage() {
   const [reviews, setReviews] = useState([]);
@@ -54,6 +173,7 @@ export default function AboutUsPage() {
       setLoading(false);
     }
   };
+
   const submitReview = () => {
     if (!user.isSignedIn) {
       return showModal("মন্তব্য প্রদানের জন্য দয়া করে আগে লগিন করুন", "error");
@@ -66,7 +186,7 @@ export default function AboutUsPage() {
   }, []);
 
   const toggleLove = async (review) => {
-    // optimistically update UI
+    // Optimistically update UI
     const updated = reviews.map((r) =>
       r._id === review._id
         ? {
@@ -79,7 +199,7 @@ export default function AboutUsPage() {
     );
     setReviews(updated);
 
-    // call backend
+    // Call backend
     const res = await fetch(`/api/reviews`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -121,10 +241,10 @@ export default function AboutUsPage() {
       });
       if (res.ok) {
         fetchReview();
-        const { review } = await res.json();
+        const { review: updatedReview } = await res.json();
         showModal(
           `মন্তব্যটি যথাযথভাবে ${
-            review.status === "rejected" ? "রিজেক্ট" : "এপ্রুভ"
+            updatedReview.status === "rejected" ? "রিজেক্ট" : "এপ্রুভ"
           } করা হয়েছে!`,
           "success"
         );
@@ -134,7 +254,6 @@ export default function AboutUsPage() {
     }
   };
 
-  // Delete review function (adjusted to use review._id)
   const deleteReview = async (id) => {
     if (
       user.user?.id !== reviews.find((i) => i._id === id).userId &&
@@ -180,108 +299,16 @@ export default function AboutUsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {reviews.map((r) => {
-            const loved = r.likes?.includes(user.user.id);
-            return (
-              <div
-                key={r._id}
-                className="relative p-6 bg-amber-100 dark:bg-[#0B192C] border"
-                style={{
-                  borderBottomRightRadius: "50%",
-                  minHeight: "200px", // Ensures enough space for content
-                }}
-              >
-                {/* Text Container */}
-                <div className="grid grid-cols-5 flex-wrap">
-                  <div className="col-span-4">
-                    <div className="flex items-center gap-2">
-                      <p className="text-2xl font-bold mb-2">{r.userName} - </p>
-                      <span
-                        className="text-sm"
-                        style={{ fontWeight: "normal" }}
-                      >
-                        পেশাঃ {r.profession}
-                      </span>
-                      <span
-                        className={`p-1 text-sm m-2 rounded ${
-                          r.status === "approved"
-                            ? "bg-green-200 text-green-800"
-                            : "bg-yellow-200 text-yellow-800"
-                        }`}
-                      >
-                        {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
-                      </span>
-                      <div className="flex space-x-2">
-                        {/* Love button */}
-                        <motion.button
-                          onClick={() => toggleLove(r)}
-                          whileTap={{ scale: 0.8 }} // shrink on tap :contentReference[oaicite:1]{index=1}
-                          whileHover={{ scale: 1.2 }} // grow on hover
-                          className="text-xl p-1 focus:outline-none"
-                          aria-label={loved ? "পছন্দ তুলে নিন" : "পছন্দ করুন"}
-                        >
-                          {loved ? (
-                            <AiFillHeart className="text-red-500" />
-                          ) : (
-                            <AiOutlineHeart className="text-gray-500" />
-                          )}
-                        </motion.button>
-                        <span className="pt-1"> {r.likes.length}</span>
-                      </div>
-                    </div>
-
-                    <p className="italic text-justify mb-4 whitespace-pre-wrap">
-                      “{r.reviewText}”
-                    </p>
-                  </div>
-                  <div className="items-end text-center ml-5">
-                    {r.userProfilePic ? (
-                      <div>
-                        <Image
-                          src={r.userProfilePic}
-                          width={100}
-                          height={100}
-                          className="rounded-full"
-                          alt={r.userName}
-                        />
-                      </div>
-                    ) : (
-                      <div className=" p-3 sm:p-6 border rounded-full text-center">
-                        ছবি নেই
-                      </div>
-                    )}
-                    <p className="text-xs mt-10 text-gray-500">
-                      Date: {new Date(r.createdAt).toLocaleDateString()}
-                    </p>
-                    <button
-                      onClick={() => toggleStatus(r)}
-                      className={`p-1 text-white rounded my-2 ${
-                        r.status === "approved"
-                          ? "bg-red-500 hover:bg-red-600"
-                          : "bg-green-500 hover:bg-green-600"
-                      }`}
-                    >
-                      {r.status === "approved" ? "Reject" : "Approve"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Profile Picture */}
-
-                {/* Delete Button */}
-                {(user.user?.publicMetadata?.isAdmin ||
-                  user.user?.id === r.userId) && (
-                  <button
-                    onClick={() => deleteReview(r._id)}
-                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                    title="Delete review"
-                  >
-                    <FiTrash2 />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          {reviews.map((r) => (
+            <Review
+              key={r._id}
+              review={r}
+              user={user}
+              toggleLove={toggleLove}
+              deleteReview={deleteReview}
+              toggleStatus={toggleStatus}
+            />
+          ))}
         </div>
       )}
       <ResponseModal
