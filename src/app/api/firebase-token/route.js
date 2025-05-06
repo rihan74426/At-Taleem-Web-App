@@ -1,12 +1,12 @@
 // src/app/api/firebase-token/route.js
 import admin from "@/firebaseAdmin";
-import { currentUser } from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs/server";
 
 export async function GET() {
-  const user = await currentUser();
+  const user = getAuth(req);
   // create a custom token for this Clerk user id
   try {
-    const firebaseToken = await admin.auth().createCustomToken(user.id);
+    const firebaseToken = await admin.auth().createCustomToken(user.userId);
     return new Response(JSON.stringify({ token: firebaseToken }), {
       headers: { "Content-Type": "application/json" },
     });

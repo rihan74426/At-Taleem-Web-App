@@ -16,6 +16,7 @@ import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { AiOutlineVideoCamera } from "react-icons/ai";
 import { BsQuestionOctagon } from "react-icons/bs";
+import { FaRegCommentDots } from "react-icons/fa";
 export default function DashSidebar() {
   const [tab, setTab] = useState("");
   const searchParams = useSearchParams();
@@ -61,7 +62,7 @@ export default function DashSidebar() {
           <Link href="/dashboard?tab=review">
             <Sidebar.Item
               active={tab === "review"}
-              icon={HiUser}
+              icon={FaRegCommentDots}
               labelColor="dark"
               as="div"
             >
