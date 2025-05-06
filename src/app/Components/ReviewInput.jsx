@@ -201,39 +201,37 @@ export default function ReviewInputPage() {
           existingReview.map((item) => (
             <div className="relative flex items-center flex-col md:flex-row bg-white dark:bg-gray-800 border rounded-lg shadow-md overflow-hidden m-5">
               {/* Left: Profile pic */}
-              <div className="flex-shrink-0 p-4">
-                {item.userProfilePic ? (
-                  <Image
-                    src={item.userProfilePic}
-                    alt={item.userName}
-                    width={96}
-                    height={96}
-                    className="rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                    <span className="text-gray-500 dark:text-gray-300">
-                      No Photo
-                    </span>
-                  </div>
-                )}
-              </div>
 
               {/* Right: Content */}
               <div className="flex-1 p-4 flex flex-col justify-between">
                 {/* Header row */}
-                <div className="flex flex-wrap items-center justify-between mb-2">
-                  <div className="space-y-1">
+                <div className="flex flex-wrap items-center mb-2">
+                  <div className="space-y-1 mr-20">
                     <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       {item.userName}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       পেশাঃ {item.profession}
                     </p>
+                    <div className="text-sm text-gray-500 dark:text-gray-300">
+                      পছন্দ করেছেনঃ {item.likes?.length || 0} জন
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-300">
-                    ❤️ {item.likes?.length || 0}
-                  </div>
+                  {item.userProfilePic ? (
+                    <Image
+                      src={item.userProfilePic}
+                      alt={item.userName}
+                      width={96}
+                      height={96}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                      <span className="text-gray-500 dark:text-gray-300">
+                        No Photo
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Review text */}
@@ -448,46 +446,81 @@ export default function ReviewInputPage() {
           )}
         </div>
 
-        <div>
-          <label className="block mb-1">ছবি যুক্ত করতে চান?</label>
-          <select
-            {...register("showPicture")}
-            className="w-full p-3 dark:bg-black border rounded"
-            disabled={uploading}
-          >
-            <option value="false">না</option>
-            <option value="true">হ্যাঁ</option>
-          </select>
-        </div>
+        {!reviewEditing?.userProfilePic ? (
+          <>
+            <div>
+              <label className="block mb-1">ছবি যুক্ত করতে চান?</label>
+              <select
+                {...register("showPicture")}
+                className="w-full p-3 dark:bg-black border rounded"
+                disabled={uploading}
+              >
+                <option value="false">না</option>
+                <option value="true">হ্যাঁ</option>
+              </select>
+            </div>
 
-        {showPicture === "true" && (
-          <div>
-            <label className="block mb-1">ছবি আপলোড</label>
-            <input
-              type="file"
-              {...register("image")}
-              accept="image/*"
-              className="w-full p-2 rounded-md"
+            {showPicture === "true" && (
+              <div>
+                <label className="block mb-1">ছবি আপলোড</label>
+                <input
+                  type="file"
+                  {...register("image")}
+                  accept="image/*"
+                  className="w-full p-2 rounded-md"
+                />
+                <label className="inline-flex items-center mt-2">
+                  <input
+                    type="checkbox"
+                    checked={makePP}
+                    onChange={(e) => setMakePP(e.target.checked)}
+                    className="mr-2"
+                  />
+                  প্রোফাইল পিক হিসেবে সেট
+                </label>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center">
+            <img
+              src={reviewEditing.userProfilePic}
+              alt="User Pic"
+              className="w-32 h-32 object-cover rounded-full"
             />
-            <label className="inline-flex items-center mt-2">
-              <input
-                type="checkbox"
-                checked={makePP}
-                onChange={(e) => setMakePP(e.target.checked)}
-                className="mr-2"
-              />
-              ছবিটি প্রোফাইলের ছবি হিসেবে সেট করুন
-            </label>
+            <button
+              onClick={() => {
+                setReviewEditing({
+                  ...reviewEditing,
+                  userProfilePic: null,
+                });
+              }}
+              className="bg-red-500 p-2 ml-5 rounded text-white"
+            >
+              Remove This Photo
+            </button>
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={uploading}
-          className="w-full py-3 bg-blue-600 text-white rounded disabled:opacity-50"
-        >
-          {uploading ? "জমা হচ্ছে…" : editing ? "আপডেট করুন" : "জমা দিন"}
-        </button>
+        <div className="flex">
+          <button
+            type=" cancel"
+            onClick={() => {
+              reset();
+              setEditing(false);
+            }}
+            className="w-full m-3 py-3 bg-red-600 text-white rounded disabled:opacity-50"
+          >
+            বাতিল করুন
+          </button>
+          <button
+            type="submit"
+            disabled={uploading}
+            className=" w-full m-3 py-3 bg-blue-600 text-white rounded disabled:opacity-50"
+          >
+            {uploading ? "জমা হচ্ছে…" : editing ? "আপডেট করুন" : "জমা দিন"}
+          </button>
+        </div>
       </form>
 
       <ResponseModal
