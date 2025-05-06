@@ -12,8 +12,8 @@ import { motion, useAnimation } from "framer-motion";
 
 // Review Component
 function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
+  const loved = review.likes?.includes(user.user?.id);
   const animation = useAnimation();
-  const loved = review.likes?.includes(user.user.id);
 
   return (
     <div
@@ -55,16 +55,6 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
               <motion.button
                 onClick={async () => {
                   toggleLove(review);
-                  await animation.start({
-                    opacity: 1,
-                    scale: 1,
-                    transition: { duration: 0.5, ease: "easeOut" },
-                  });
-                  await animation.start({
-                    opacity: 0,
-                    scale: 10,
-                    transition: { duration: 0.5, ease: "easeIn" },
-                  });
                 }}
                 whileTap={{ scale: 0.8 }}
                 whileHover={{ scale: 2 }}
@@ -84,35 +74,54 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
             “{review.reviewText}”
           </p>
         </div>
-        <div className="items-end text-center ml-5">
+        <div className="items-end text-center ml-5 space-y-2">
           {review.userProfilePic ? (
-            <div>
-              <Image
-                src={review.userProfilePic}
-                width={100}
-                height={100}
-                className="rounded-full"
-                alt={review.userName}
-              />
-            </div>
+            <Image
+              src={review.userProfilePic}
+              width={100}
+              height={100}
+              className="rounded-full mx-auto"
+              alt={review.userName}
+            />
           ) : (
-            <div className="p-3 sm:p-6 border rounded-full text-center">
+            <div className="p-3 sm:p-6 border rounded-full mx-auto">
               ছবি নেই
             </div>
           )}
-          <p className="text-xs mt-10 text-gray-500">
+
+          <p className="text-xs text-gray-500">
             Date: {new Date(review.createdAt).toLocaleDateString()}
           </p>
-          <button
-            onClick={() => toggleStatus(review)}
-            className={`p-1 text-white rounded my-2 ${
-              review.status === "approved"
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-green-500 hover:bg-green-600"
-            }`}
-          >
-            {review.status === "approved" ? "Reject" : "Approve"}
-          </button>
+
+          {/* only when pending show both Approve & Reject */}
+          {review.status === "pending" && (
+            <div className="flex space-x-2 justify-center">
+              <button
+                onClick={() => toggleStatus(review, "approved")}
+                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => toggleStatus(review, "rejected")}
+                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
+              >
+                Reject
+              </button>
+            </div>
+          )}
+
+          {/* if rejected, only show Approve to let admin reverse */}
+          {review.status === "rejected" && (
+            <button
+              onClick={() => toggleStatus(review, "approved")}
+              className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
+            >
+              Approve
+            </button>
+          )}
+
+          {/* if approved, render nothing */}
         </div>
       </div>
 
@@ -185,7 +194,11 @@ export default function AboutUsPage() {
     fetchReview();
   }, []);
 
+  const animation = useAnimation();
   const toggleLove = async (review) => {
+    if (!user.isSignedIn) {
+      return showModal("পছন্দ করার জন্য আপনাকে লগিন করতে হবে!", "error");
+    }
     // Optimistically update UI
     const updated = reviews.map((r) =>
       r._id === review._id
@@ -208,6 +221,16 @@ export default function AboutUsPage() {
 
     if (res.ok) {
       const { message } = await res.json();
+      await animation.start({
+        opacity: 1,
+        scale: 1,
+        transition: { duration: 0.5, ease: "easeOut" },
+      });
+      await animation.start({
+        opacity: 0,
+        scale: 10,
+        transition: { duration: 0.5, ease: "easeIn" },
+      });
       showModal(
         `আপনি মন্তব্যটি ${
           message === "Liked" ? "পছন্দ করেছেন" : "থেকে পছন্দ তুলেছেন"
@@ -222,8 +245,8 @@ export default function AboutUsPage() {
     }
   };
 
-  const toggleStatus = async (review) => {
-    if (!user.user.publicMetadata.isAdmin) {
+  const toggleStatus = async (review, status) => {
+    if (!user.user?.publicMetadata.isAdmin) {
       showModal("You are not authorized to perform this action", "error");
       return;
     }
@@ -236,7 +259,7 @@ export default function AboutUsPage() {
         body: JSON.stringify({
           ...review,
           reviewId: review._id,
-          status: review.status === "approved" ? "rejected" : "approved",
+          status: status,
         }),
       });
       if (res.ok) {
@@ -257,7 +280,7 @@ export default function AboutUsPage() {
   const deleteReview = async (id) => {
     if (
       user.user?.id !== reviews.find((i) => i._id === id).userId &&
-      !user?.user.publicMetadata?.isAdmin
+      !user.user?.publicMetadata?.isAdmin
     ) {
       showModal("You are not authorized to delete this review", "error");
       return null;
@@ -280,6 +303,15 @@ export default function AboutUsPage() {
       }
   };
 
+  const isAdmin = user.user?.publicMetadata.isAdmin;
+  const visibleReviews = isAdmin
+    ? [...reviews].sort((a, b) => {
+        if (a.status === "pending" && b.status !== "pending") return -1;
+        if (a.status !== "pending" && b.status === "pending") return 1;
+        return 0;
+      })
+    : reviews.filter((r) => r.status === "approved");
+
   return (
     <div className="p-6 min-h-screen overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 m-10">
@@ -293,13 +325,14 @@ export default function AboutUsPage() {
           আপনার মন্তব্য জানান
         </button>
       </div>
+
       {loading ? (
-        <div className="flex place-content-center">
+        <div className="flex justify-center">
           <Loader />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {reviews.map((r) => (
+          {visibleReviews.map((r) => (
             <Review
               key={r._id}
               review={r}
@@ -311,11 +344,12 @@ export default function AboutUsPage() {
           ))}
         </div>
       )}
+
       <ResponseModal
         isOpen={modal.isOpen}
         message={modal.message}
         status={modal.status}
-        onClose={() => setModal({ ...modal, isOpen: false })}
+        onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
       />
     </div>
   );

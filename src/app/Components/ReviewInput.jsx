@@ -58,14 +58,17 @@ export default function ReviewInputPage() {
 
   // when editing, prefill form
   useEffect(() => {
-    if (editing && existingReview) {
-      setValue("name", reviewEditing.userName);
-      setValue("profession", reviewEditing.profession);
-      setValue("review", reviewEditing.reviewText);
-      setValue("showPicture", reviewEditing.userProfilePic ? "true" : "false");
-    }
+    setValue("name", reviewEditing?.userName);
+    setValue("profession", reviewEditing?.profession);
+    setValue("review", reviewEditing?.reviewText);
+    setValue("showPicture", reviewEditing?.userProfilePic ? "true" : "false");
+  }, [reviewEditing]);
+
+  const editHandler = (item) => {
+    setEditing(true);
+    setReviewEditing(item);
     formRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [editing, existingReview, setValue]);
+  };
 
   const compressIfNeeded = async (file) => {
     if (file.size <= 1024 * 1024) return file;
@@ -161,7 +164,7 @@ export default function ReviewInputPage() {
   // read-only view if user has review and not editing
   if ((existingReview && !editing) || user.publicMetadata.isAdmin) {
     return (
-      <div className="container" ref={formRef}>
+      <div className="container">
         {existingReview?.length > 0 &&
           existingReview.map((item) => (
             <div
@@ -177,15 +180,15 @@ export default function ReviewInputPage() {
               <p className="mb-2">
                 <strong>পেশা:</strong> {item.profession}
               </p>
+              <p className="mb-2">
+                <strong>পছন্দ:</strong> {item.likes?.length}
+              </p>
               <p className="mb-4 whitespace-pre-wrap italic text-justify">
                 “{item.reviewText}”
               </p>
 
               <button
-                onClick={() => {
-                  setEditing(true);
-                  setReviewEditing(item);
-                }}
+                onClick={() => editHandler(item)}
                 className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
               >
                 Edit Your Review
@@ -193,7 +196,10 @@ export default function ReviewInputPage() {
             </div>
           ))}
         {user.publicMetadata.isAdmin && (
-          <div className="max-w-3xl mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow">
+          <div
+            ref={formRef}
+            className="max-w-3xl mx-auto p-6 m-5 bg-gray-100 dark:bg-gray-800 rounded shadow"
+          >
             <h2 className="text-2xl font-bold mb-6 text-center text-teal-600 dark:text-teal-300">
               {editing
                 ? "Edit Your Review"
@@ -202,11 +208,7 @@ export default function ReviewInputPage() {
                 : "Share Your Review"}
             </h2>
 
-            <form
-              ref={formRef}
-              onSubmit={handleSubmit(onSubmit)}
-              className="space-y-6"
-            >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
                 <label className="block mb-1">নাম</label>
                 <input
@@ -242,39 +244,62 @@ export default function ReviewInputPage() {
                   <span className="text-red-500 text-sm">প্রয়োজন</span>
                 )}
               </div>
+              {!reviewEditing?.userProfilePic ? (
+                <>
+                  <div>
+                    <label className="block mb-1">ছবি যুক্ত করতে চান?</label>
+                    <select
+                      {...register("showPicture")}
+                      className="w-full p-3 dark:bg-black border rounded"
+                      disabled={uploading}
+                    >
+                      <option value="false">না</option>
+                      <option value="true">হ্যাঁ</option>
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block mb-1">ছবি যুক্ত করতে চান?</label>
-                <select
-                  {...register("showPicture")}
-                  className="w-full p-3 dark:bg-black border rounded"
-                  disabled={uploading}
-                >
-                  <option value="false">না</option>
-                  <option value="true">হ্যাঁ</option>
-                </select>
-              </div>
-
-              {showPicture === "true" && (
-                <div>
-                  <label className="block mb-1">ছবি আপলোড</label>
-                  <input
-                    type="file"
-                    {...register("image")}
-                    accept="image/*"
-                    className="w-full p-2 rounded-md"
+                  {showPicture === "true" && (
+                    <div>
+                      <label className="block mb-1">ছবি আপলোড</label>
+                      <input
+                        type="file"
+                        {...register("image")}
+                        accept="image/*"
+                        className="w-full p-2 rounded-md"
+                      />
+                      <label className="inline-flex items-center mt-2">
+                        <input
+                          type="checkbox"
+                          checked={makePP}
+                          onChange={(e) => setMakePP(e.target.checked)}
+                          className="mr-2"
+                        />
+                        প্রোফাইল পিক হিসেবে সেট
+                      </label>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center">
+                  <img
+                    src={reviewEditing.userProfilePic}
+                    alt="User Pic"
+                    className="w-32 h-32 object-cover rounded-full"
                   />
-                  <label className="inline-flex items-center mt-2">
-                    <input
-                      type="checkbox"
-                      checked={makePP}
-                      onChange={(e) => setMakePP(e.target.checked)}
-                      className="mr-2"
-                    />
-                    প্রোফাইল পিক হিসেবে সেট
-                  </label>
+                  <button
+                    onClick={() => {
+                      setReviewEditing({
+                        ...reviewEditing,
+                        userProfilePic: null,
+                      });
+                    }}
+                    className="bg-red-500 p-2 ml-5 rounded text-white"
+                  >
+                    Remove This Photo
+                  </button>
                 </div>
               )}
+
               <div className="flex">
                 <button
                   type=" cancel"
