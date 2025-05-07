@@ -4,6 +4,8 @@ export async function GET(req) {
   await connect();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  const limit = parseInt(searchParams.get("limit") || "10", 10);
+
   if (id) {
     try {
       const review = await Review.findById(id);
@@ -25,7 +27,7 @@ export async function GET(req) {
       });
     }
   }
-  const reviews = await Review.find({}).sort({ createdAt: -1 });
+  const reviews = await Review.find({}).sort({ createdAt: -1 }).limit(limit);
   return new Response(JSON.stringify({ reviews }));
 }
 

@@ -11,7 +11,13 @@ import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { motion, useAnimation } from "framer-motion";
 
 // Review Component
-function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
+export function ReviewCard({
+  review,
+  user,
+  toggleLove,
+  deleteReview,
+  toggleStatus,
+}) {
   const loved = review.likes?.includes(user.user?.id);
   const animation = useAnimation();
 
@@ -175,6 +181,9 @@ export default function AboutUsPage() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    fetchReview();
+  }, []);
 
   const submitReview = () => {
     if (!user.isSignedIn) {
@@ -182,10 +191,6 @@ export default function AboutUsPage() {
     }
     router.push(`/dashboard?tab=review`);
   };
-
-  useEffect(() => {
-    fetchReview();
-  }, []);
 
   const animation = useAnimation();
   const toggleLove = async (review) => {
@@ -326,7 +331,7 @@ export default function AboutUsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {visibleReviews.map((r) => (
-            <Review
+            <ReviewCard
               key={r._id}
               review={r}
               user={user}
