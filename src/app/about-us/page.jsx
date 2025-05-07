@@ -18,31 +18,29 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
   return (
     <div
       key={review._id}
-      className="relative p-6 bg-amber-100 dark:bg-[#0B192C] border"
-      style={{
-        borderBottomRightRadius: "50%",
-        minHeight: "200px", // Ensures enough space for content
-      }}
+      className="relative bg-amber-100 dark:bg-[#0B192C] border rounded-lg overflow-hidden"
+      style={{ borderBottomRightRadius: "50%", minHeight: 200 }}
     >
-      {/* Animation overlay */}
+      {/* Love animation */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
         initial={{ opacity: 0, scale: 0 }}
         animate={animation}
       >
-        <AiFillHeart className="text-red-500" style={{ fontSize: "50px" }} />
+        <AiFillHeart className="text-red-500 text-5xl" />
       </motion.div>
 
-      {/* Content */}
-      <div className="grid grid-cols-5 flex-wrap">
-        <div className="col-span-4">
-          <div className="flex items-center gap-2">
-            <p className="text-2xl font-bold mb-2">{review.userName} - </p>
-            <span className="text-sm" style={{ fontWeight: "normal" }}>
-              পেশাঃ {review.profession}
+      {/* Responsive grid: 1 col on sm, 5 cols on md+ */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4">
+        {/* Main content spans all on sm, first 4 cols on md */}
+        <div className="col-span-1 md:col-span-4 space-y-3">
+          <div className="sm:flex sm:justify-between sm:items-center sm:space-x-2">
+            <h3 className="text-2xl m-2 font-bold">{review.userName}</h3>
+            <span className="text-sm m-2 text-gray-700 dark:text-gray-300">
+              (পেশাঃ {review.profession})
             </span>
             <span
-              className={`p-1 text-sm m-2 rounded ${
+              className={`mt-2 sm:mt-0 m-2 px-2 text-sm rounded ${
                 review.status === "approved"
                   ? "bg-green-200 text-green-800"
                   : "bg-yellow-200 text-yellow-800"
@@ -50,41 +48,40 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
             >
               {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
             </span>
-            <div className="flex space-x-2">
-              {/* Love button */}
+            {review.status === "approved" && (
               <motion.button
-                onClick={async () => {
-                  toggleLove(review);
-                }}
+                onClick={() => toggleLove(review)}
                 whileTap={{ scale: 0.8 }}
-                whileHover={{ scale: 2 }}
-                className="text-xl focus:outline-none"
-                aria-label={loved ? "পছন্দ তুলে নিন" : "পছন্দ করুন"}
+                whileHover={{ scale: 1.5 }}
+                className=" flex items-center space-x-1 ml-auto mt-2 sm:mt-0"
+                aria-label={loved ? "Unlove" : "Love"}
               >
                 {loved ? (
-                  <AiFillHeart size={20} className="text-red-500" />
+                  <AiFillHeart className="text-red-500" size={30} />
                 ) : (
-                  <AiOutlineHeart size={20} className="text-gray-500" />
+                  <AiOutlineHeart className="text-gray-500" size={30} />
                 )}
+                <span className="">{review.likes.length}</span>
               </motion.button>
-              <span>{review.likes.length}</span>
-            </div>
+            )}
           </div>
-          <p className="italic text-justify mb-4 whitespace-pre-wrap">
+          <p className="italic text-justify whitespace-pre-wrap">
             “{review.reviewText}”
           </p>
         </div>
-        <div className="items-end text-center ml-5 space-y-2">
+
+        {/* Sidebar spans full width on sm, 1 col on md */}
+        <div className="col-span-1 flex flex-col items-center sm:mt-20 space-y-3">
           {review.userProfilePic ? (
             <Image
               src={review.userProfilePic}
               width={100}
               height={100}
-              className="rounded-full mx-auto"
+              className="rounded-full"
               alt={review.userName}
             />
           ) : (
-            <div className="p-3 sm:p-6 border rounded-full mx-auto">
+            <div className="w-24 h-24 border rounded-full flex items-center justify-center">
               ছবি নেই
             </div>
           )}
@@ -93,9 +90,8 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
             Date: {new Date(review.createdAt).toLocaleDateString()}
           </p>
 
-          {/* only when pending show both Approve & Reject */}
           {review.status === "pending" && (
-            <div className="flex space-x-2 justify-center">
+            <div className="flex space-x-2">
               <button
                 onClick={() => toggleStatus(review, "approved")}
                 className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
@@ -111,7 +107,6 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
             </div>
           )}
 
-          {/* if rejected, only show Approve to let admin reverse */}
           {review.status === "rejected" && (
             <button
               onClick={() => toggleStatus(review, "approved")}
@@ -120,12 +115,10 @@ function Review({ review, user, toggleLove, deleteReview, toggleStatus }) {
               Approve
             </button>
           )}
-
-          {/* if approved, render nothing */}
         </div>
       </div>
 
-      {/* Delete Button */}
+      {/* Delete */}
       {(user.user?.publicMetadata?.isAdmin ||
         user.user?.id === review.userId) && (
         <button
