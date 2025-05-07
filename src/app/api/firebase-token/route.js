@@ -2,7 +2,7 @@
 import admin from "@/firebaseAdmin";
 import { getAuth } from "@clerk/nextjs/server";
 
-export async function GET() {
+export async function GET(req) {
   const user = getAuth(req);
   // create a custom token for this Clerk user id
   try {

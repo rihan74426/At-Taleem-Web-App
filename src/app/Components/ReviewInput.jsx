@@ -14,7 +14,7 @@ import {
 import { app } from "@/firebase";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "./ResponseModal";
-import { getAuth } from "firebase/auth";
+import { getAuth, signInWithCustomToken } from "firebase/auth";
 
 export default function ReviewInputPage() {
   const {
@@ -133,7 +133,7 @@ export default function ReviewInputPage() {
         userId: user.id,
         userName: data.name,
         profession: data.profession,
-        reviewText: data.review,
+        reviewText: data.review.trim(),
         userProfilePic: imageUrl || null,
       };
 
@@ -147,7 +147,10 @@ export default function ReviewInputPage() {
       });
       if (!res.ok) throw new Error("Server error");
       const { review } = res.json();
-      showModal("মন্তব্য সফলভাবে জমা হয়েছে!", "success");
+      showModal(
+        "মন্তব্য সফলভাবে জমা হয়েছে! এডমিন কর্তৃক এপ্রুভ করা হলে পেইজে দেখতে পাবেন!",
+        "success"
+      );
       reset();
       setEditing(false);
       fetchReview();
@@ -169,17 +172,23 @@ export default function ReviewInputPage() {
     }
     if (confirm("Are you sure you want to delete this review?"))
       try {
-        await fetch(`/api/reviews`, {
+        const res = await fetch(`/api/reviews`, {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            userId: user.user.id,
+            userId: user.id,
             reviewId: id,
           }),
         });
-        fetchReview();
+        if (res.ok) {
+          fetchReview();
+          showModal(
+            "আপনার মন্তব্যটি ডিলিট হয়ে গেছে! দয়া করে আবার যুক্ত করুন।",
+            "success"
+          );
+        }
       } catch (error) {
         showModal(
           "একটি সমস্যা হয়েছে! দয়া করে একটু পর আবার চেষ্টা করুন",
@@ -199,7 +208,10 @@ export default function ReviewInputPage() {
       <div className="container">
         {existingReview?.length > 0 &&
           existingReview.map((item) => (
-            <div className="relative flex items-center flex-col md:flex-row bg-white dark:bg-gray-800 border rounded-lg shadow-md overflow-hidden m-5">
+            <div
+              key={item._id}
+              className="relative flex items-center flex-col md:flex-row bg-white dark:bg-gray-800 border rounded-lg shadow-md overflow-hidden m-5"
+            >
               {/* Left: Profile pic */}
 
               {/* Right: Content */}
@@ -232,11 +244,20 @@ export default function ReviewInputPage() {
                       </span>
                     </div>
                   )}
+                  <span
+                    className={`p-1 text-sm m-2 ml-20 rounded ${
+                      item.status === "approved"
+                        ? "bg-green-200 text-green-800"
+                        : "bg-yellow-200 text-yellow-800"
+                    }`}
+                  >
+                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                  </span>
                 </div>
 
                 {/* Review text */}
                 <p className="flex-1 text-gray-700 dark:text-gray-300 italic whitespace-pre-wrap mb-4">
-                  “{item.reviewText}”
+                  {item.reviewText}
                 </p>
 
                 {/* Actions */}
@@ -336,7 +357,7 @@ export default function ReviewInputPage() {
                           onChange={(e) => setMakePP(e.target.checked)}
                           className="mr-2"
                         />
-                        প্রোফাইল পিক হিসেবে সেট
+                        প্রোফাইল পিক হিসেবে সেট করুন
                       </label>
                     </div>
                   )}
