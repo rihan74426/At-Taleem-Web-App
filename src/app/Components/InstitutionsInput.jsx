@@ -1,38 +1,44 @@
-// src/app/components/InstitutionInputPage.jsx
+// src/app/components/InstitutionManager.jsx
 "use client";
 
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { useEffect, useRef, useState, useCallback } from "react";
-import imageCompression from "browser-image-compression";
-import {
-  uploadBytesResumable,
-  ref as storageRef,
-  getDownloadURL,
-  getStorage,
-} from "firebase/storage";
-import { app } from "@/firebase";
 import { useUser } from "@clerk/nextjs";
-import ResponseModal from "./ResponseModal";
 import { getAuth, signInWithCustomToken } from "firebase/auth";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import imageCompression from "browser-image-compression";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import ResponseModal from "./ResponseModal";
+import Loader from "./Loader";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
-export default function InstitutionInputPage() {
+export default function InstitutionManager() {
+  const { user, isLoaded } = useUser();
+  const isAdmin = user?.publicMetadata?.isAdmin;
+
+  // form setup
   const {
     register,
     control,
     handleSubmit,
-    watch,
     setValue,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
       title: "",
-      code: "",
+      code: "Sub-institute",
       description: "",
       email: "",
       phone: "",
       address: "",
-      establishedAt: "",
       studentCount: 0,
       admissionStatus: false,
       admissionPeriod: { openDate: "", closeDate: "" },
@@ -48,322 +54,304 @@ export default function InstitutionInputPage() {
   });
   const {
     fields: deptFields,
-    append: appendDept,
-    remove: removeDept,
+    append,
+    remove,
   } = useFieldArray({ control, name: "departments" });
-  const [loading, setLoading] = useState(true);
-  const [institution, setInstitution] = useState(null);
-  const [editing, setEditing] = useState(false);
+  const formRef = useRef();
+
+  // state
+  const [institutions, setInstitutions] = useState(null);
+  const [loadingList, setLoadingList] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [modal, setModal] = useState({
     isOpen: false,
     message: "",
     status: "",
   });
-  const formRef = useRef(null);
-  const { user, isLoaded } = useUser();
+  const showModal = (m, s) => setModal({ isOpen: true, message: m, status: s });
 
-  const showModal = (msg, status) =>
-    setModal({ isOpen: true, message: msg, status });
-
-  // get id from URL if present
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-
-  // fetch existing institution if id
-  const fetchInstitution = useCallback(async () => {
-    if (!id) return setLoading(false);
-    const res = await fetch(`/api/institutions?id=${id}`);
-    if (res.ok) {
-      const { institution } = await res.json();
-      setInstitution(institution);
-      // populate form
-      for (const [k, v] of Object.entries(institution)) {
-        if (k === "admissionPeriod") {
-          setValue("admissionPeriod.openDate", v.openDate?.split("T")[0] || "");
-          setValue(
-            "admissionPeriod.closeDate",
-            v.closeDate?.split("T")[0] || ""
-          );
-        } else if (k === "departments") {
-          reset({ ...institution });
-        } else {
-          setValue(k, v);
-        }
-      }
-      setEditing(true);
+  // fetch list
+  const fetchList = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const res = await fetch("/api/institutions");
+      const { institutions } = await res.json();
+      setInstitutions(institutions);
+    } catch {
+      showModal("Failed to load list", "error");
+    } finally {
+      setLoadingList(false);
     }
-    setLoading(false);
-  }, [id, setValue, reset]);
+  }, []);
 
   useEffect(() => {
-    if (isLoaded) fetchInstitution();
-  }, [isLoaded, fetchInstitution]);
+    if (isLoaded) fetchList();
+  }, [isLoaded, fetchList]);
 
-  // scroll into view when editing
-  useEffect(() => {
-    if (editing) formRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [editing]);
-
-  // compress logo if >1MB
-  const compressIfNeeded = async (file) => {
-    if (file.size <= 1024 * 1024) return file;
-    return imageCompression(file, {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1024,
-      useWebWorker: true,
-    });
+  // load for edit
+  const loadForEdit = (inst) => {
+    setEditingId(inst._id);
+    formRef.current.scrollIntoView({ behavior: "smooth" });
+    // populate fields
+    for (const [k, v] of Object.entries(inst)) {
+      if (k === "admissionPeriod") {
+        setValue("admissionPeriod.openDate", v.openDate?.split("T")[0] || "");
+        setValue("admissionPeriod.closeDate", v.closeDate?.split("T")[0] || "");
+      } else if (k === "departments") {
+        reset({ ...inst });
+      } else {
+        setValue(k, v);
+      }
+    }
   };
 
+  // logo upload helpers
   let firebaseSignedIn = false;
-  const ensureFirebaseSignedIn = async () => {
+  const ensureFirebase = async () => {
     if (firebaseSignedIn) return;
-    const auth = getAuth(app);
+    const auth = getAuth();
     if (!auth.currentUser) {
-      const tokRes = await fetch("/api/firebase-token");
-      const { token } = await tokRes.json();
+      const { token } = await (await fetch("/api/firebase-token")).json();
       await signInWithCustomToken(auth, token);
     }
     firebaseSignedIn = true;
   };
   const uploadLogo = async (file) => {
-    await ensureFirebaseSignedIn();
-    const storage = getStorage(app);
-    const path = `institution-logos/${Date.now()}_${file.name}`;
-    const task = uploadBytesResumable(storageRef(storage, path), file);
-    return new Promise((resolve, reject) => {
-      task.on("state_changed", null, reject, async () => {
-        resolve(await getDownloadURL(task.snapshot.ref));
-      });
+    await ensureFirebase();
+    const compressed =
+      file.size > 1024 * 1024
+        ? await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024 })
+        : file;
+    const storage = getStorage();
+    const path = `institution-logos/${Date.now()}_${compressed.name}`;
+    const task = uploadBytesResumable(storageRef(storage, path), compressed);
+    return new Promise((res, rej) => {
+      task.on("state_changed", null, rej, async () =>
+        res(await getDownloadURL(task.snapshot.ref))
+      );
     });
   };
 
+  // submit create/update
   const onSubmit = async (data) => {
-    if (!user.publicMetadata.isAdmin) {
-      showModal("Only admins may perform this action", "error");
-      return;
-    }
+    if (!isAdmin) return showModal("Only admins may save", "error");
     setUploadingLogo(true);
-    let logoUrl = institution?.logoUrl || "";
-    if (data.logo?.[0]) {
-      const file = await compressIfNeeded(data.logo[0]);
-      logoUrl = await uploadLogo(file);
-    }
+
+    let logoUrl = institutions?.find((i) => i._id === editingId)?.logoUrl || "";
+    if (data.logo?.[0]) logoUrl = await uploadLogo(data.logo[0]);
+
     const payload = { ...data, logoUrl };
-    const method = editing ? "PUT" : "POST";
+    const url = "/api/institutions";
+    const opts = {
+      method: editingId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingId ? { id: editingId, ...payload } : payload),
+    };
+
     try {
-      const res = await fetch("/api/institutions", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editing ? { id, ...payload } : payload),
-      });
+      const res = await fetch(url, opts);
       if (!res.ok) throw new Error();
-      showModal(
-        `Institution ${editing ? "updated" : "created"} successfully`,
-        "success"
-      );
-      if (!editing) reset();
+      showModal(`Saved successfully`, "success");
+      reset();
+      setEditingId(null);
+      fetchList();
     } catch {
-      showModal("Failed to save institution", "error");
+      showModal("Save failed", "error");
     } finally {
       setUploadingLogo(false);
     }
   };
 
-  if (!isLoaded || loading) return <p className="p-8 text-center">Loading…</p>;
+  const handleDelete = async (id) => {
+    if (!confirm("Delete?")) return;
+    try {
+      setInstitutions((lst) => lst.filter((i) => i._id !== id));
+      await fetch("/api/institutions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      showModal("Deleted", "success");
+    } catch {
+      showModal("Delete failed", "error");
+      fetchList();
+    }
+  };
+
+  const handleToggleAdmission = async (inst) => {
+    const newStatus = !inst.admissionStatus;
+    setInstitutions((lst) =>
+      lst.map((i) =>
+        i._id === inst._id ? { ...i, admissionStatus: newStatus } : i
+      )
+    );
+    await fetch("/api/institutions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: inst._id, admissionStatus: newStatus }),
+    });
+  };
 
   return (
-    <div
-      ref={formRef}
-      className="w-[40rem] mx-auto p-6 bg-white dark:bg-gray-800 m-5 rounded-lg shadow"
-    >
-      <h2 className="text-2xl font-bold mb-4">
-        {editing ? "Edit Institution" : "Create Institution"}
-      </h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* basic */}
-        <div>
-          <label className="block font-semibold">Title*</label>
-          <input
-            {...register("title", { required: true })}
-            type="text"
-            className="w-full p-2 border dark:bg-black rounded"
-            disabled={uploadingLogo}
-          />
-          {errors.title && <span className="text-red-500">Required</span>}
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-semibold">Code</label>
-            <input
-              {...register("code")}
-              type="text"
-              className="w-full p-2 border dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
+    <div className="p-6 place-content-center container flex-wrap space-y-8">
+      <div>
+        <h2 className="text-3xl text-center font-bold mb-4">Institutions</h2>
+        {loadingList ? (
+          <div className="flex justify-center">
+            <Loader />
           </div>
-          <div>
-            <label className="block font-semibold">Email*</label>
-            <input
-              type="email"
-              {...register("email", { required: true })}
-              className="w-full p-2 border dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
-            {errors.email && <span className="text-red-500">Required</span>}
-          </div>
-        </div>
-        <div>
-          <label className="block font-semibold">Description</label>
-          <textarea
-            {...register("description")}
-            className="w-full p-2 border dark:bg-black rounded"
-            disabled={uploadingLogo}
-          />
-        </div>
-        {/* address & phone */}
-        <div>
-          <label className="block font-semibold">Address*</label>
-          <input
-            {...register("address", { required: true })}
-            className="w-full p-2 border dark:bg-black rounded"
-            disabled={uploadingLogo}
-          />
-          {errors.address && <span className="text-red-500">Required</span>}
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-semibold">Phone</label>
-            <input
-              {...register("phone")}
-              className="w-full p-2 border dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
-          </div>
-          <div>
-            <label className="block font-semibold">Established</label>
-            <input
-              type="date"
-              {...register("establishedAt")}
-              className="w-full p-2 border dark:text-white dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
-          </div>
-        </div>
-        {/* student count & admission */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-semibold">Student Count</label>
-            <input
-              type="number"
-              {...register("studentCount", { valueAsNumber: true })}
-              className="w-full p-2 border dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              {...register("admissionStatus")}
-              disabled={uploadingLogo}
-            />
-            <label className="font-semibold">Admission Open</label>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-semibold">Open Date</label>
-            <input
-              type="date"
-              {...register("admissionPeriod.openDate")}
-              className="w-full p-2 border dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
-          </div>
-          <div>
-            <label className="block font-semibold">Close Date</label>
-            <input
-              type="date"
-              {...register("admissionPeriod.closeDate")}
-              className="w-full p-2 border dark:bg-black rounded"
-              disabled={uploadingLogo}
-            />
-          </div>
-        </div>
-        {/* departments */}
-        <div>
-          <label className="font-semibold mb-1 block">Departments</label>
-          {deptFields.map((d, i) => (
-            <div key={d.id} className="flex items-center space-x-2 mb-2">
-              <input
-                {...register(`departments.${i}.name`, { required: true })}
-                placeholder="Name"
-                className="flex-1 p-2 border dark:bg-black rounded"
-                disabled={uploadingLogo}
+        ) : institutions?.length ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {institutions.map((inst) => (
+              <InstitutionCard
+                key={inst._id}
+                inst={inst}
+                isAdmin={isAdmin}
+                onEdit={() => loadForEdit(inst)}
+                onDelete={() => handleDelete(inst._id)}
+                onToggleAdm={() => handleToggleAdmission(inst)}
               />
-              <button
-                type="button"
-                onClick={() => removeDept(i)}
-                className="text-red-500"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => appendDept({ name: "" })}
-            className="px-3 py-1 bg-green-500 text-white rounded"
-          >
-            + Add Dept
-          </button>
-        </div>
-        {/* logo */}
-        <div>
-          <label className="font-semibold block mb-1">Logo</label>
-          <input
-            type="file"
-            {...register("logo")}
-            accept="image/*"
-            className="mb-2"
-            disabled={uploadingLogo}
-          />
-          {institution?.logoUrl && (
-            <img
-              src={institution.logoUrl}
-              alt="logo"
-              className="w-24 h-24 object-contain mb-2"
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-gray-500">No institutions yet.</p>
+        )}
+      </div>
+      {/* Form */}
+      <div
+        ref={formRef}
+        className="w-[40rem]  mx-auto bg-white dark:bg-gray-800 p-6 rounded shadow"
+      >
+        <h2 className="text-2xl font-bold mb-4">
+          {editingId ? "Edit" : "New"} Institution
+        </h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block">Title*</label>
+            <input
+              {...register("title", { required: true })}
+              placeholder="Institution title"
+              className="w-full p-2 dark:bg-black  border rounded"
             />
-          )}
-        </div>
-        {/* social */}
-        <div className="grid grid-cols-2 gap-4">
-          {["facebook", "twitter", "instagram", "linkedin", "youtube"].map(
-            (net) => (
-              <div key={net}>
-                <label className="block font-semibold">{net}</label>
+            {errors.title && <span className="text-red-500">Required</span>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label>Code</label>
+              <select
+                aria-label="All"
+                {...register("code", { required: true })}
+                className="w-full p-2 dark:bg-black border rounded"
+              >
+                <option value="Primary">Primary</option>
+                <option value="Sub-institute">Sub-institute</option>
+                <option value="Partial">Partial</option>
+                <option value="Non-academic">Non-academic</option>
+              </select>
+            </div>
+            <div>
+              <label>Email*</label>
+              <input
+                type="email"
+                {...register("email", { required: true })}
+                placeholder="Institution email"
+                className="w-full p-2 dark:bg-black border rounded"
+              />
+              {errors.email && <span className="text-red-500">Required</span>}
+            </div>
+          </div>
+          <div>
+            <label>Description</label>
+            <textarea
+              {...register("description")}
+              placeholder="Institution description"
+              className="w-full p-2 dark:bg-black border rounded"
+            />
+          </div>
+          <div>
+            <label>Address*</label>
+            <input
+              {...register("address", { required: true })}
+              className="w-full p-2 dark:bg-black border rounded"
+            />
+            {errors.address && <span className="text-red-500">Required</span>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label>Students</label>
+              <input
+                type="number"
+                placeholder="Number of students"
+                {...register("studentCount", { valueAsNumber: true })}
+                className="w-full p-2 dark:bg-black border rounded"
+              />
+            </div>
+            <div className="flex items-center">
+              <input type="checkbox" {...register("admissionStatus")} />
+              <label className="ml-2">Admission Open</label>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label>Open Date</label>
+              <input
+                type="date"
+                {...register("admissionPeriod.openDate")}
+                className="w-full p-2 dark:bg-black border rounded"
+              />
+            </div>
+            <div>
+              <label>Close Date</label>
+              <input
+                type="date"
+                {...register("admissionPeriod.closeDate")}
+                className="w-full p-2 dark:bg-black border rounded"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block mb-1">Departments</label>
+            {deptFields.map((d, i) => (
+              <div key={d.id} className="flex items-center space-x-2 mb-2">
                 <input
-                  {...register(`social.${net}`)}
-                  className="w-full p-2 border dark:bg-black rounded"
-                  disabled={uploadingLogo}
+                  {...register(`departments.${i}.name`, { required: true })}
+                  className="flex-1 p-2 border dark:bg-black rounded"
+                  placeholder="Dept name"
                 />
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="text-red-500"
+                >
+                  {" "}
+                  X
+                </button>
               </div>
-            )
-          )}
-        </div>
-        {/* submit */}
-        <button
-          type="submit"
-          disabled={uploadingLogo}
-          className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {uploadingLogo
-            ? "Saving…"
-            : editing
-            ? "Update Institution"
-            : "Create Institution"}
-        </button>
-      </form>
+            ))}
+            <button
+              type="button"
+              onClick={() => append({ name: "" })}
+              className="px-3 py-1 bg-green-500 text-white rounded"
+            >
+              + Dept
+            </button>
+          </div>
+          <div>
+            <label className="block mb-1">Logo</label>
+            <input type="file" {...register("logo")} accept="image/*" />
+          </div>
+          <button
+            type="submit"
+            disabled={uploadingLogo}
+            className="w-full py-2 bg-blue-600 text-white rounded"
+          >
+            {uploadingLogo ? "Saving…" : editingId ? "Update" : "Create"}
+          </button>
+        </form>
+      </div>
+
+      {/* Showcase */}
 
       <ResponseModal
         isOpen={modal.isOpen}
@@ -372,5 +360,81 @@ export default function InstitutionInputPage() {
         onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
       />
     </div>
+  );
+}
+
+// small card sub‑component
+function InstitutionCard({ inst, isAdmin, onEdit, onDelete, onToggleAdm }) {
+  return (
+    <motion.div
+      key={inst._id}
+      className="bg-white dark:bg-gray-800 border rounded-lg shadow-sm flex flex-col"
+      whileHover={{ scale: 1.02, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }}
+    >
+      <div className="relative h-40 w-full bg-gray-100">
+        {inst.logoUrl ? (
+          <Image
+            src={inst.logoUrl}
+            alt={inst.title}
+            fill
+            className="object-contain p-4"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            No Logo
+          </div>
+        )}
+      </div>
+      <div className="p-4 flex-1 flex flex-col">
+        <h2 className="text-xl font-semibold">{inst.title}</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 truncate">
+          {inst.description}
+        </p>
+        <p className="text-sm mb-1">
+          <strong>Students:</strong> {inst.studentCount}
+        </p>
+        <p className="text-sm mb-4">
+          <strong>Established:</strong>{" "}
+          {inst.establishedAt
+            ? new Date(inst.establishedAt).getFullYear()
+            : "—"}
+        </p>
+        <span
+          className={`inline-block px-2 py-1 text-sm rounded self-start mb-4 ${
+            inst.admissionStatus
+              ? "bg-green-200 text-green-800"
+              : "bg-red-200 text-red-800"
+          }`}
+        >
+          Admission {inst.admissionStatus ? "Open" : "Closed"}
+        </span>
+        {isAdmin && (
+          <div className="mt-auto flex space-x-2">
+            <button
+              onClick={() => onEdit(inst._id)}
+              className="flex-1 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded"
+            >
+              <FiEdit2 className="inline mr-1" /> Edit
+            </button>
+            <button
+              onClick={() => onDelete(inst._id)}
+              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
+            >
+              <FiTrash2 className="inline mr-1" /> Delete
+            </button>
+            <button
+              onClick={() => onToggleAdm(inst)}
+              className={`px-3 py-1 rounded text-white ${
+                inst.admissionStatus
+                  ? "bg-gray-500 hover:bg-gray-600"
+                  : "bg-green-500 hover:bg-green-600"
+              }`}
+            >
+              {inst.admissionStatus ? "Close" : "Open"}
+            </button>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }

@@ -212,8 +212,6 @@ export default function ReviewInputPage() {
               key={item._id}
               className="relative flex items-center flex-col md:flex-row bg-white dark:bg-gray-800 border rounded-lg shadow-md overflow-hidden m-5"
             >
-              {/* Left: Profile pic */}
-
               {/* Right: Content */}
               <div className="flex-1 p-4 flex flex-col justify-between">
                 {/* Header row */}
