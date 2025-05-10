@@ -13,6 +13,7 @@ import AskQuestionForm from "../Components/AskQuestions";
 import AddBookForm from "../Components/AddBooks";
 import ReviewInputPage from "../Components/ReviewInput";
 import { useUser } from "@clerk/nextjs";
+import InstitutionInputPage from "../Components/InstitutionsInput";
 
 export default function Dashboard() {
   const user = useUser();
@@ -43,6 +44,7 @@ export default function Dashboard() {
         {tab === "askQuestion" && <AskQuestionForm />}
         {tab === "addBooks" && <AddBookForm />}
         {tab === "review" && <ReviewInputPage />}
+        {tab === "institutions" && <InstitutionInputPage />}
       </div>
     );
   } else {

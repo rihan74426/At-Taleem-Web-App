@@ -8,6 +8,7 @@ import {
   HiOutlineUserGroup,
   HiChartPie,
   HiBookOpen,
+  HiVideoCamera,
 } from "react-icons/hi";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -16,7 +17,7 @@ import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { AiOutlineVideoCamera } from "react-icons/ai";
 import { BsQuestionOctagon } from "react-icons/bs";
-import { FaRegCommentDots } from "react-icons/fa";
+import { FaRegCommentDots, FaSchool } from "react-icons/fa";
 export default function DashSidebar() {
   const [tab, setTab] = useState("");
   const searchParams = useSearchParams();
@@ -95,7 +96,7 @@ export default function DashSidebar() {
             <Link href="/dashboard?tab=addVideo">
               <Sidebar.Item
                 active={tab === "addVideo"}
-                icon={HiOutlineUserGroup}
+                icon={HiVideoCamera}
                 as="div"
               >
                 Add New Video
@@ -110,6 +111,17 @@ export default function DashSidebar() {
                 as="div"
               >
                 Add a Book
+              </Sidebar.Item>
+            </Link>
+          )}
+          {user?.publicMetadata?.isAdmin && (
+            <Link href="/dashboard?tab=institutions">
+              <Sidebar.Item
+                active={tab === "institutions"}
+                icon={FaSchool}
+                as="div"
+              >
+                Add an Institution
               </Sidebar.Item>
             </Link>
           )}
