@@ -169,6 +169,7 @@ export default function Header() {
           items={[
             { label: "আমাদের কর্মসূচী", href: "/programme" },
             { label: "আমাদের সম্পর্কে", href: "/about-us" },
+            { label: "আমাদের প্রতিষ্ঠানসমূহ", href: "/institutions" },
           ]}
         />
         {isSignedIn && (

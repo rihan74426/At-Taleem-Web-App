@@ -35,6 +35,7 @@ export default function InstitutionManager() {
     defaultValues: {
       title: "",
       code: "Sub-institute",
+      establishedAt: "",
       description: "",
       email: "",
       phone: "",
@@ -249,6 +250,16 @@ export default function InstitutionManager() {
                 <option value="Partial">Partial</option>
                 <option value="Non-academic">Non-academic</option>
               </select>
+            </div>
+            <div>
+              <label>Established At*</label>
+              <input
+                type="number"
+                {...register("establishedAt", { required: true })}
+                placeholder="Institution establish year"
+                className="w-full p-2 dark:bg-black border rounded"
+              />
+              {errors.email && <span className="text-red-500">Required</span>}
             </div>
             <div>
               <label>Email*</label>
