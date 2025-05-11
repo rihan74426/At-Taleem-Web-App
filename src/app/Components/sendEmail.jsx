@@ -1,26 +1,29 @@
 "use client";
+import { useUser } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { IoMdMail } from "react-icons/io";
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 
-export default function SendEmailModal({ recipientEmail, onClose }) {
+export default function SendEmailModal({
+  defaultHeader,
+  defaultBody,
+  defaultFooter,
+  recipientEmail,
+  onClose,
+}) {
   // State for modal inputs
   const [logoUrl, setLogoUrl] = useState(
     "https://at-taleem.vercel.app/favicon.png"
   );
-  const [headline, setHeadline] = useState("Your Message from At-Taleem");
-  const [body, setBody] = useState(
-    "Thanks for joining us. Click below to get started."
-  );
-  const [footerText, setFooterText] = useState(
-    "© 2025 At-Taleem. All rights reserved."
-  );
+  const [headline, setHeadline] = useState(defaultHeader);
+  const [body, setBody] = useState(defaultBody);
+  const [footerText, setFooterText] = useState(defaultFooter);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-
+  const user = useUser();
   const handleSend = async () => {
     setLoading(true);
     setError(null);
@@ -71,18 +74,20 @@ export default function SendEmailModal({ recipientEmail, onClose }) {
         ) : (
           <>
             {/* Headline input */}
-            <label className="block mb-2">
-              <span className="text-gray-700 dark:text-gray-300">
-                Headline & Subject
-              </span>
-              <input
-                type="text"
-                value={headline}
-                onChange={(e) => setHeadline(e.target.value)}
-                placeholder="Email Subject and Header"
-                className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-              />
-            </label>
+            {user.user.publicMetadata.isAdmin && (
+              <label className="block mb-2">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Headline & Subject
+                </span>
+                <input
+                  type="text"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  placeholder="Email Subject and Header"
+                  className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                />
+              </label>
+            )}
             {/* Message body input */}
             <label className="block mb-2">
               <span className="text-gray-700 dark:text-gray-300">Message</span>
@@ -95,18 +100,20 @@ export default function SendEmailModal({ recipientEmail, onClose }) {
               />
             </label>
             {/* Footer text input */}
-            <label className="block mb-4">
-              <span className="text-gray-700 dark:text-gray-300">
-                Footer Text
-              </span>
-              <input
-                type="text"
-                value={footerText}
-                onChange={(e) => setFooterText(e.target.value)}
-                placeholder="© 2025 At-Taleem. All rights reserved."
-                className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-              />
-            </label>
+            {user.user.publicMetadata.isAdmin && (
+              <label className="block mb-4">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Footer Text
+                </span>
+                <input
+                  type="text"
+                  value={footerText}
+                  onChange={(e) => setFooterText(e.target.value)}
+                  placeholder="© 2025 At-Taleem. All rights reserved."
+                  className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                />
+              </label>
+            )}
             {error && <p className="text-red-600 mb-2">{error}</p>}
             <button
               onClick={handleSend}

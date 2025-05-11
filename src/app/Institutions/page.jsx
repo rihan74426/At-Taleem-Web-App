@@ -3,14 +3,25 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Loader from "@/app/components/Loader";
+import Loader from "@/app/Components/Loader";
 import { FiMapPin, FiUsers, FiBookOpen, FiMail, FiBell } from "react-icons/fi";
+import SendEmailModal from "../Components/sendEmail";
+import { useUser } from "@clerk/nextjs";
+import ResponseModal from "../Components/ResponseModal";
 
 export default function InstitutionsPage() {
   const [institutions, setInstitutions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notifyEmail, setNotifyEmail] = useState({});
   const [notifyStatus, setNotifyStatus] = useState({});
+  const [emailModal, setEmailModal] = useState(false);
+  const user = useUser();
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+  const showModal = (m, s) => setModal({ isOpen: true, message: m, status: s });
 
   useEffect(() => {
     fetch("/api/institutions")
@@ -204,9 +215,14 @@ export default function InstitutionsPage() {
                         <FiMail className="mr-2" /> {inst.email}
                       </p>
                       <button
-                        onClick={() =>
-                          (window.location.href = `mailto:${inst.email}`)
-                        }
+                        onClick={() => {
+                          if (!user.isSignedIn)
+                            return showModal(
+                              "প্রতিষ্ঠানকে মেসেজ করার জন্য দয়া করে লগিন করুন!",
+                              "error"
+                            );
+                          setEmailModal(true);
+                        }}
                         className="inline-flex items-center px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded"
                       >
                         <FiMail className="mr-2" /> Email Institution
@@ -215,12 +231,31 @@ export default function InstitutionsPage() {
 
                     {/* Admission notify */}
                     <div className="space-y-3">
-                      <h3 className="text-xl font-semibold">Get Notified</h3>
+                      <h3 className="text-xl font-semibold">Admissions</h3>
+
                       {inst.admissionStatus ? (
+                        // OPEN: show your apply button/link
                         <>
                           <p className="text-gray-700 dark:text-gray-300">
-                            Admissions are open! Enter your email below and
-                            we’ll let you know how to apply.
+                            Admissions are now open! Click below to start your
+                            application.
+                          </p>
+                          <button
+                            onClick={() =>
+                              (window.location.href =
+                                inst.applyLink || "/apply")
+                            }
+                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+                          >
+                            <FiBell className="mr-1" /> Apply Now
+                          </button>
+                        </>
+                      ) : (
+                        // CLOSED: allow notification signup
+                        <>
+                          <p className="text-gray-700 dark:text-gray-300">
+                            Admissions are currently closed. Leave your email
+                            and we'll let you know when they reopen.
                           </p>
                           <div className="flex space-x-2">
                             <input
@@ -248,19 +283,30 @@ export default function InstitutionsPage() {
                             </p>
                           )}
                         </>
-                      ) : (
-                        <p className="text-gray-500 dark:text-gray-400">
-                          Admissions are currently closed.
-                        </p>
                       )}
                     </div>
                   </div>
                 </div>
+                {emailModal && (
+                  <SendEmailModal
+                    defaultHeader="Hello! This is from a Interested Person"
+                    defaultBody="আস্সালামু আলাইকুম!"
+                    defaultFooter="Thank you for your time and consideration."
+                    recipientEmail={inst.email}
+                    onClose={() => setEmailModal(false)}
+                  />
+                )}
               </section>
             ))}
           </main>
         )}
       </section>
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
+      />
     </main>
   );
 }
