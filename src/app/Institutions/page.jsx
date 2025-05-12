@@ -31,17 +31,27 @@ export default function InstitutionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleNotify = async (id) => {
-    const email = notifyEmail[id];
-    if (!email)
-      return setNotifyStatus((s) => ({ ...s, [id]: "Enter your email" }));
-    // stub: send to your API to save
-    await fetch("/api/institution-notify", {
+  const handleNotify = async (institutionId) => {
+    const email = user.isSignedIn
+      ? user.user.emailAddresses[0].emailAddress
+      : notifyEmail[institutionId]?.trim();
+    if (!email) {
+      setNotifyStatus((s) => ({ ...s, [institutionId]: "Enter your email" }));
+      return;
+    }
+
+    const res = await fetch(`/api/institutions/${institutionId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ institutionId: id, email }),
+      body: JSON.stringify({ email }),
     });
-    setNotifyStatus((s) => ({ ...s, [id]: "Subscribed!" }));
+
+    if (res.ok) {
+      setNotifyStatus((s) => ({ ...s, [institutionId]: "Subscribed!" }));
+    } else {
+      const { error } = await res.json();
+      setNotifyStatus((s) => ({ ...s, [institutionId]: error || "Failed" }));
+    }
   };
 
   return (
@@ -258,18 +268,20 @@ export default function InstitutionsPage() {
                             and we'll let you know when they reopen.
                           </p>
                           <div className="flex space-x-2">
-                            <input
-                              type="email"
-                              placeholder="you@example.com"
-                              value={notifyEmail[inst._id] || ""}
-                              onChange={(e) =>
-                                setNotifyEmail((s) => ({
-                                  ...s,
-                                  [inst._id]: e.target.value,
-                                }))
-                              }
-                              className="flex-1 p-2 border rounded bg-white dark:bg-gray-900"
-                            />
+                            {!user.isSignedIn && (
+                              <input
+                                type="email"
+                                placeholder="you@example.com"
+                                value={notifyEmail[inst._id] || ""}
+                                onChange={(e) =>
+                                  setNotifyEmail((s) => ({
+                                    ...s,
+                                    [inst._id]: e.target.value,
+                                  }))
+                                }
+                                className="flex-1 p-2 border rounded bg-white dark:bg-gray-900"
+                              />
+                            )}
                             <button
                               onClick={() => handleNotify(inst._id)}
                               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
@@ -289,7 +301,7 @@ export default function InstitutionsPage() {
                 </div>
                 {emailModal && (
                   <SendEmailModal
-                    defaultHeader="Hello! This is from a Interested Person"
+                    defaultHeader={`This is from ${user.user.fullName} from the At-taleem`}
                     defaultBody="আস্সালামু আলাইকুম!"
                     defaultFooter="Thank you for your time and consideration."
                     recipientEmail={inst.email}

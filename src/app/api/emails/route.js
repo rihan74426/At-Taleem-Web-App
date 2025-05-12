@@ -103,13 +103,6 @@ export async function PUT(req) {
       replyTo: userEmail, // so replies go back to your user
       subject,
       html,
-      attachments: [
-        {
-          filename: "favicon.png",
-          path: path.join(process.cwd(), "public", "favicon.png"),
-          cid: "logo",
-        },
-      ],
     });
 
     return new Response(JSON.stringify({ success: true }), {

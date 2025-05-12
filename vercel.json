@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/institutions/cron-open",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

@@ -25,7 +25,7 @@ const InstitutionSchema = new mongoose.Schema(
       openDate: { type: Date },
       closeDate: { type: Date },
     },
-
+    interestedEmails: { type: [String], default: [] },
     studentCount: { type: Number, default: 0 },
     establishedAt: { type: Date },
     social: {
