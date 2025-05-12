@@ -100,7 +100,7 @@ export default function InstitutionsPage() {
 
       {/* Institutions Grid */}
       <section>
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">
+        <h2 className="text-3xl font-bold mb-6 text-center">
           আমাদের প্রতিষ্ঠানসমূহ
         </h2>
         {loading ? (

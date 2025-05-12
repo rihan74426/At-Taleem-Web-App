@@ -28,6 +28,7 @@ export default function SendEmailModal({
     setLoading(true);
     setError(null);
     try {
+      if (!user.isSignedIn) return alert("You must login to send emails");
       // Build the full HTML using the template
       const html = buildEmailTemplate({
         logoUrl,
@@ -35,13 +36,14 @@ export default function SendEmailModal({
         message: body,
         footerText,
       });
-
+      const method = user.user.publicMetadata.isAdmin ? "POST" : "PUT";
       const res = await fetch("/api/emails", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: recipientEmail,
           subject: headline || "Your Message from At-Taleem",
+          userEmail: user.user.emailAddresses[0]?.emailAddress,
           html,
         }),
       });
