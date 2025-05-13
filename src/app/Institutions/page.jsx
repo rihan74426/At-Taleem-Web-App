@@ -8,6 +8,8 @@ import { FiMapPin, FiUsers, FiBookOpen, FiMail, FiBell } from "react-icons/fi";
 import SendEmailModal from "../Components/sendEmail";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "../Components/ResponseModal";
+import { format } from "date-fns";
+import { FaGraduationCap } from "react-icons/fa";
 
 export default function InstitutionsPage() {
   const [institutions, setInstitutions] = useState(null);
@@ -33,7 +35,7 @@ export default function InstitutionsPage() {
 
   const handleNotify = async (institutionId) => {
     const email = user.isSignedIn
-      ? user.user.emailAddresses[0].emailAddress
+      ? user.user.emailAddresses[0]?.emailAddress.trim()
       : notifyEmail[institutionId]?.trim();
     if (!email) {
       setNotifyStatus((s) => ({ ...s, [institutionId]: "Enter your email" }));
@@ -172,15 +174,15 @@ export default function InstitutionsPage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div className="flex items-center text-gray-700 dark:text-gray-300">
+                  <div className="grid grid-cols-1  sm:grid-cols-3 gap-6">
+                    <div className="flex items-center place-content-center text-gray-700 dark:text-gray-300">
                       <FiUsers size={24} className="mr-3 text-teal-500" />
                       <div>
                         <p className="font-semibold">{inst.studentCount}</p>
                         <p className="text-sm">Students</p>
                       </div>
                     </div>
-                    <div className="flex items-center text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center place-content-center text-gray-700 dark:text-gray-300">
                       <FiBookOpen size={24} className="mr-3 text-blue-500" />
                       <div>
                         <p className="font-semibold">
@@ -189,8 +191,11 @@ export default function InstitutionsPage() {
                         <p className="text-sm">Departments</p>
                       </div>
                     </div>
-                    <div className="flex items-center text-gray-700 dark:text-gray-300">
-                      <span className="mr-3 text-lg">🎓</span>
+                    <div className="flex items-center place-content-center text-gray-700 dark:text-gray-300">
+                      <FaGraduationCap
+                        size={24}
+                        className="mr-3 text-orange-500"
+                      />
                       <div>
                         <p className="font-semibold">
                           {inst.establishedAt
@@ -203,99 +208,132 @@ export default function InstitutionsPage() {
                   </div>
 
                   {/* Departments list */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Departments</h3>
-                    <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-1">
-                      {inst.departments.length > 0 ? (
-                        inst.departments.map((d, i) => (
-                          <li key={i}>{d.name}</li>
-                        ))
-                      ) : (
-                        <li>No departments listed.</li>
-                      )}
-                    </ul>
-                  </div>
-
-                  {/* Contact & Admission */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                    {/* Contact */}
-                    <div className="space-y-3">
-                      <h3 className="text-xl font-semibold">Contact</h3>
-                      <p className="flex items-center text-gray-700 dark:text-gray-300">
-                        <FiMail className="mr-2" /> {inst.email}
-                      </p>
-                      <button
-                        onClick={() => {
-                          if (!user.isSignedIn)
-                            return showModal(
-                              "প্রতিষ্ঠানকে মেসেজ করার জন্য দয়া করে লগিন করুন!",
-                              "error"
-                            );
-                          setEmailModal(true);
-                        }}
-                        className="inline-flex items-center px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded"
-                      >
-                        <FiMail className="mr-2" /> Email Institution
-                      </button>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">
+                        Departments
+                      </h3>
+                      <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-1">
+                        {inst.departments.length > 0 ? (
+                          inst.departments.map((d, i) => (
+                            <li key={i}>{d.name}</li>
+                          ))
+                        ) : (
+                          <li>No departments listed.</li>
+                        )}
+                      </ul>
+                      {/* Contact */}
+                      <div className="space-y-3 mt-5">
+                        <h3 className="text-xl font-semibold">Contact</h3>
+                        <p className="flex items-center text-gray-700 dark:text-gray-300">
+                          <FiMail className="mr-2" /> {inst.email}
+                        </p>
+                        <button
+                          onClick={() => {
+                            if (!user.isSignedIn)
+                              return showModal(
+                                "প্রতিষ্ঠানকে মেসেজ করার জন্য দয়া করে লগিন করুন!",
+                                "error"
+                              );
+                            setEmailModal(true);
+                          }}
+                          className="inline-flex items-center px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded"
+                        >
+                          <FiMail className="mr-2" /> Email Institution
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Admission notify */}
-                    <div className="space-y-3">
+                    <div>
                       <h3 className="text-xl font-semibold">Admissions</h3>
-
-                      {inst.admissionStatus ? (
-                        // OPEN: show your apply button/link
-                        <>
-                          <p className="text-gray-700 dark:text-gray-300">
-                            Admissions are now open! Click below to start your
-                            application.
-                          </p>
-                          <button
-                            onClick={() =>
-                              (window.location.href =
-                                inst.applyLink || "/apply")
-                            }
-                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
-                          >
-                            <FiBell className="mr-1" /> Apply Now
-                          </button>
-                        </>
-                      ) : (
-                        // CLOSED: allow notification signup
-                        <>
-                          <p className="text-gray-700 dark:text-gray-300">
-                            Admissions are currently closed. Leave your email
-                            and we'll let you know when they reopen.
-                          </p>
-                          <div className="flex space-x-2">
-                            {!user.isSignedIn && (
-                              <input
-                                type="email"
-                                placeholder="you@example.com"
-                                value={notifyEmail[inst._id] || ""}
-                                onChange={(e) =>
-                                  setNotifyEmail((s) => ({
-                                    ...s,
-                                    [inst._id]: e.target.value,
-                                  }))
-                                }
-                                className="flex-1 p-2 border rounded bg-white dark:bg-gray-900"
-                              />
-                            )}
-                            <button
-                              onClick={() => handleNotify(inst._id)}
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
-                            >
-                              <FiBell className="mr-1" /> Notify Me
-                            </button>
-                          </div>
-                          {notifyStatus[inst._id] && (
-                            <p className="text-sm text-teal-600">
-                              {notifyStatus[inst._id]}
-                            </p>
+                      <h3 className="text-lg font-medium m-3">
+                        Admission Open Date:{" "}
+                        <span className="font-semibold">
+                          {format(
+                            new Date(inst.admissionPeriod.openDate),
+                            "dd/MMM/yyyy"
                           )}
-                        </>
-                      )}
+                        </span>
+                      </h3>
+                      <h3 className="text-lg font-medium m-3">
+                        Admission Close Date:{" "}
+                        <span className="font-semibold">
+                          {format(
+                            new Date(inst.admissionPeriod.closeDate),
+                            "dd/MMM/yyyy"
+                          )}
+                        </span>
+                      </h3>
+
+                      {/* Contact & Admission */}
+
+                      {/* Admission notify */}
+                      <div className="space-y-3">
+                        {inst.admissionStatus ? (
+                          // OPEN: show your apply button/link
+                          <>
+                            <p className="text-gray-700 dark:text-gray-300">
+                              Admissions are now open! Click below to start your
+                              application.
+                            </p>
+                            <button
+                              onClick={() =>
+                                (window.location.href =
+                                  inst.applyLink || "/apply")
+                              }
+                              className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+                            >
+                              <FiBell className="mr-1" /> Apply Now
+                            </button>
+                          </>
+                        ) : (
+                          // CLOSED: allow notification signup
+                          <>
+                            <p className="text-gray-700 dark:text-gray-300">
+                              Note: Admissions are currently closed. Leave your
+                              email and we'll let you know when they reopen.
+                            </p>
+                            {inst.interestedEmails?.some(
+                              (e) =>
+                                e ===
+                                user?.user?.emailAddresses?.[0]?.emailAddress
+                            ) ? (
+                              <div>
+                                <span className="px-4 py-2 bg-green-100 text-green-800 rounded">
+                                  You will be notified
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex space-x-2">
+                                {!user.isSignedIn && (
+                                  <input
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    value={notifyEmail[inst._id] || ""}
+                                    onChange={(e) =>
+                                      setNotifyEmail((s) => ({
+                                        ...s,
+                                        [inst._id]: e.target.value,
+                                      }))
+                                    }
+                                    className="flex-1 p-2 border rounded bg-white dark:bg-gray-900"
+                                  />
+                                )}
+                                <button
+                                  onClick={() => handleNotify(inst._id)}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
+                                >
+                                  <FiBell className="mr-1" /> Notify Me
+                                </button>
+                              </div>
+                            )}
+                            {notifyStatus[inst._id] && (
+                              <p className="text-sm text-teal-600">
+                                {notifyStatus[inst._id]}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -5,10 +5,10 @@ import Institution from "@/lib/models/Institution";
 
 export async function POST(req, { params }) {
   await connect();
-  const institutionId = await params.id;
+  const { id } = await params;
   const { email } = await req.json();
 
-  if (!email || !institutionId) {
+  if (!email || !id) {
     return new Response(JSON.stringify({ error: "Missing email or id" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -17,7 +17,7 @@ export async function POST(req, { params }) {
 
   // Add to array if not already present
   const updated = await Institution.findByIdAndUpdate(
-    institutionId,
+    id,
     { $addToSet: { interestedEmails: email.toLowerCase() } },
     { new: true }
   );
