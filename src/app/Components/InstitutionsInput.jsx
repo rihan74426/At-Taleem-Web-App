@@ -65,6 +65,7 @@ export default function InstitutionManager() {
   const [loadingList, setLoadingList] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [editingInst, setEditingInst] = useState(null);
   const [modal, setModal] = useState({
     isOpen: false,
     message: "",
@@ -93,6 +94,7 @@ export default function InstitutionManager() {
   // load for edit
   const loadForEdit = (inst) => {
     setEditingId(inst._id);
+    setEditingInst(inst);
     formRef.current.scrollIntoView({ behavior: "smooth" });
     // populate fields
     for (const [k, v] of Object.entries(inst)) {
@@ -199,7 +201,7 @@ export default function InstitutionManager() {
       <div>
         <h2 className="text-3xl text-center font-bold mb-4">Institutions</h2>
         {loadingList ? (
-          <div className="flex justify-center">
+          <div className="flex justify-center min-h-screen">
             <Loader />
           </div>
         ) : institutions?.length ? (
@@ -220,12 +222,13 @@ export default function InstitutionManager() {
         )}
       </div>
       {/* Form */}
+
       <div
         ref={formRef}
         className="w-[40rem]  mx-auto bg-white dark:bg-gray-800 p-6 rounded shadow"
       >
-        <h2 className="text-2xl font-bold mb-4">
-          {editingId ? "Edit" : "New"} Institution
+        <h2 className="text-2xl text-center font-bold mb-4">
+          {editingId ? "Edit" : "Add New"} Institution
         </h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -305,7 +308,7 @@ export default function InstitutionManager() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label>Open Date</label>
+              <label>Admission Open Date</label>
               <input
                 type="date"
                 {...register("admissionPeriod.openDate")}
@@ -313,7 +316,7 @@ export default function InstitutionManager() {
               />
             </div>
             <div>
-              <label>Close Date</label>
+              <label>Admission Close Date</label>
               <input
                 type="date"
                 {...register("admissionPeriod.closeDate")}
@@ -348,17 +351,61 @@ export default function InstitutionManager() {
               + Dept
             </button>
           </div>
-          <div>
-            <label className="block mb-1">Logo</label>
-            <input type="file" {...register("logo")} accept="image/*" />
+          {editingInst?.logoUrl ? (
+            <div className="flex items-center">
+              <img
+                src={editingInst.logoUrl}
+                alt={`${editingInst.title} Logo`}
+                className="w-32 h-32 object-cover rounded-full"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setValue("logo", null);
+                  setEditingInst((prev) => {
+                    return { ...prev, logoUrl: null };
+                  });
+                }}
+                className="bg-red-500 p-2 ml-5 rounded text-white"
+              >
+                Remove This Photo
+              </button>
+            </div>
+          ) : (
+            <div>
+              <label className="block mb-1">Logo</label>
+              <input
+                type="file"
+                {...register("logo")}
+                accept="image/*"
+                className="w-full"
+              />
+            </div>
+          )}
+          <div className="flex">
+            <button
+              type=" cancel"
+              onClick={() => {
+                reset();
+                setEditingId(null);
+                setEditingInst(null);
+              }}
+              className="w-full m-3 py-3 bg-red-600 text-white rounded disabled:opacity-50"
+            >
+              বাতিল করুন
+            </button>
+            <button
+              type="submit"
+              disabled={uploadingLogo}
+              className=" w-full m-3 py-3 bg-blue-600 text-white rounded disabled:opacity-50"
+            >
+              {uploadingLogo
+                ? "জমা হচ্ছে…"
+                : editingId
+                ? "আপডেট করুন"
+                : "জমা দিন"}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={uploadingLogo}
-            className="w-full py-2 bg-blue-600 text-white rounded"
-          >
-            {uploadingLogo ? "Saving…" : editingId ? "Update" : "Create"}
-          </button>
         </form>
       </div>
 
