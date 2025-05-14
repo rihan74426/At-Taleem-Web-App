@@ -25,12 +25,15 @@ export default function InstitutionsPage() {
   });
   const showModal = (m, s) => setModal({ isOpen: true, message: m, status: s });
 
-  useEffect(() => {
-    fetch("/api/institutions")
+  const fetchInstitutions = async () => {
+    await fetch("/api/institutions")
       .then((res) => res.json())
       .then(({ institutions }) => setInstitutions(institutions))
       .catch(() => setInstitutions([]))
       .finally(() => setLoading(false));
+  };
+  useEffect(() => {
+    fetchInstitutions();
   }, []);
 
   const handleNotify = async (institutionId) => {
@@ -50,6 +53,7 @@ export default function InstitutionsPage() {
 
     if (res.ok) {
       setNotifyStatus((s) => ({ ...s, [institutionId]: "Subscribed!" }));
+      fetchInstitutions();
     } else {
       const { error } = await res.json();
       setNotifyStatus((s) => ({ ...s, [institutionId]: error || "Failed" }));
@@ -116,7 +120,9 @@ export default function InstitutionsPage() {
           আমাদের প্রতিষ্ঠানসমূহ
         </h2>
         {loading ? (
-          <Loader />
+          <div className="flex place-content-center">
+            <Loader />
+          </div>
         ) : institutions?.length === 0 ? (
           <p className="text-center text-gray-500">No institutions found.</p>
         ) : (
@@ -160,13 +166,13 @@ export default function InstitutionsPage() {
                   {/* Description & Address */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
-                      <h3 className="text-xl font-semibold mb-2">About</h3>
+                      <h3 className="text-xl font-semibold mb-2">সম্পর্কে</h3>
                       <p className="text-gray-700 dark:text-gray-300">
                         {inst.description || "No description available."}
                       </p>
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-2">Location</h3>
+                      <h3 className="text-xl font-semibold mb-2">অবস্থান</h3>
                       <p className="flex items-center text-gray-700 dark:text-gray-300">
                         <FiMapPin className="mr-2" /> {inst.address}
                       </p>
@@ -179,7 +185,7 @@ export default function InstitutionsPage() {
                       <FiUsers size={24} className="mr-3 text-teal-500" />
                       <div>
                         <p className="font-semibold">{inst.studentCount}</p>
-                        <p className="text-sm">Students </p>
+                        <p className="text-sm">শিক্ষার্থী</p>
                       </div>
                     </div>
                     <div className="flex items-center place-content-center text-gray-700 dark:text-gray-300">
@@ -188,7 +194,7 @@ export default function InstitutionsPage() {
                         <p className="font-semibold">
                           {inst.departments.length}
                         </p>
-                        <p className="text-sm">Departments</p>
+                        <p className="text-sm">বিভাগ</p>
                       </div>
                     </div>
                     <div className="flex items-center place-content-center text-gray-700 dark:text-gray-300">
@@ -202,7 +208,7 @@ export default function InstitutionsPage() {
                             ? new Date(inst.establishedAt).getFullYear()
                             : "N/A"}
                         </p>
-                        <p className="text-sm">Established</p>
+                        <p className="text-sm">স্থাপিত</p>
                       </div>
                     </div>
                   </div>
@@ -210,21 +216,19 @@ export default function InstitutionsPage() {
                   {/* Departments list */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
                     <div>
-                      <h3 className="text-xl font-semibold mb-2">
-                        Departments
-                      </h3>
+                      <h3 className="text-xl font-semibold mb-2">বিভাগসমূহ</h3>
                       <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-1">
                         {inst.departments.length > 0 ? (
                           inst.departments.map((d, i) => (
                             <li key={i}>{d.name}</li>
                           ))
                         ) : (
-                          <li>No departments listed.</li>
+                          <li>কোন বিভাগ যুক্ত করা হয়নি</li>
                         )}
                       </ul>
                       {/* Contact */}
                       <div className="space-y-3 mt-5">
-                        <h3 className="text-xl font-semibold">Contact</h3>
+                        <h3 className="text-xl font-semibold">যোগাযোগ</h3>
                         <p className="flex items-center text-gray-700 dark:text-gray-300">
                           <FiMail className="mr-2" /> {inst.email}
                         </p>
@@ -239,14 +243,14 @@ export default function InstitutionsPage() {
                           }}
                           className="inline-flex items-center px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded"
                         >
-                          <FiMail className="mr-2" /> Email Institution
+                          <FiMail className="mr-2" /> প্রতিষ্ঠানকে মেইল পাঠান
                         </button>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold">Admissions</h3>
+                      <h3 className="text-xl font-semibold">ভর্তি</h3>
                       <h3 className="text-lg font-medium m-3">
-                        Admission Open Date:{" "}
+                        ভর্তি শুরুর তারিখঃ{" "}
                         <span className="font-semibold">
                           {format(
                             new Date(inst.admissionPeriod.openDate),
@@ -255,7 +259,7 @@ export default function InstitutionsPage() {
                         </span>
                       </h3>
                       <h3 className="text-lg font-medium m-3">
-                        Admission Close Date:{" "}
+                        ভর্তি শেষের তারিখ:{" "}
                         <span className="font-semibold">
                           {format(
                             new Date(inst.admissionPeriod.closeDate),
@@ -272,8 +276,8 @@ export default function InstitutionsPage() {
                           // OPEN: show your apply button/link
                           <>
                             <p className="text-gray-700 dark:text-gray-300">
-                              Admissions are now open! Click below to start your
-                              application.
+                              এখন ভর্তি চলছে! ভর্তি প্রক্রিয়ার জন্য নিচে ক্লিক
+                              করুন!
                             </p>
                             <button
                               onClick={() =>
@@ -282,15 +286,16 @@ export default function InstitutionsPage() {
                               }
                               className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
                             >
-                              <FiBell className="mr-1" /> Apply Now
+                              <FiBell className="mr-1" /> এখনি আবেদন করুন
                             </button>
                           </>
                         ) : (
                           // CLOSED: allow notification signup
                           <>
                             <p className="text-gray-700 dark:text-gray-300">
-                              Note: Admissions are currently closed. Leave your
-                              email and we'll let you know when they reopen.
+                              নোটঃ এখন ভর্তি কার্যক্রম বন্ধ। আপনার ইমেইল ঠিকানা
+                              নিচে দিয়ে রাখুন। ভর্তি কার্যক্রম চালু হলে আপনাকে
+                              জানানো হবে।
                             </p>
                             {inst.interestedEmails?.some(
                               (e) =>
@@ -299,7 +304,7 @@ export default function InstitutionsPage() {
                             ) ? (
                               <div>
                                 <span className="px-4 py-2 bg-green-100 text-green-800 rounded">
-                                  You will be notified
+                                  আপনাকে জানানো হবে
                                 </span>
                               </div>
                             ) : (
@@ -322,7 +327,7 @@ export default function InstitutionsPage() {
                                   onClick={() => handleNotify(inst._id)}
                                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded inline-flex items-center"
                                 >
-                                  <FiBell className="mr-1" /> Notify Me
+                                  <FiBell className="mr-1" /> আমাকে জানানো হোক
                                 </button>
                               </div>
                             )}
