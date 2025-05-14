@@ -117,7 +117,7 @@ export default function InstitutionsPage() {
         </h2>
         {loading ? (
           <Loader />
-        ) : institutions.length === 0 ? (
+        ) : institutions?.length === 0 ? (
           <p className="text-center text-gray-500">No institutions found.</p>
         ) : (
           <main className="space-y-16 px-6 py-12">
@@ -127,7 +127,7 @@ export default function InstitutionsPage() {
               </p>
             )}
 
-            {institutions.map((inst) => (
+            {institutions?.map((inst) => (
               <section
                 key={inst._id}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden"
