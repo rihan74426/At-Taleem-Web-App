@@ -179,7 +179,7 @@ export default function InstitutionsPage() {
                       <FiUsers size={24} className="mr-3 text-teal-500" />
                       <div>
                         <p className="font-semibold">{inst.studentCount}</p>
-                        <p className="text-sm">Students</p>
+                        <p className="text-sm">Students </p>
                       </div>
                     </div>
                     <div className="flex items-center place-content-center text-gray-700 dark:text-gray-300">
