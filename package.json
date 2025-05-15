@@ -11,6 +11,7 @@
   "dependencies": {
     "@clerk/nextjs": "^5.7.5",
     "@clerk/themes": "^2.2.20",
+    "@headlessui/react": "^2.2.3",
     "@react-pdf-viewer/core": "^3.12.0",
     "@react-pdf-viewer/default-layout": "^3.12.0",
     "@react-pdf/renderer": "^4.3.0",
@@ -20,6 +21,7 @@
     "flowbite-qwik": "^0.38.3",
     "flowbite-react": "^0.10.2",
     "framer-motion": "^12.6.3",
+    "headlessui": "^0.0.0",
     "mongodb": "^6.10.0",
     "mongoose": "^8.8.1",
     "next": "15.0.3",

@@ -1,24 +1,22 @@
-// lib/models/Activity.js
 import mongoose from "mongoose";
 
 const ActivitySchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
-    description: { type: String },
+    description: { type: String, default: "" },
     scope: {
       type: String,
       enum: ["weekly", "monthly", "yearly"],
       required: true,
     },
     startDate: { type: Date, required: true },
-    scheduledTime: { type: Date }, // exact moment to auto‑complete
+    endDate: { type: Date }, // optional end
+    scheduledTime: { type: Date }, // for auto-complete/job trigger
     seriesIndex: { type: Number, default: 1 },
-    createdBy: { type: String }, // admin userId
 
-    // New fields:
-    interestedPersons: [{ type: String }], // userIds who clicked “interested”
-    notificationWants: [{ type: String }], // userIds who want notifications for this scope
-
+    createdBy: { type: String, required: true }, // admin userId
+    interestedUsers: [{ type: String }], // clicked “interested”
+    notificationWants: [{ type: String }], // prefetched at creation
     completed: { type: Boolean, default: false },
   },
   { timestamps: true }

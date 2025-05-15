@@ -14,6 +14,7 @@ import AskQuestionForm from "../Components/AskQuestions";
 import AddBookForm from "../Components/AddBooks";
 import ReviewInputPage from "../Components/ReviewInput";
 import InstitutionInputPage from "../Components/InstitutionsInput";
+import EventInputPage from "../Components/EventsInput";
 
 export default function Dashboard() {
   const { isSignedIn, user } = useUser();
@@ -61,6 +62,8 @@ export default function Dashboard() {
         return <ReviewInputPage />;
       case "institutions":
         return isAdmin ? <InstitutionInputPage /> : <NotAdmin />;
+      case "events":
+        return isAdmin ? <EventInputPage /> : <NotAdmin />;
       default:
         return (
           <div className="flex justify-center items-center min-h-screen">

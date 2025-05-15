@@ -16,7 +16,7 @@ import { SignOutButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { AiOutlineVideoCamera } from "react-icons/ai";
-import { BsQuestionOctagon } from "react-icons/bs";
+import { BsCalendarEvent, BsQuestionOctagon } from "react-icons/bs";
 import { FaRegCommentDots, FaSchool } from "react-icons/fa";
 export default function DashSidebar() {
   const [tab, setTab] = useState("");
@@ -92,6 +92,16 @@ export default function DashSidebar() {
               </Sidebar.Item>
             </Link>
           )}
+          <Link href="/dashboard?tab=askQuestion">
+            <Sidebar.Item
+              active={tab === "askQuestion"}
+              icon={BsQuestionOctagon}
+              labelColor="dark"
+              as="div"
+            >
+              Ask a question
+            </Sidebar.Item>
+          </Link>
           {user?.publicMetadata?.isAdmin && (
             <Link href="/dashboard?tab=addVideo">
               <Sidebar.Item
@@ -115,6 +125,17 @@ export default function DashSidebar() {
             </Link>
           )}
           {user?.publicMetadata?.isAdmin && (
+            <Link href="/dashboard?tab=events">
+              <Sidebar.Item
+                active={tab === "events"}
+                icon={BsCalendarEvent}
+                as="div"
+              >
+                Schedule an event
+              </Sidebar.Item>
+            </Link>
+          )}
+          {user?.publicMetadata?.isAdmin && (
             <Link href="/dashboard?tab=institutions">
               <Sidebar.Item
                 active={tab === "institutions"}
@@ -125,16 +146,6 @@ export default function DashSidebar() {
               </Sidebar.Item>
             </Link>
           )}
-          <Link href="/dashboard?tab=askQuestion">
-            <Sidebar.Item
-              active={tab === "askQuestion"}
-              icon={BsQuestionOctagon}
-              labelColor="dark"
-              as="div"
-            >
-              Ask a question
-            </Sidebar.Item>
-          </Link>
           <Sidebar.Item icon={HiArrowSmRight} className="cursor-pointer">
             <SignOutButton />
           </Sidebar.Item>
