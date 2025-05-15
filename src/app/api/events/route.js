@@ -1,8 +1,7 @@
 // src/app/api/activities/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
-import { currentUser, users } from "@clerk/nextjs/server";
-import User from "@/lib/models/user.model";
+import { clerkClient, currentUser } from "@clerk/nextjs/server";
 
 export async function GET(req) {
   await connect();
@@ -31,7 +30,7 @@ export async function POST(req) {
   // If body contains prefs → update user prefs
   if (body.ActivityPrefs) {
     if (!user) return new Response("Unauthorized", { status: 401 });
-    await users.updateUser(user.id, {
+    await clerkClient.users.updateUser(user.id, {
       publicMetadata: {
         ...user.publicMetadata,
         ActivityPrefs: body.ActivityPrefs,
@@ -41,14 +40,13 @@ export async function POST(req) {
   }
 
   // Else → create new Activity (admin only)
-  if (!user?.publicMetadata?.isAdmin) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+
   const {
     title,
     description,
     category,
     scope,
+    createdBy,
     startDate,
     endDate,
     scheduledTime,
@@ -61,19 +59,16 @@ export async function POST(req) {
   }
 
   // build notificationWants from user collection
-  const prefField = `publicMetadata.activityPrefs.${scope}`;
-  const allUsers = await User.find({ [prefField]: true }, { _id: 1 }).lean();
-  const notifyList = allUsers.map((u) => u._id.toString());
 
   const act = await Event.create({
     title,
     description,
     category,
     scope,
+    createdBy,
     startDate,
     endDate,
     scheduledTime,
-    notificationWants: notifyList,
   });
 
   // send notifications (email + in-app) here…

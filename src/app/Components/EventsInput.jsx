@@ -94,6 +94,7 @@ export default function EventInputPage() {
     try {
       const payload = {
         ...data,
+        createdBy: user.id,
         startDate: data.startDate,
         scheduledTime: data.scheduledTime || null,
         seriesIndex: Number(data.seriesIndex),
