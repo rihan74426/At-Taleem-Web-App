@@ -1,26 +1,60 @@
 import mongoose from "mongoose";
 
-const ActivitySchema = new mongoose.Schema(
+const EventSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    description: { type: String, default: "" },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "", trim: true },
     scope: {
       type: String,
       enum: ["weekly", "monthly", "yearly"],
       required: true,
+      index: true,
     },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date }, // optional end
-    scheduledTime: { type: Date }, // for auto-complete/job trigger
+    startDate: { type: Date, required: true, index: true },
+    scheduledTime: { type: Date, index: true }, // for auto-complete/job trigger
     seriesIndex: { type: Number, default: 1 },
+    location: {
+      type: String,
+      trim: true,
+      default: "",
+    },
 
-    createdBy: { type: String, required: true }, // admin userId
-    interestedUsers: [{ type: String }], // clicked “interested”
-    notificationWants: [{ type: String }], // prefetched at creation
-    completed: { type: Boolean, default: false },
+    // User interactions
+    createdBy: { type: String, required: true, index: true }, // admin userId
+    interestedUsers: [{ type: String, index: true }], // clicked "interested"
+    notificationWants: [{ type: String, index: true }], // users who want notifications
+
+    // Event status
+    completed: { type: Boolean, default: false, index: true },
+    canceled: { type: Boolean, default: false, index: true },
+    featured: { type: Boolean, default: false, index: true },
+
+    // Attachments/resources
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default mongoose.models.Activity ||
-  mongoose.model("Activity", ActivitySchema);
+// Method to check if a user can register
+EventSchema.methods.canRegister = function (userId) {
+  if (this.canceled) return false;
+  if (this.completed) return false;
+  return true;
+};
+
+// Helper to format dates
+EventSchema.methods.formatDates = function () {
+  return {
+    startDate: this.startDate
+      ? new Date(this.startDate).toLocaleDateString()
+      : null,
+    scheduledTime: this.scheduledTime
+      ? new Date(this.scheduledTime).toLocaleString()
+      : null,
+  };
+};
+
+const Event = mongoose.models.Event || mongoose.model("Event", EventSchema);
+
+export default Event;
