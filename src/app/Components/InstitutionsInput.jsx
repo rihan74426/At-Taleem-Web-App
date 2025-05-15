@@ -30,6 +30,7 @@ const DEFAULT_FORM_VALUES = {
   studentCount: 0,
   admissionStatus: false,
   admissionPeriod: { openDate: "", closeDate: "" },
+  admissionLink: "",
   departments: [{ name: "" }],
   social: {
     facebook: "",
@@ -391,6 +392,7 @@ export default function InstitutionManager() {
             <input
               {...register("title", { required: "Title is required" })}
               placeholder="Institution title"
+              type="text"
               className="w-full p-2 border rounded dark:bg-black"
             />
             {errors.title && (
@@ -443,6 +445,7 @@ export default function InstitutionManager() {
               <label>Email*</label>
               <input
                 type="email"
+                placeholder="The institutional email address"
                 {...register("email", {
                   required: "Email is required",
                   pattern: {
@@ -462,6 +465,7 @@ export default function InstitutionManager() {
               <label>Phone Number*</label>
               <input
                 type="tel"
+                placeholder="Institutional Contact Number"
                 {...register("phone", { required: "Phone number is required" })}
                 className="w-full p-2 border rounded dark:bg-black"
               />
@@ -488,6 +492,8 @@ export default function InstitutionManager() {
           <div>
             <label>Address*</label>
             <input
+              type="text"
+              placeholder="Write the complete address here..."
               {...register("address", { required: "Address is required" })}
               className="w-full p-2 border rounded dark:bg-black"
             />
@@ -550,6 +556,15 @@ export default function InstitutionManager() {
               />
             </div>
           </div>
+          <div>
+            <label>Admission Link</label>
+            <input
+              type="text"
+              {...register("admissionLink")}
+              placeholder="Paste the online admission page or form link here..."
+              className="w-full p-2 border rounded dark:bg-black"
+            />
+          </div>
 
           {/* Departments */}
           <div>
@@ -557,6 +572,7 @@ export default function InstitutionManager() {
             {deptFields.map((d, i) => (
               <div key={d.id} className="flex items-center space-x-2 mb-2">
                 <input
+                  type="text"
                   {...register(`departments.${i}.name`, {
                     required: "Department name is required",
                   })}
@@ -587,26 +603,31 @@ export default function InstitutionManager() {
             <label className="block mb-1">Social Links</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
+                type="text"
                 {...register("social.facebook")}
                 placeholder="Facebook URL"
                 className="w-full p-2 border rounded dark:bg-black"
               />
               <input
+                type="text"
                 {...register("social.twitter")}
                 placeholder="Twitter URL"
                 className="w-full p-2 border rounded dark:bg-black"
               />
               <input
+                type="text"
                 {...register("social.instagram")}
                 placeholder="Instagram URL"
                 className="w-full p-2 border rounded dark:bg-black"
               />
               <input
+                type="text"
                 {...register("social.linkedin")}
                 placeholder="LinkedIn URL"
                 className="w-full p-2 border rounded dark:bg-black"
               />
               <input
+                type="text"
                 {...register("social.youtube")}
                 placeholder="YouTube URL"
                 className="w-full p-2 border rounded dark:bg-black"
