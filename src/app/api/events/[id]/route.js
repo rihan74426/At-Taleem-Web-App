@@ -1,7 +1,7 @@
-// src/app/api/events/[id]/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
-import { currentUser } from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -11,7 +11,6 @@ export async function GET(req, { params }) {
   try {
     await connect();
     const eventId = params.id;
-
     const event = await Event.findById(eventId).lean();
     if (!event) {
       return Response.json({ error: "Event not found" }, { status: 404 });
@@ -30,11 +29,12 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   try {
     await connect();
-    const user = await currentUser();
-    if (!user) {
+    const auth = getAuth(req);
+    if (!auth.userId) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const user = await clerkClient.users.getUser(auth.userId);
     if (!user.publicMetadata?.isAdmin) {
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
@@ -42,18 +42,34 @@ export async function PUT(req, { params }) {
     const eventId = params.id;
     const updateData = await req.json();
 
-    // Remove fields that shouldn't be directly updated
-    const { _id, createdBy, createdAt, updatedAt, ...allowedUpdates } =
-      updateData;
+    // Only allow updating fields that exist in the model
+    const allowedFields = [
+      "title",
+      "description",
+      "scope",
+      "startDate",
+      "scheduledTime",
+      "seriesIndex",
+      "location",
+      "completed",
+      "canceled",
+      "featured",
+    ];
+    const updates = {};
+    for (const key of allowedFields) {
+      if (updateData[key] !== undefined) {
+        updates[key] = updateData[key];
+      }
+    }
 
-    const event = await Event.findById(eventId);
+    const event = await Event.findByIdAndUpdate(eventId, updates, {
+      new: true,
+      runValidators: true,
+    });
+
     if (!event) {
       return Response.json({ error: "Event not found" }, { status: 404 });
     }
-
-    // Update the event
-    Object.assign(event, allowedUpdates);
-    await event.save();
 
     revalidatePath("/programme");
     revalidatePath(`/programme/${eventId}`);
@@ -71,11 +87,12 @@ export async function PUT(req, { params }) {
 export async function PATCH(req, { params }) {
   try {
     await connect();
-    const user = await currentUser();
-    if (!user) {
+    const auth = getAuth(req);
+    if (!auth.userId) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const user = await clerkClient.users.getUser(auth.userId);
     const eventId = params.id;
     const { action } = await req.json();
 
@@ -87,15 +104,11 @@ export async function PATCH(req, { params }) {
     // Handle user actions
     switch (action) {
       case "toggleInterest":
-        await handleToggleInterest(event, user.id);
-        break;
-
-      case "toggleAttendance":
-        await handleToggleAttendance(event, user.id);
+        handleToggleInterest(event, auth.userId);
         break;
 
       case "toggleNotification":
-        await handleToggleNotification(event, user.id);
+        handleToggleNotification(event, auth.userId);
         break;
 
       // Admin-only actions
@@ -108,7 +121,7 @@ export async function PATCH(req, { params }) {
             { status: 403 }
           );
         }
-        await handleAdminAction(event, action);
+        handleAdminAction(event, action);
         break;
 
       default:
@@ -122,9 +135,8 @@ export async function PATCH(req, { params }) {
     return Response.json({
       event,
       userStatus: {
-        interested: event.interestedUsers.includes(user.id),
-        attending: event.confirmedAttendees.includes(user.id),
-        notified: event.notificationWants.includes(user.id),
+        interested: event.interestedUsers.includes(auth.userId),
+        notified: event.notificationWants.includes(auth.userId),
       },
     });
   } catch (error) {
@@ -139,11 +151,12 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await connect();
-    const user = await currentUser();
-    if (!user) {
+    const auth = getAuth(req);
+    if (!auth.userId) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const user = await clerkClient.users.getUser(auth.userId);
     if (!user.publicMetadata?.isAdmin) {
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
@@ -164,7 +177,7 @@ export async function DELETE(req, { params }) {
 }
 
 // Helper functions for handling event actions
-async function handleToggleInterest(event, userId) {
+function handleToggleInterest(event, userId) {
   const idx = event.interestedUsers.indexOf(userId);
   if (idx >= 0) {
     event.interestedUsers.splice(idx, 1);
@@ -173,23 +186,7 @@ async function handleToggleInterest(event, userId) {
   }
 }
 
-async function handleToggleAttendance(event, userId) {
-  if (
-    !event.canRegister(userId) &&
-    !event.confirmedAttendees.includes(userId)
-  ) {
-    throw new Error("Cannot register for this event");
-  }
-
-  const idx = event.confirmedAttendees.indexOf(userId);
-  if (idx >= 0) {
-    event.confirmedAttendees.splice(idx, 1);
-  } else {
-    event.confirmedAttendees.push(userId);
-  }
-}
-
-async function handleToggleNotification(event, userId) {
+function handleToggleNotification(event, userId) {
   const idx = event.notificationWants.indexOf(userId);
   if (idx >= 0) {
     event.notificationWants.splice(idx, 1);
@@ -198,7 +195,7 @@ async function handleToggleNotification(event, userId) {
   }
 }
 
-async function handleAdminAction(event, action) {
+function handleAdminAction(event, action) {
   switch (action) {
     case "toggleComplete":
       event.completed = !event.completed;

@@ -1,4 +1,3 @@
-// src/app/api/events/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
@@ -92,7 +91,7 @@ export async function POST(req) {
       query: `publicMetadata.eventPrefs.${scope}:true`,
     });
 
-    const notifyList = usersWithMatchingPrefs.map((u) => u.id);
+    const notifyList = usersWithMatchingPrefs?.map((u) => u.id) || [];
 
     // Create the event
     const eventData = {
@@ -102,9 +101,6 @@ export async function POST(req) {
     };
 
     const event = await Event.create(eventData);
-
-    // TODO: Send notifications to users in notifyList
-    // This would integrate with your notification service
 
     revalidatePath("/programme");
     return Response.json({ event }, { status: 201 });
@@ -123,10 +119,6 @@ function buildEventFilter(searchParams) {
   // Basic filters
   if (searchParams.has("scope")) {
     filter.scope = searchParams.get("scope");
-  }
-
-  if (searchParams.has("category")) {
-    filter.category = searchParams.get("category");
   }
 
   if (searchParams.has("featured")) {
@@ -160,7 +152,6 @@ function buildEventFilter(searchParams) {
 
     filter.startDate = { $gte: date, $lt: nextDay };
   } else {
-    // Date range filters
     if (searchParams.has("startAfter")) {
       filter.startDate = {
         ...filter.startDate,
@@ -183,15 +174,6 @@ function buildEventFilter(searchParams) {
 
   if (searchParams.has("interestedUser")) {
     filter.interestedUsers = searchParams.get("interestedUser");
-  }
-
-  if (searchParams.has("attendee")) {
-    filter.confirmedAttendees = searchParams.get("attendee");
-  }
-
-  // Virtual/in-person filter
-  if (searchParams.has("isVirtual")) {
-    filter.isVirtual = searchParams.get("isVirtual") === "true";
   }
 
   return filter;

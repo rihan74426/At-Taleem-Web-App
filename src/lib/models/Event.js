@@ -37,7 +37,7 @@ const EventSchema = new mongoose.Schema(
 );
 
 // Method to check if a user can register
-EventSchema.methods.canRegister = function (userId) {
+EventSchema.methods.canRegister = function () {
   if (this.canceled) return false;
   if (this.completed) return false;
   return true;
