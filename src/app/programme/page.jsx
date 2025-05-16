@@ -22,6 +22,7 @@ import {
 } from "react-icons/fi";
 import { Menu } from "@headlessui/react";
 import ResponseModal from "@/app/Components/ResponseModal";
+import EventInputModal from "../Components/EventInputModal";
 
 const SCOPES = [
   { value: "weekly", label: "Weekly" },
@@ -73,6 +74,7 @@ export default function ProgrammePage() {
 
   // State for user interactions with events
   const [userStatus, setUserStatus] = useState({});
+  const [editingEvent, setEditingEvent] = useState(null);
 
   // Show modal helper
   const showModal = (message, status) => {
@@ -504,236 +506,237 @@ export default function ProgrammePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-6 space-y-6">
-      {/* Hero */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-        <h1 className="text-3xl md:text-4xl font-bold">Programme</h1>
-        <div className="flex items-center space-x-2">
-          {isAdmin && (
-            <Link href="/events/new">
-              <button className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                <FiPlus className="mr-1" />
-                New Event
-              </button>
-            </Link>
-          )}
-          <button
-            onClick={() => setView("calendar")}
-            className={`p-2 rounded ${
-              view === "calendar"
-                ? "bg-teal-600 text-white"
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            <FiCalendar size={20} />
-          </button>
-          <button
-            onClick={() => setView("list")}
-            className={`p-2 rounded ${
-              view === "list"
-                ? "bg-teal-600 text-white"
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            <FiList size={20} />
-          </button>
-        </div>
-      </header>
-
-      {/* Tabs + search/filters */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex space-x-2">
-          {SCOPES.map((s) => (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-6 ">
+      <div className="space-y-6">
+        {/* Hero */}
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+          <h1 className="text-3xl md:text-4xl font-bold">Programme</h1>
+          <div className="flex items-center space-x-2">
+            {isAdmin && (
+              <Link href="/events/new">
+                <button className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  <FiPlus className="mr-1" />
+                  New Event
+                </button>
+              </Link>
+            )}
             <button
-              key={s.value}
-              onClick={() => {
-                setScope(s.value);
-                setPage(1); // Reset to page 1 when scope changes
-              }}
-              className={`px-4 py-2 rounded-full ${
-                scope === s.value
+              onClick={() => setView("calendar")}
+              className={`p-2 rounded ${
+                view === "calendar"
                   ? "bg-teal-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  : "hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
             >
-              {s.label}
+              <FiCalendar size={20} />
             </button>
-          ))}
-        </div>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 items-stretch sm:items-center w-full sm:w-auto">
-          <form onSubmit={handleSearch} className="flex flex-1">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search events…"
-              className="px-3 py-2 border rounded-l dark:bg-gray-800 flex-1"
-            />
             <button
-              type="submit"
-              className="px-3 py-2 bg-teal-600 text-white rounded-r"
+              onClick={() => setView("list")}
+              className={`p-2 rounded ${
+                view === "list"
+                  ? "bg-teal-600 text-white"
+                  : "hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
             >
-              Search
+              <FiList size={20} />
             </button>
-          </form>
-          <Menu as="div" className="relative">
-            <Menu.Button className="flex items-center px-3 py-2 border rounded dark:bg-gray-800">
-              <FiFilter className="mr-1" />
-              Filters
-            </Menu.Button>
-            <Menu.Items className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow-lg focus:outline-none z-10">
-              <div className="p-3">
-                <p className="text-sm font-medium mb-2">Event Status</p>
-                <label className="flex items-center space-x-2 mt-2">
-                  <input
-                    type="checkbox"
-                    checked={filter.featured}
-                    onChange={() => toggleFilter("featured")}
-                    className="form-checkbox h-4 w-4 text-teal-600"
-                  />
-                  <span>Featured</span>
-                </label>
-                <label className=" flex items-center space-x-2 mt-2">
-                  <input
-                    type="checkbox"
-                    checked={filter.completed}
-                    onChange={() => toggleFilter("completed")}
-                    className="form-checkbox h-4 w-4 text-teal-600"
-                  />
-                  <span>Completed</span>
-                </label>
-                <label className="flex items-center space-x-2 mt-2">
-                  <input
-                    type="checkbox"
-                    checked={filter.canceled}
-                    onChange={() => toggleFilter("canceled")}
-                    className="form-checkbox h-4 w-4 text-teal-600"
-                  />
-                  <span>Canceled</span>
-                </label>
-                <hr className="my-2 border-gray-200 dark:border-gray-700" />
-                <p className="text-sm font-medium mb-2">Sort By</p>
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full p-1 text-sm border rounded dark:bg-gray-700"
-                >
-                  <option value="startDate">Date</option>
-                  <option value="title">Title</option>
-                  <option value="createdAt">Created</option>
-                </select>
-                <div className="flex mt-2">
-                  <button
-                    onClick={() => {
-                      setSortOrder("asc");
-                      setPage(1);
-                    }}
-                    className={`flex-1 p-1 text-xs ${
-                      sortOrder === "asc"
-                        ? "bg-teal-100 dark:bg-teal-900"
-                        : "bg-gray-100 dark:bg-gray-700"
-                    } rounded-l`}
-                  >
-                    Ascending
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortOrder("desc");
-                      setPage(1);
-                    }}
-                    className={`flex-1 p-1 text-xs ${
-                      sortOrder === "desc"
-                        ? "bg-teal-100 dark:bg-teal-900"
-                        : "bg-gray-100 dark:bg-gray-700"
-                    } rounded-r`}
-                  >
-                    Descending
-                  </button>
-                </div>
-                <button
-                  onClick={() => {
-                    setFilter({
-                      featured: false,
-                      completed: false,
-                      canceled: false,
-                    });
-                    setSortBy("startDate");
-                    setSortOrder("asc");
-                    setSearch("");
-                    setPage(1);
-                  }}
-                  className="w-full mt-3 px-2 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
-                >
-                  Clear All Filters
-                </button>
-              </div>
-            </Menu.Items>
-          </Menu>
-        </div>
-      </div>
+          </div>
+        </header>
 
-      {/* Notification Preferences */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div className="flex flex-col sm:flex-row justify-between">
-          <div className="flex flex-wrap gap-4 items-center mb-3 sm:mb-0">
-            <span className="font-medium">Notify me about:</span>
+        {/* Tabs + search/filters */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex space-x-2">
             {SCOPES.map((s) => (
-              <label
+              <button
                 key={s.value}
-                className="inline-flex items-center space-x-2"
+                onClick={() => {
+                  setScope(s.value);
+                  setPage(1); // Reset to page 1 when scope changes
+                }}
+                className={`px-4 py-2 rounded-full ${
+                  scope === s.value
+                    ? "bg-teal-600 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
               >
-                <input
-                  type="checkbox"
-                  checked={prefs[s.value]}
-                  onChange={() => togglePref(s.value)}
-                  className="form-checkbox h-5 w-5 text-teal-600"
-                />
-                <span>{s.label}</span>
-              </label>
+                {s.label}
+              </button>
             ))}
           </div>
-          <button
-            onClick={savePreferences}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded"
-          >
-            Save Preferences
-          </button>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 items-stretch sm:items-center w-full sm:w-auto">
+            <form onSubmit={handleSearch} className="flex flex-1">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search events…"
+                className="px-3 py-2 border rounded-l dark:bg-gray-800 flex-1"
+              />
+              <button
+                type="submit"
+                className="px-3 py-2 bg-teal-600 text-white rounded-r"
+              >
+                Search
+              </button>
+            </form>
+            <Menu as="div" className="relative">
+              <Menu.Button className="flex items-center px-3 py-2 border rounded dark:bg-gray-800">
+                <FiFilter className="mr-1" />
+                Filters
+              </Menu.Button>
+              <Menu.Items className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow-lg focus:outline-none z-10">
+                <div className="p-3">
+                  <p className="text-sm font-medium mb-2">Event Status</p>
+                  <label className="flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      checked={filter.featured}
+                      onChange={() => toggleFilter("featured")}
+                      className="form-checkbox h-4 w-4 text-teal-600"
+                    />
+                    <span>Featured</span>
+                  </label>
+                  <label className=" flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      checked={filter.completed}
+                      onChange={() => toggleFilter("completed")}
+                      className="form-checkbox h-4 w-4 text-teal-600"
+                    />
+                    <span>Completed</span>
+                  </label>
+                  <label className="flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      checked={filter.canceled}
+                      onChange={() => toggleFilter("canceled")}
+                      className="form-checkbox h-4 w-4 text-teal-600"
+                    />
+                    <span>Canceled</span>
+                  </label>
+                  <hr className="my-2 border-gray-200 dark:border-gray-700" />
+                  <p className="text-sm font-medium mb-2">Sort By</p>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full p-1 text-sm border rounded dark:bg-gray-700"
+                  >
+                    <option value="startDate">Date</option>
+                    <option value="title">Title</option>
+                    <option value="createdAt">Created</option>
+                  </select>
+                  <div className="flex mt-2">
+                    <button
+                      onClick={() => {
+                        setSortOrder("asc");
+                        setPage(1);
+                      }}
+                      className={`flex-1 p-1 text-xs ${
+                        sortOrder === "asc"
+                          ? "bg-teal-100 dark:bg-teal-900"
+                          : "bg-gray-100 dark:bg-gray-700"
+                      } rounded-l`}
+                    >
+                      Ascending
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortOrder("desc");
+                        setPage(1);
+                      }}
+                      className={`flex-1 p-1 text-xs ${
+                        sortOrder === "desc"
+                          ? "bg-teal-100 dark:bg-teal-900"
+                          : "bg-gray-100 dark:bg-gray-700"
+                      } rounded-r`}
+                    >
+                      Descending
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setFilter({
+                        featured: false,
+                        completed: false,
+                        canceled: false,
+                      });
+                      setSortBy("startDate");
+                      setSortOrder("asc");
+                      setSearch("");
+                      setPage(1);
+                    }}
+                    className="w-full mt-3 px-2 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              </Menu.Items>
+            </Menu>
+          </div>
         </div>
-      </div>
 
-      {/* Data / Loading / Error */}
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+        {/* Notification Preferences */}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="flex flex-col sm:flex-row justify-between">
+            <div className="flex flex-wrap gap-4 items-center mb-3 sm:mb-0">
+              <span className="font-medium">Notify me about:</span>
+              {SCOPES.map((s) => (
+                <label
+                  key={s.value}
+                  className="inline-flex items-center space-x-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={prefs[s.value]}
+                    onChange={() => togglePref(s.value)}
+                    className="form-checkbox h-5 w-5 text-teal-600"
+                  />
+                  <span>{s.label}</span>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={savePreferences}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded"
+            >
+              Save Preferences
+            </button>
+          </div>
         </div>
-      ) : error ? (
-        <div className="bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded relative">
-          <strong className="font-bold">Error: </strong>
-          <span className="block sm:inline">{error}</span>
-        </div>
-      ) : events.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-xl font-semibold">No events found</p>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            Try changing your search criteria or filters
-          </p>
-        </div>
-      ) : view === "calendar" ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <p className="text-center text-gray-500 dark:text-gray-400">
-            Calendar view coming soon. Please use the list view for now.
-          </p>
-          {/* TODO: Implement a calendar component */}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <div
-              key={event._id}
-              className={`
+
+        {/* Data / Loading / Error */}
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded relative">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-xl font-semibold">No events found</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
+              Try changing your search criteria or filters
+            </p>
+          </div>
+        ) : view === "calendar" ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <p className="text-center text-gray-500 dark:text-gray-400">
+              Calendar view coming soon. Please use the list view for now.
+            </p>
+            {/* TODO: Implement a calendar component */}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {events.map((event) => (
+              <div
+                key={event._id}
+                className={`
                 bg-white dark:bg-gray-800 border rounded-lg p-5 flex flex-col justify-between shadow 
                 ${event.canceled ? "border-red-500 dark:border-red-700" : ""} 
                 ${
@@ -747,193 +750,201 @@ export default function ProgrammePage() {
                     : ""
                 }
               `}
-            >
-              {/* Status indicators */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                {event.featured && (
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs rounded-full flex items-center">
-                    <FiStar className="mr-1" /> Featured
-                  </span>
-                )}
-                {event.completed && (
-                  <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded-full flex items-center">
-                    <FiCheck className="mr-1" /> Completed
-                  </span>
-                )}
-                {event.canceled && (
-                  <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs rounded-full flex items-center">
-                    <FiX className="mr-1" /> Canceled
-                  </span>
-                )}
-              </div>
-
-              {/* Event details */}
-              <div>
-                <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 flex flex-col space-y-1">
-                  <div className="flex items-center">
-                    <FiCalendar className="mr-2" />
-                    <span>{formatDate(event.startDate)}</span>
-                    {event.scheduledTime && (
-                      <span className="ml-2">
-                        {formatTime(event.scheduledTime)}
-                      </span>
-                    )}
-                  </div>
-                  {event.location && (
-                    <div className="flex items-center">
-                      <FiMap className="mr-2" />
-                      <span>{event.location}</span>
-                    </div>
+              >
+                {/* Status indicators */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {event.featured && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs rounded-full flex items-center">
+                      <FiStar className="mr-1" /> Featured
+                    </span>
+                  )}
+                  {event.completed && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded-full flex items-center">
+                      <FiCheck className="mr-1" /> Completed
+                    </span>
+                  )}
+                  {event.canceled && (
+                    <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs rounded-full flex items-center">
+                      <FiX className="mr-1" /> Canceled
+                    </span>
                   )}
                 </div>
 
-                {event.description && (
-                  <p className="text-sm mb-4 line-clamp-3">
-                    {event.description}
-                  </p>
-                )}
-              </div>
+                {/* Event details */}
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 flex flex-col space-y-1">
+                    <div className="flex items-center">
+                      <FiCalendar className="mr-2" />
+                      <span>{formatDate(event.startDate)}</span>
+                      {event.scheduledTime && (
+                        <span className="ml-2">
+                          {formatTime(event.scheduledTime)}
+                        </span>
+                      )}
+                    </div>
+                    {event.location && (
+                      <div className="flex items-center">
+                        <FiMap className="mr-2" />
+                        <span>{event.location}</span>
+                      </div>
+                    )}
+                  </div>
 
-              {/* Event interactions */}
-              <div className="mt-4">
-                {/* User actions */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <button
-                    onClick={() => handleToggleInterest(event._id)}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
-                      userStatus[event._id]?.interested
-                        ? "bg-teal-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    }`}
-                    disabled={event.canceled}
-                  >
-                    <FiStar size={16} />
-                    <span>
-                      {userStatus[event._id]?.interested
-                        ? "Interested"
-                        : "Interest"}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => handleToggleNotification(event._id)}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
-                      userStatus[event._id]?.notified
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    }`}
-                    disabled={event.canceled}
-                  >
-                    <FiBell size={16} />
-                    <span>
-                      {userStatus[event._id]?.notified
-                        ? "Notifying"
-                        : "Notify Me"}
-                    </span>
-                  </button>
-                  <Link href={`/programme/${event._id}`}>
-                    <button className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm">
-                      <span>Details</span>
-                    </button>
-                  </Link>
+                  {event.description && (
+                    <p className="text-sm mb-4 line-clamp-3">
+                      {event.description}
+                    </p>
+                  )}
                 </div>
 
-                {/* Admin actions */}
-                {isAdmin && (
-                  <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t dark:border-gray-700">
-                    <Link href={`/events/edit?id=${event._id}`}>
-                      <button className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs">
-                        <FiEdit size={14} />
-                        <span>Edit</span>
-                      </button>
-                    </Link>
+                {/* Event interactions */}
+                <div className="mt-4">
+                  {/* User actions */}
+                  <div className="flex flex-wrap gap-2 mb-3">
                     <button
-                      onClick={() => handleToggleComplete(event._id)}
-                      className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
+                      onClick={() => handleToggleInterest(event._id)}
+                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
+                        userStatus[event._id]?.interested
+                          ? "bg-teal-600 text-white"
+                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                      disabled={event.canceled}
                     >
-                      <FiCheck size={14} />
+                      <FiStar size={16} />
                       <span>
-                        {event.completed ? "Mark Incomplete" : "Complete"}
+                        {userStatus[event._id]?.interested
+                          ? "Interested"
+                          : "Interest"}
                       </span>
                     </button>
                     <button
-                      onClick={() => handleToggleCancel(event._id)}
-                      className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+                      onClick={() => handleToggleNotification(event._id)}
+                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
+                        userStatus[event._id]?.notified
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                      disabled={event.canceled}
                     >
-                      <FiAlertCircle size={14} />
-                      <span>{event.canceled ? "Restore" : "Cancel"}</span>
+                      <FiBell size={16} />
+                      <span>
+                        {userStatus[event._id]?.notified
+                          ? "Notifying"
+                          : "Notify Me"}
+                      </span>
                     </button>
-                    <button
-                      onClick={() => handleToggleFeatured(event._id)}
-                      className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
-                    >
-                      <FiStar size={14} />
-                      <span>{event.featured ? "Unfeature" : "Feature"}</span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEvent(event._id)}
-                      className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
-                    >
-                      <FiTrash2 size={14} />
-                      <span>Delete</span>
-                    </button>
+                    <Link href={`/programme/${event._id}`}>
+                      <button className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm">
+                        <span>Details</span>
+                      </button>
+                    </Link>
                   </div>
-                )}
+
+                  {/* Admin actions */}
+                  {isAdmin && (
+                    <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t dark:border-gray-700">
+                      <button
+                        onClick={() => setEditingEvent(event)}
+                        className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs"
+                      >
+                        <FiEdit size={14} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleComplete(event._id)}
+                        className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
+                      >
+                        <FiCheck size={14} />
+                        <span>
+                          {event.completed ? "Mark Incomplete" : "Complete"}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleCancel(event._id)}
+                        className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+                      >
+                        <FiAlertCircle size={14} />
+                        <span>{event.canceled ? "Restore" : "Cancel"}</span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleFeatured(event._id)}
+                        className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
+                      >
+                        <FiStar size={14} />
+                        <span>{event.featured ? "Unfeature" : "Feature"}</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(event._id)}
+                        className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+                      >
+                        <FiTrash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && !error && events.length > 0 && (
+          <nav className="flex justify-center mt-6 space-x-2">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              className={`px-3 py-1 rounded flex items-center ${
+                page === 1
+                  ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
+                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              }`}
+            >
+              <FiChevronLeft />
+            </button>
+
+            {pageNumbers.map((num, idx) =>
+              num === "..." ? (
+                <span key={`ellipsis-${idx}`} className="px-3 py-1">
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={num}
+                  onClick={() => handlePageChange(num)}
+                  className={`px-3 py-1 rounded ${
+                    num === page
+                      ? "bg-teal-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  {num}
+                </button>
+              )
+            )}
+
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === pagination.pages}
+              className={`px-3 py-1 rounded flex items-center ${
+                page === pagination.pages
+                  ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
+                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              }`}
+            >
+              <FiChevronRight />
+            </button>
+          </nav>
+        )}
+      </div>
+
+      {editingEvent && (
+        <EventInputModal
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+        />
       )}
-
-      {/* Pagination */}
-      {!loading && !error && events.length > 0 && (
-        <nav className="flex justify-center mt-6 space-x-2">
-          <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 1}
-            className={`px-3 py-1 rounded flex items-center ${
-              page === 1
-                ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
-                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-            }`}
-          >
-            <FiChevronLeft />
-          </button>
-
-          {pageNumbers.map((num, idx) =>
-            num === "..." ? (
-              <span key={`ellipsis-${idx}`} className="px-3 py-1">
-                ...
-              </span>
-            ) : (
-              <button
-                key={num}
-                onClick={() => handlePageChange(num)}
-                className={`px-3 py-1 rounded ${
-                  num === page
-                    ? "bg-teal-600 text-white"
-                    : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                }`}
-              >
-                {num}
-              </button>
-            )
-          )}
-
-          <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === pagination.pages}
-            className={`px-3 py-1 rounded flex items-center ${
-              page === pagination.pages
-                ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
-                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-            }`}
-          >
-            <FiChevronRight />
-          </button>
-        </nav>
-      )}
-
       {/* Response Modal */}
       <ResponseModal
         isOpen={modal.isOpen}
