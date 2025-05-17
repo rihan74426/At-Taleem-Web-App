@@ -1,7 +1,6 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
-import { getAuth } from "@clerk/nextjs/server";
-import { clerkClient } from "@clerk/nextjs/server";
+import { getAuth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -10,7 +9,7 @@ import { revalidatePath } from "next/cache";
 export async function GET(req, { params }) {
   try {
     await connect();
-    const eventId = params.id;
+    const eventId = await params.id;
     const event = await Event.findById(eventId).lean();
     if (!event) {
       return Response.json({ error: "Event not found" }, { status: 404 });
@@ -31,18 +30,19 @@ export async function PUT(req, { params }) {
     await connect();
     const auth = getAuth(req);
     if (!auth.userId) {
+      console.error("[API] PUT: No userId found in auth:", auth);
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await clerkClient.users.getUser(auth.userId);
-    if (!user.publicMetadata?.isAdmin) {
+    const user = await clerkClient().users.getUser(auth.userId);
+    if (!user?.publicMetadata?.isAdmin) {
+      console.error("[API] PUT: User is not admin:", auth.userId);
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const eventId = params.id;
+    const eventId = await params.id;
     const updateData = await req.json();
 
-    // Only allow updating fields that exist in the model
     const allowedFields = [
       "title",
       "description",
@@ -88,12 +88,8 @@ export async function PATCH(req, { params }) {
   try {
     await connect();
     const auth = getAuth(req);
-    if (!auth.userId) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
-    const user = await clerkClient.users.getUser(auth.userId);
-    const eventId = params.id;
+    const eventId = await params.id;
     const { action } = await req.json();
 
     const event = await Event.findById(eventId);
@@ -104,23 +100,17 @@ export async function PATCH(req, { params }) {
     // Handle user actions
     switch (action) {
       case "toggleInterest":
-        handleToggleInterest(event, auth.userId);
+        handleToggleInterest(event, auth?.userId);
         break;
 
       case "toggleNotification":
-        handleToggleNotification(event, auth.userId);
+        handleToggleNotification(event, auth?.userId);
         break;
 
       // Admin-only actions
       case "toggleComplete":
       case "toggleCancel":
       case "toggleFeatured":
-        if (!user.publicMetadata?.isAdmin) {
-          return Response.json(
-            { error: "Admin access required" },
-            { status: 403 }
-          );
-        }
         handleAdminAction(event, action);
         break;
 
@@ -135,8 +125,8 @@ export async function PATCH(req, { params }) {
     return Response.json({
       event,
       userStatus: {
-        interested: event.interestedUsers.includes(auth.userId),
-        notified: event.notificationWants.includes(auth.userId),
+        interested: event.interestedUsers.includes(auth?.userId),
+        notified: event.notificationWants.includes(auth?.userId),
       },
     });
   } catch (error) {
@@ -153,15 +143,17 @@ export async function DELETE(req, { params }) {
     await connect();
     const auth = getAuth(req);
     if (!auth.userId) {
+      console.error("[API] DELETE: No userId found in auth:", auth);
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await clerkClient.users.getUser(auth.userId);
-    if (!user.publicMetadata?.isAdmin) {
+    const user = await clerkClient().users.getUser(auth.userId);
+    if (!user?.publicMetadata?.isAdmin) {
+      console.error("[API] DELETE: User is not admin:", auth.userId);
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const eventId = params.id;
+    const eventId = await params.id;
     const deletedEvent = await Event.findByIdAndDelete(eventId);
 
     if (!deletedEvent) {
