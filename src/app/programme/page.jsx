@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import EventDetailModal from "../Components/EventDetailModal";
 import Link from "next/link";
 import {
   FiBell,
@@ -23,6 +24,7 @@ import {
 import { Menu } from "@headlessui/react";
 import ResponseModal from "@/app/Components/ResponseModal";
 import EventInputModal from "../Components/EventInputModal";
+import CalendarView from "../Components/CalendarViewComp";
 
 const SCOPES = [
   { value: "weekly", label: "Weekly" },
@@ -48,6 +50,7 @@ export default function ProgrammePage() {
     completed: false,
     canceled: false,
   });
+  const [viewingEvent, setViewingEvent] = useState(null);
 
   // State for notification preferences
   const [prefs, setPrefs] = useState({
@@ -101,6 +104,11 @@ export default function ProgrammePage() {
     }
   }, [isLoaded, user]);
 
+  const handleEventUpdate = (updatedEvent) => {
+    setEvents((prev) =>
+      prev.map((e) => (e._id === updatedEvent._id ? updatedEvent : e))
+    );
+  };
   // Build query string for fetching events
   const getQueryString = useCallback(() => {
     const params = new URLSearchParams();
@@ -513,7 +521,7 @@ export default function ProgrammePage() {
           <h1 className="text-3xl md:text-4xl font-bold">Programme</h1>
           <div className="flex items-center space-x-2">
             {isAdmin && (
-              <Link href="/events/new">
+              <Link href="/dashboard?tab=events">
                 <button className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                   <FiPlus className="mr-1" />
                   New Event
@@ -726,10 +734,19 @@ export default function ProgrammePage() {
           </div>
         ) : view === "calendar" ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <p className="text-center text-gray-500 dark:text-gray-400">
-              Calendar view coming soon. Please use the list view for now.
-            </p>
-            {/* TODO: Implement a calendar component */}
+            <CalendarView
+              events={events}
+              scope={scope}
+              userStatus={userStatus}
+              handleToggleInterest={handleToggleInterest}
+              handleToggleNotification={handleToggleNotification}
+              isAdmin={isAdmin}
+              handleToggleComplete={handleToggleComplete}
+              handleToggleCancel={handleToggleCancel}
+              handleToggleFeatured={handleToggleFeatured}
+              handleDeleteEvent={handleDeleteEvent}
+              setEditingEvent={setEditingEvent}
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -834,11 +851,12 @@ export default function ProgrammePage() {
                           : "Notify Me"}
                       </span>
                     </button>
-                    <Link href={`/programme/${event._id}`}>
-                      <button className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm">
-                        <span>Details</span>
-                      </button>
-                    </Link>
+                    <button
+                      onClick={() => setViewingEvent(event)}
+                      className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                    >
+                      <span>Details</span>
+                    </button>
                   </div>
 
                   {/* Admin actions */}
@@ -943,6 +961,14 @@ export default function ProgrammePage() {
         <EventInputModal
           event={editingEvent}
           onClose={() => setEditingEvent(null)}
+        />
+      )}
+      {viewingEvent && (
+        <EventDetailModal
+          event={viewingEvent}
+          onClose={() => setViewingEvent(null)}
+          onEventUpdate={handleEventUpdate}
+          onEventDelete={handleDeleteEvent}
         />
       )}
       {/* Response Modal */}
