@@ -1,7 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { clerkClient } from "@clerk/nextjs/server";
-import { createAndUpdateUser } from "@/lib/actions/user";
+import { createOrUpdateUser } from "@/lib/actions/user";
 
 export async function POST(req) {
   const SIGNING_SECRET = process.env.SIGNING_SECRET;
@@ -62,7 +62,7 @@ export async function POST(req) {
     const safeLastName = last_name ?? "";
 
     try {
-      const user = await createAndUpdateUser(
+      const user = await createOrUpdateUser(
         id,
         safeFirstName,
         safeLastName,

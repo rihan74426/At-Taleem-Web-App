@@ -9,6 +9,7 @@ import {
   FiCheck,
   FiX,
   FiAlertCircle,
+  FiBell,
 } from "react-icons/fi";
 
 const CalendarView = ({
@@ -17,6 +18,7 @@ const CalendarView = ({
   userStatus,
   handleToggleInterest,
   handleToggleNotification,
+  handleSetViewingEvent,
   isAdmin,
   handleToggleComplete,
   handleToggleCancel,
@@ -35,7 +37,9 @@ const CalendarView = ({
   }, [scope]);
 
   // Format date utilities
-  const formatDate = (date) => {
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
     return date.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
@@ -52,48 +56,29 @@ const CalendarView = ({
     });
   };
 
-  // Get dates for the current view based on scope
+  // Get 30 dates for the view starting from the current date or start of month
   const viewDates = useMemo(() => {
     const dates = [];
     const now = new Date(currentDate);
 
-    if (scope === "weekly") {
-      // Get start of week (Sunday)
-      const firstDay = new Date(now);
-      const day = firstDay.getDay();
-      const diff = firstDay.getDate() - day;
-      firstDay.setDate(diff);
-
-      // Create array of 7 days
-      for (let i = 0; i < 7; i++) {
-        const nextDate = new Date(firstDay);
-        nextDate.setDate(firstDay.getDate() + i);
-        dates.push(nextDate);
-      }
-    } else if (scope === "monthly") {
-      // Get all days in current month
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-
-      // Get the first day of week for the month view
-      const firstDayOfGrid = new Date(firstDay);
-      const firstDayDayOfWeek = firstDay.getDay();
-      firstDayOfGrid.setDate(firstDay.getDate() - firstDayDayOfWeek);
-
-      // We'll show a 6-week grid to ensure we cover the month
-      for (let i = 0; i < 42; i++) {
-        const nextDate = new Date(firstDayOfGrid);
-        nextDate.setDate(firstDayOfGrid.getDate() + i);
-        dates.push(nextDate);
-      }
+    // Determine the start date based on the scope
+    let startDate;
+    if (scope === "monthly") {
+      // Start from the 1st of the current month
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     } else if (scope === "yearly") {
-      // Show all months in the year
-      const year = now.getFullYear();
-      for (let month = 0; month < 12; month++) {
-        dates.push(new Date(year, month, 1));
-      }
+      // For yearly view, we'll still show 30 days but starting from current date
+      startDate = new Date(now);
+    } else {
+      // Default (weekly or any other) - start from today
+      startDate = new Date(now);
+    }
+
+    // Create array of 30 days
+    for (let i = 0; i < 30; i++) {
+      const nextDate = new Date(startDate);
+      nextDate.setDate(startDate.getDate() + i);
+      dates.push(nextDate);
     }
 
     return dates;
@@ -105,32 +90,42 @@ const CalendarView = ({
 
     return events.filter((event) => {
       const eventDate = new Date(event.startDate);
-      if (scope === "yearly") {
-        // For yearly view, match month and year
-        return (
-          eventDate.getMonth() === date.getMonth() &&
-          eventDate.getFullYear() === date.getFullYear()
-        );
-      } else {
-        // For weekly and monthly view, match exact date
-        return (
-          eventDate.getDate() === date.getDate() &&
-          eventDate.getMonth() === date.getMonth() &&
-          eventDate.getFullYear() === date.getFullYear()
-        );
-      }
+      return (
+        eventDate.getDate() === date.getDate() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getFullYear() === date.getFullYear()
+      );
     });
+  };
+
+  // Get all dates that have events for highlighting
+  const eventDates = useMemo(() => {
+    if (!events || !events.length) return [];
+
+    const dates = {};
+    events.forEach((event) => {
+      const eventDate = new Date(event.startDate);
+      const dateKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
+      dates[dateKey] = true;
+    });
+
+    return dates;
+  }, [events]);
+
+  // Check if a date has events
+  const hasEvents = (date) => {
+    const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    return !!eventDates[dateKey];
   };
 
   // Navigation functions
   const navigatePrevious = () => {
     const newDate = new Date(currentDate);
-    if (scope === "weekly") {
-      newDate.setDate(newDate.getDate() - 7);
-    } else if (scope === "monthly") {
+    if (scope === "monthly") {
       newDate.setMonth(newDate.getMonth() - 1);
-    } else if (scope === "yearly") {
-      newDate.setFullYear(newDate.getFullYear() - 1);
+    } else {
+      // For all other views, go back 30 days
+      newDate.setDate(newDate.getDate() - 30);
     }
     setCurrentDate(newDate);
     setSelectedDate(null);
@@ -138,12 +133,11 @@ const CalendarView = ({
 
   const navigateNext = () => {
     const newDate = new Date(currentDate);
-    if (scope === "weekly") {
-      newDate.setDate(newDate.getDate() + 7);
-    } else if (scope === "monthly") {
+    if (scope === "monthly") {
       newDate.setMonth(newDate.getMonth() + 1);
-    } else if (scope === "yearly") {
-      newDate.setFullYear(newDate.getFullYear() + 1);
+    } else {
+      // For all other views, go forward 30 days
+      newDate.setDate(newDate.getDate() + 30);
     }
     setCurrentDate(newDate);
     setSelectedDate(null);
@@ -156,17 +150,16 @@ const CalendarView = ({
 
   // Get current period label
   const getPeriodLabel = () => {
-    if (scope === "weekly") {
-      const firstDay = new Date(viewDates[0]);
-      const lastDay = new Date(viewDates[6]);
-      return `${formatDate(firstDay)} - ${formatDate(lastDay)}`;
-    } else if (scope === "monthly") {
+    const firstDay = new Date(viewDates[0]);
+    const lastDay = new Date(viewDates[viewDates.length - 1]);
+
+    if (scope === "monthly") {
       return currentDate.toLocaleDateString(undefined, {
         year: "numeric",
         month: "long",
       });
     } else {
-      return currentDate.getFullYear().toString();
+      return `${formatDate(firstDay)} - ${formatDate(lastDay)}`;
     }
   };
 
@@ -180,7 +173,7 @@ const CalendarView = ({
     );
   };
 
-  // Check if date is in the current month (for monthly view)
+  // Check if date is in the current month
   const isCurrentMonth = (date) => {
     return date.getMonth() === currentDate.getMonth();
   };
@@ -194,7 +187,11 @@ const CalendarView = ({
       classes += "bg-blue-50 dark:bg-blue-900/20 ";
     }
 
-    if (scope === "monthly" && !isCurrentMonth(date)) {
+    if (hasEvents(date)) {
+      classes += "bg-teal-50 dark:bg-teal-900/10 ";
+    }
+
+    if (!isCurrentMonth(date)) {
       classes +=
         "bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 ";
     }
@@ -218,6 +215,24 @@ const CalendarView = ({
     if (event.featured) return "bg-yellow-500";
     return "bg-teal-500";
   };
+
+  // Group dates by week for grid display
+  const weekRows = useMemo(() => {
+    const rows = [];
+    let currentRow = [];
+
+    viewDates.forEach((date, index) => {
+      currentRow.push(date);
+
+      // Create a new row after every 7 days or at the end
+      if ((index + 1) % 7 === 0 || index === viewDates.length - 1) {
+        rows.push([...currentRow]);
+        currentRow = [];
+      }
+    });
+
+    return rows;
+  }, [viewDates]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -246,9 +261,9 @@ const CalendarView = ({
         </button>
       </div>
 
-      {/* Calendar Body */}
-      {scope === "weekly" && (
-        <div className="grid grid-cols-7 min-h-80">
+      {/* Calendar Grid - Always displayed as a grid regardless of scope */}
+      <div>
+        <div className="grid grid-cols-7 min-h-96">
           {/* Week day headers */}
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div
@@ -259,90 +274,11 @@ const CalendarView = ({
             </div>
           ))}
 
-          {/* Days */}
-          {viewDates.map((date) => (
-            <div
-              key={date.toString()}
-              className={getDateCellClass(date)}
-              onClick={() => setSelectedDate(date)}
-            >
-              <div className="flex justify-between items-start">
-                <span
-                  className={`inline-block w-6 h-6 rounded-full text-center ${
-                    isToday(date) ? "bg-teal-600 text-white" : ""
-                  }`}
-                >
-                  {date.getDate()}
-                </span>
-
-                {/* Event indicators - small dots */}
-                <div className="flex space-x-1">
-                  {getEventsForDate(date)
-                    .slice(0, 3)
-                    .map((event) => (
-                      <div
-                        key={event._id}
-                        className={`w-2 h-2 rounded-full ${getEventDotColor(
-                          event
-                        )}`}
-                        title={event.title}
-                      ></div>
-                    ))}
-                  {getEventsForDate(date).length > 3 && (
-                    <span className="text-xs">
-                      +{getEventsForDate(date).length - 3}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Event list - top 2 */}
-              <div className="mt-1 space-y-1">
-                {getEventsForDate(date)
-                  .slice(0, 2)
-                  .map((event) => (
-                    <div
-                      key={event._id}
-                      className={`text-xs truncate px-1 py-0.5 rounded ${
-                        event.canceled
-                          ? "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300"
-                          : event.completed
-                          ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
-                          : event.featured
-                          ? "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300"
-                          : "bg-teal-100 dark:bg-teal-900/20 text-teal-800 dark:text-teal-300"
-                      }`}
-                      title={event.title}
-                    >
-                      {event.scheduledTime
-                        ? formatTime(event.scheduledTime) + " "
-                        : ""}
-                      {event.title}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {scope === "monthly" && (
-        <div>
-          <div className="grid grid-cols-7 min-h-96">
-            {/* Week day headers */}
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          {/* Calendar days by week rows */}
+          {weekRows.map((week, weekIndex) =>
+            week.map((date, dateIndex) => (
               <div
-                key={day}
-                className="text-center p-2 font-medium border-b border-gray-200 dark:border-gray-700"
-              >
-                {day}
-              </div>
-            ))}
-
-            {/* Calendar days */}
-            {viewDates.map((date) => (
-              <div
-                key={date.toString()}
+                key={`${weekIndex}-${dateIndex}`}
                 className={getDateCellClass(date)}
                 onClick={() => setSelectedDate(date)}
               >
@@ -354,6 +290,13 @@ const CalendarView = ({
                   >
                     {date.getDate()}
                   </span>
+
+                  {/* Month label for the first day of month */}
+                  {date.getDate() === 1 && (
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {date.toLocaleDateString(undefined, { month: "short" })}
+                    </span>
+                  )}
 
                   {/* Event indicators */}
                   <div className="flex space-x-1">
@@ -376,7 +319,7 @@ const CalendarView = ({
                   </div>
                 </div>
 
-                {/* Only show 1 event in monthly view */}
+                {/* Event preview - show 1-2 events based on available space */}
                 {getEventsForDate(date).length > 0 && (
                   <div className="mt-1">
                     <div
@@ -391,6 +334,10 @@ const CalendarView = ({
                       }`}
                       title={getEventsForDate(date)[0].title}
                     >
+                      {getEventsForDate(date)[0].scheduledTime &&
+                        `${formatTime(
+                          getEventsForDate(date)[0].scheduledTime
+                        )} `}
                       {getEventsForDate(date)[0].title}
                     </div>
                     {getEventsForDate(date).length > 1 && (
@@ -401,56 +348,10 @@ const CalendarView = ({
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      )}
-
-      {scope === "yearly" && (
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-2 p-4">
-          {viewDates.map((date) => (
-            <div
-              key={date.toString()}
-              className={`border rounded p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                date.getMonth() === new Date().getMonth() &&
-                date.getFullYear() === new Date().getFullYear()
-                  ? "ring-2 ring-teal-500"
-                  : ""
-              }`}
-              onClick={() => setSelectedDate(date)}
-            >
-              <h3 className="font-medium mb-2">
-                {date.toLocaleDateString(undefined, { month: "long" })}
-              </h3>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                {getEventsForDate(date).length} events
-              </div>
-
-              {/* Event indicators */}
-              {getEventsForDate(date).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {getEventsForDate(date)
-                    .slice(0, 4)
-                    .map((event) => (
-                      <div
-                        key={event._id}
-                        className={`w-2 h-2 rounded-full ${getEventDotColor(
-                          event
-                        )}`}
-                        title={event.title}
-                      ></div>
-                    ))}
-                  {getEventsForDate(date).length > 4 && (
-                    <span className="text-xs">
-                      +{getEventsForDate(date).length - 4}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
 
       {/* Event Detail Panel - Shows when a date is selected */}
       {selectedDate && (
@@ -523,7 +424,7 @@ const CalendarView = ({
                   )}
 
                   {event.description && (
-                    <p className="text-sm mt-2 line-clamp-2">
+                    <p className="text-sm mt-2 line-clamp-2 whitespace-pre-wrap">
                       {event.description}
                     </p>
                   )}
@@ -562,6 +463,12 @@ const CalendarView = ({
                           ? "Notifying"
                           : "Notify Me"}
                       </span>
+                    </button>
+                    <button
+                      onClick={() => handleSetViewingEvent(event)}
+                      className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                    >
+                      <span>Details</span>
                     </button>
 
                     {isAdmin && (

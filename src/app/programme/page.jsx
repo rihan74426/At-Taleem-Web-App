@@ -38,7 +38,7 @@ export default function ProgrammePage() {
   const isAdmin = user?.publicMetadata?.isAdmin;
 
   // State for view controls
-  const [view, setView] = useState("list"); // "list" or "calendar"
+  const [view, setView] = useState("calendar"); // "list" or "calendar"
   const [scope, setScope] = useState("weekly");
   const [page, setPage] = useState(1);
   const [limit] = useState(9); // Items per page
@@ -192,7 +192,7 @@ export default function ProgrammePage() {
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventPrefs: prefs }),
+        body: JSON.stringify({ eventPrefs: prefs, userId: user.id }),
       });
 
       if (!res.ok) {
@@ -740,6 +740,7 @@ export default function ProgrammePage() {
               userStatus={userStatus}
               handleToggleInterest={handleToggleInterest}
               handleToggleNotification={handleToggleNotification}
+              handleSetViewingEvent={setViewingEvent}
               isAdmin={isAdmin}
               handleToggleComplete={handleToggleComplete}
               handleToggleCancel={handleToggleCancel}
@@ -809,7 +810,7 @@ export default function ProgrammePage() {
                   </div>
 
                   {event.description && (
-                    <p className="text-sm mb-4 line-clamp-3">
+                    <p className="text-sm mb-4 line-clamp-3 whitespace-pre-wrap">
                       {event.description}
                     </p>
                   )}

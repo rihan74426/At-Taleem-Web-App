@@ -1,6 +1,8 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import DatePicker from "react-datepicker";
+import { Controller, useForm } from "react-hook-form";
+import "react-datepicker/dist/react-datepicker.css";
 
 const SCOPES = [
   { value: "weekly", label: "Weekly" },
@@ -23,6 +25,7 @@ export default function EventForm({ initialData, onSubmit, isAdmin }) {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors },
   } = useForm({
@@ -71,23 +74,51 @@ export default function EventForm({ initialData, onSubmit, isAdmin }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Start Date with Calendar */}
         <div>
-          <label className="block font-semibold">Start Date*</label>
-          <input
-            type="date"
-            {...register("startDate", { required: "Start date is required" })}
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+          <label className="block font-semibold mb-1">Start Date*</label>
+          <Controller
+            name="startDate"
+            control={control}
+            rules={{ required: "Start date is required" }}
+            render={({ field }) => (
+              <DatePicker
+                {...field}
+                selected={field.value}
+                onChange={(d) => field.onChange(d)}
+                dateFormat="dd/MMM/yyyy"
+                placeholderText="Select date"
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                calendarClassName="dark:bg-gray-800 dark:text-white"
+              />
+            )}
           />
           {errors.startDate && (
             <p className="text-red-500 text-sm">{errors.startDate.message}</p>
           )}
         </div>
+
+        {/* Scheduled Time with Clock */}
         <div>
-          <label className="block font-semibold">Scheduled Time</label>
-          <input
-            type="datetime-local"
-            {...register("scheduledTime")}
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+          <label className="block font-semibold mb-1">Scheduled Time</label>
+          <Controller
+            name="scheduledTime"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                {...field}
+                selected={field.value}
+                onChange={(d) => field.onChange(d)}
+                showTimeSelect
+                showTimeSelectOnly
+                timeIntervals={15}
+                timeCaption="Time"
+                dateFormat="hh:mm aa"
+                placeholderText="Select time"
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                popperClassName="dark:bg-gray-800 dark:text-white"
+              />
+            )}
           />
         </div>
       </div>

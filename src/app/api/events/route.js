@@ -47,30 +47,34 @@ export async function GET(req) {
  * POST /api/events - Create a new event or update user preferences
  */
 export async function POST(req) {
+  // const {createdBy}= req.body;
+  // const user = await currentUser()
   try {
     await connect();
-    const user = await currentUser();
-    if (!user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
-
-    // Case 1: Update user preferences
     if (body.eventPrefs) {
-      await clerkClient.users.updateUser(user.id, {
+      const user = await clerkClient.users.getUser(body.userId);
+
+      await clerkClient.users.updateUser(body.userId, {
         publicMetadata: {
-          ...user.publicMetadata,
+          ...user?.publicMetadata,
           eventPrefs: body.eventPrefs,
         },
       });
 
+      // Case 1: Update user preferences
+
       revalidatePath("/programme");
       return Response.json({ success: true }, { status: 200 });
     }
+    const userId = body.createdBy;
+    const user = await clerkClient.users.getUser(userId);
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // Case 2: Create new event (admin only)
-    if (!user.publicMetadata?.isAdmin) {
+    if (!user?.publicMetadata?.isAdmin) {
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
@@ -90,13 +94,14 @@ export async function POST(req) {
     const usersWithMatchingPrefs = await clerkClient.users.getUserList({
       query: `publicMetadata.eventPrefs.${scope}:true`,
     });
-
-    const notifyList = usersWithMatchingPrefs?.map((u) => u.id) || [];
+    const notifyList =
+      usersWithMatchingPrefs.length > 0
+        ? usersWithMatchingPrefs.map((u) => u.id)
+        : [];
 
     // Create the event
     const eventData = {
       ...body,
-      createdBy: user.id,
       notificationWants: notifyList,
     };
 

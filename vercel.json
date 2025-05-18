@@ -3,6 +3,10 @@
     {
       "path": "/api/institutions/cron-open",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/institutions/auto-create-weeklies",
+      "schedule": "0 0 * * *"
     }
   ]
 }
