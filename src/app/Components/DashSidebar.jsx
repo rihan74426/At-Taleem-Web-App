@@ -67,7 +67,7 @@ export default function DashSidebar() {
               labelColor="dark"
               as="div"
             >
-              My Review
+              {user?.publicMetadata?.isAdmin ? "Add a" : "My"} Review
             </Sidebar.Item>
           </Link>
           {user?.publicMetadata?.isAdmin && (
