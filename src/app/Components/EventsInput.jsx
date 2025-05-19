@@ -129,10 +129,10 @@ export default function EventInputPage() {
       {event && (
         <div className="flex justify-between items-center pt-4 border-t">
           <div>
-            <strong>Interested:</strong> {interestedCount}
+            <strong>Interested: </strong> {interestedCount}
           </div>
           <div>
-            <strong>To Notify:</strong> {notifyCount}
+            <strong>To Notify: </strong> {notifyCount}
           </div>
           {event.completed && (
             <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded">
