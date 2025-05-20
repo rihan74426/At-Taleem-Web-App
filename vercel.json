@@ -2,11 +2,19 @@
   "crons": [
     {
       "path": "/api/institutions/cron-open",
-      "schedule": "0 0 * * *"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/institutions/auto-create-weeklies",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/events/mark-complete",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/events/reminders/hourly",
+      "schedule": "0 * * * *"
     }
   ]
 }

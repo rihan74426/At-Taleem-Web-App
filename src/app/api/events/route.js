@@ -1,6 +1,6 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
-import { clerkClient, currentUser } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 /**
