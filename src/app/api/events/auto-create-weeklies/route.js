@@ -1,5 +1,6 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
+import { clerkClient } from "@clerk/nextjs/dist/types/server";
 
 // Utility to get all matching weekdays between two dates
 function getMatchingDates(startDate, endDate, weekdays) {
@@ -28,9 +29,19 @@ export async function GET() {
   const womenEventDays = getMatchingDates(today, nextMonth, [0]); // Sunday only
 
   const createdEvents = [];
+  const scope = "weekly";
+
+  const usersWithMatchingPrefs = await clerkClient.users.getUserList({
+    query: `publicMetadata.eventPrefs.${scope}:true`,
+  });
+  const notifyList =
+    usersWithMatchingPrefs.length > 0
+      ? usersWithMatchingPrefs.map((u) => u.id)
+      : [];
 
   for (const date of mainEventDays) {
-    const existing = await Event.findOne({ startDate: date, scope: "weekly" });
+    const existing = await Event.findOne({ startDate: date, scope });
+
     if (!existing) {
       const event = await Event.create({
         title: "তালিমের মাহফিল",
@@ -43,6 +54,8 @@ export async function GET() {
         scope: "weekly",
         location: "বহদ্দারহাট জামে মসজিদ, বহদ্দারহাট, চট্টগ্রাম", // your default location
         createdBy: "System Generated", // or some default user/system id
+        scheduledTime: "2025-05-20T13:00:00.729+00:00",
+        notifyList: notifyList,
       });
       createdEvents.push(event);
     }

@@ -23,6 +23,7 @@ const EventSchema = new mongoose.Schema(
     createdBy: { type: String, required: true, index: true }, // admin userId
     interestedUsers: [{ type: String, index: true }], // clicked "interested"
     notificationWants: [{ type: String, index: true }], // users who want notifications
+    reminderSent: { type: [String], default: [] },
 
     // Event status
     completed: { type: Boolean, default: false, index: true },
