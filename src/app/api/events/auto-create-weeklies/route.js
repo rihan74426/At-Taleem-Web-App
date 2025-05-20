@@ -1,6 +1,6 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
-import { clerkClient } from "@clerk/nextjs/dist/types/server";
+import { clerkClient } from "@clerk/nextjs/server";
 
 // Utility to get all matching weekdays between two dates
 function getMatchingDates(startDate, endDate, weekdays) {
