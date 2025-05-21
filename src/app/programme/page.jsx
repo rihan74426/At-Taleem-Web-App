@@ -38,10 +38,10 @@ export default function ProgrammePage() {
   const isAdmin = user?.publicMetadata?.isAdmin;
 
   // State for view controls
-  const [view, setView] = useState("calendar"); // "list" or "calendar"
+  const [view, setView] = useState(localStorage.getItem("EventView")); // "list" or "calendar"
   const [scope, setScope] = useState("weekly");
   const [page, setPage] = useState(1);
-  const [limit] = useState(9); // Items per page
+  const [limit] = useState(30); // Items per page
   const [sortBy, setSortBy] = useState("startDate");
   const [sortOrder, setSortOrder] = useState("asc");
   const [search, setSearch] = useState("");
@@ -64,7 +64,7 @@ export default function ProgrammePage() {
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 9,
+    limit: 30,
     pages: 1,
   });
   const [loading, setLoading] = useState(true);
@@ -127,37 +127,42 @@ export default function ProgrammePage() {
   }, [scope, page, limit, sortBy, sortOrder, search, filter]);
 
   // Fetch events based on current filters
-  const fetchEvents = useCallback(async () => {
-    if (!isLoaded) return;
+  // Update your fetchEvents function
+  const fetchEvents = useCallback(
+    async (overrideQueryString = null) => {
+      if (!isLoaded) return;
 
-    setLoading(true);
-    setError("");
+      setLoading(true);
+      setError("");
 
-    try {
-      const queryString = getQueryString();
-      const res = await fetch(`/api/events?${queryString}`);
+      try {
+        // Use provided query string or generate default
+        const queryString = overrideQueryString || getQueryString();
+        const res = await fetch(`/api/events?${queryString}`);
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch events");
-      }
-
-      const data = await res.json();
-      setEvents(data.events || []);
-      setPagination(
-        data.pagination || {
-          total: 0,
-          page: 1,
-          limit,
-          pages: 1,
+        if (!res.ok) {
+          throw new Error("Failed to fetch events");
         }
-      );
-    } catch (err) {
-      console.error("Error fetching events:", err);
-      setError("Unable to fetch events. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [isLoaded, getQueryString, limit]);
+
+        const data = await res.json();
+        setEvents(data.events || []);
+        setPagination(
+          data.pagination || {
+            total: 0,
+            page: 1,
+            limit,
+            pages: 1,
+          }
+        );
+      } catch (err) {
+        console.error("Error fetching events:", err);
+        setError("Unable to fetch events. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isLoaded, getQueryString, limit]
+  );
 
   // Fetch user's status for events (interested, notifications)
   const fetchUserEventStatus = useCallback(async () => {
@@ -184,7 +189,7 @@ export default function ProgrammePage() {
   // Update user notification preferences
   const savePreferences = async () => {
     if (!isLoaded || !user) {
-      showModal("Please sign in to save preferences", "error");
+      showModal("পছন্দ ঠিক করতে আগে লগিন করতে হবে!", "error");
       return;
     }
 
@@ -199,10 +204,10 @@ export default function ProgrammePage() {
         throw new Error("Failed to save preferences");
       }
 
-      showModal("Notification preferences saved!", "success");
+      showModal("নোটিফিকেশন পছন্দ সংরক্ষণ করা হয়েছে!", "success");
     } catch (err) {
       console.error("Error saving preferences:", err);
-      showModal("Failed to save preferences", "error");
+      showModal("পছন্দ সংরক্ষণে কোন সমস্যা হয়েছে!", "error");
     }
   };
 
@@ -217,7 +222,7 @@ export default function ProgrammePage() {
   // Handle event interest toggle
   const handleToggleInterest = async (eventId) => {
     if (!isLoaded || !user) {
-      showModal("Please sign in to express interest", "error");
+      showModal("আগ্রহী হওয়ার জন্য দয়া করে আগে লগিন করে নিন!", "error");
       return;
     }
 
@@ -246,8 +251,8 @@ export default function ProgrammePage() {
 
       showModal(
         data.userStatus.interested
-          ? "You're now interested in this event!"
-          : "You're no longer interested in this event",
+          ? "আপনি এখন এই মাহফিলে আগ্রহী!"
+          : "আপনি এখন আর এই মাহফিলে আগ্রহী নন!",
         "success"
       );
     } catch (err) {
@@ -259,7 +264,7 @@ export default function ProgrammePage() {
   // Handle notification toggle for specific event
   const handleToggleNotification = async (eventId) => {
     if (!isLoaded || !user) {
-      showModal("Please sign in to receive notifications", "error");
+      showModal("নোটিফিকেশন পাওয়ার জন্য দয়া করে আগে লগিন করে নিন!", "error");
       return;
     }
 
@@ -288,13 +293,13 @@ export default function ProgrammePage() {
 
       showModal(
         data.userStatus.notified
-          ? "You'll be notified about this event"
-          : "You won't be notified about this event",
+          ? "আপনাকে এই মাহফিলের ব্যাপারে ১ ঘন্টা আগে জানানো হবে!"
+          : "আপনাকে এই মাহফিলের ব্যাপারে জানানো হবে না!",
         "success"
       );
     } catch (err) {
       console.error("Error toggling notification:", err);
-      showModal("Failed to update notification preferences", "error");
+      showModal("নোটিফিকেশন সিস্টেম আপডেট করতে একটু সমস্যা হয়েছে!", "error");
     }
   };
 
@@ -326,7 +331,7 @@ export default function ProgrammePage() {
       );
     } catch (err) {
       console.error("Error updating event status:", err);
-      showModal("Failed to update event status", "error");
+      showModal("মাহফিলের অবস্থা আপডেট করতে সমস্যা হয়েছে!", "error");
     }
   };
 
@@ -357,7 +362,7 @@ export default function ProgrammePage() {
       );
     } catch (err) {
       console.error("Error updating event status:", err);
-      showModal("Failed to update event status", "error");
+      showModal("মাহফিলের অবস্থা আপডেট করতে সমস্যা হয়েছে!", "error");
     }
   };
 
@@ -388,7 +393,7 @@ export default function ProgrammePage() {
       );
     } catch (err) {
       console.error("Error updating featured status:", err);
-      showModal("Failed to update featured status", "error");
+      showModal("মাহফিলকে বিশেষায়িত করতে সমস্যা হয়েছে!", "error");
     }
   };
 
@@ -414,10 +419,10 @@ export default function ProgrammePage() {
 
       // Remove from local state
       setEvents((prev) => prev.filter((e) => e._id !== eventId));
-      showModal("Event deleted successfully", "success");
+      showModal("মাহফিল ডিলিট সম্পন্ন হয়েছে!", "success");
     } catch (err) {
       console.error("Error deleting event:", err);
-      showModal("Failed to delete event", "error");
+      showModal("মাহফিল ডিলিটে সমস্যা হয়েছে!", "error");
     }
   };
 
@@ -503,6 +508,24 @@ export default function ProgrammePage() {
     setPage(1);
     fetchEvents();
   };
+  const handleMonthChange = (newDate) => {
+    // Update the date filter for API calls
+    const nextMonth = new Date(
+      newDate.getFullYear(),
+      newDate.getMonth() + 1,
+      0
+    );
+
+    // Set up query parameters with new date range
+    const params = new URLSearchParams(getQueryString());
+
+    // Add date range parameters
+    params.set("startDate", newDate.toISOString().split("T")[0]);
+    params.set("endDate", nextMonth.toISOString().split("T")[0]);
+
+    // Fetch events for the new month
+    fetchEvents(params.toString());
+  };
 
   // Toggle filter options
   const toggleFilter = (key) => {
@@ -518,18 +541,23 @@ export default function ProgrammePage() {
       <div className="space-y-6">
         {/* Hero */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-          <h1 className="text-3xl md:text-4xl font-bold">Programme</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">
+            আমাদের কর্মসূচীসমূহ
+          </h1>
           <div className="flex items-center space-x-2">
             {isAdmin && (
               <Link href="/dashboard?tab=events">
                 <button className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                   <FiPlus className="mr-1" />
-                  New Event
+                  নতুন মাহফিল
                 </button>
               </Link>
             )}
             <button
-              onClick={() => setView("calendar")}
+              onClick={() => {
+                setView("calendar");
+                localStorage.setItem("EventView", "calendar");
+              }}
               className={`p-2 rounded ${
                 view === "calendar"
                   ? "bg-teal-600 text-white"
@@ -539,7 +567,10 @@ export default function ProgrammePage() {
               <FiCalendar size={20} />
             </button>
             <button
-              onClick={() => setView("list")}
+              onClick={() => {
+                setView("list");
+                localStorage.setItem("EventView", "list");
+              }}
               className={`p-2 rounded ${
                 view === "list"
                   ? "bg-teal-600 text-white"
@@ -747,6 +778,7 @@ export default function ProgrammePage() {
               handleToggleFeatured={handleToggleFeatured}
               handleDeleteEvent={handleDeleteEvent}
               setEditingEvent={setEditingEvent}
+              onMonthChange={handleMonthChange} // Add this new prop
             />
           </div>
         ) : (
