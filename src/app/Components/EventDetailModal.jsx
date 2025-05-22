@@ -421,7 +421,7 @@ export default function EventDetailModal({
                 <span>Share</span>
               </button>
 
-              <Link href={`/programme/${event._id}`}>
+              <Link href={`/programme/${event._id}`} target="blank">
                 <button className="flex items-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded">
                   <FiExternalLink size={18} />
                   <span>Full Page</span>

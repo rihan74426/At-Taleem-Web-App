@@ -55,6 +55,7 @@ const CalendarView = ({
       minute: "2-digit",
     });
   };
+
   const isToday = (date) => {
     const today = new Date();
     return (
@@ -64,98 +65,74 @@ const CalendarView = ({
     );
   };
 
-  // Get all dates for the current month view, including padding days
+  // Get only the current month's dates (no padding from other months)
   const calendarDays = useMemo(() => {
-    // First day of the current month
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    );
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
 
-    // Last day of the current month
-    const lastDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    );
-
-    // Day of week for the first day (0 = Sunday, 6 = Saturday)
+    // Always start from the first day of the month
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    // Get the day of week for the first day (0 = Sunday, 6 = Saturday)
     const firstDayWeekday = firstDayOfMonth.getDay();
-
     // Total days in current month
     const totalDaysInMonth = lastDayOfMonth.getDate();
 
-    // Array to hold all calendar days
     const days = [];
 
-    // Add previous month's days to fill the first row
-    const prevMonthLastDay = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      0
-    ).getDate();
-
+    // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayWeekday; i++) {
-      const prevMonthDate = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() - 1,
-        prevMonthLastDay - firstDayWeekday + i + 1
-      );
-      days.push({
-        date: prevMonthDate,
-        isCurrentMonth: false,
-        isToday: isToday(prevMonthDate),
-      });
+      days.push(null);
     }
 
-    // Add current month's days
-    for (let i = 1; i <= totalDaysInMonth; i++) {
-      const currentMonthDate = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        i
-      );
+    // Add all days of the current month
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+      const date = new Date(year, month, day);
       days.push({
-        date: currentMonthDate,
+        date,
         isCurrentMonth: true,
-        isToday: isToday(currentMonthDate),
-      });
-    }
-
-    // Add next month's days to complete the grid (always show 6 weeks for consistency)
-    const remainingDays = 42 - days.length; // 6 rows of 7 days
-
-    for (let i = 1; i <= remainingDays; i++) {
-      const nextMonthDate = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        i
-      );
-      days.push({
-        date: nextMonthDate,
-        isCurrentMonth: false,
-        isToday: isToday(nextMonthDate),
+        isToday: isToday(date),
       });
     }
 
     return days;
   }, [currentDate]);
 
-  // Group calendar days into weeks
+  // Group calendar days into weeks (but only show weeks that have current month days)
   const calendarWeeks = useMemo(() => {
     const weeks = [];
     for (let i = 0; i < calendarDays.length; i += 7) {
-      weeks.push(calendarDays.slice(i, i + 7));
+      const week = calendarDays.slice(i, i + 7);
+      // Only add weeks that have at least one day from current month
+      if (week.some((day) => day !== null)) {
+        // Fill the rest of the week with nulls if needed
+        while (week.length < 7) {
+          week.push(null);
+        }
+        weeks.push(week);
+      }
     }
     return weeks;
   }, [calendarDays]);
 
-  // Get events for specific date
-  const getEventsForDate = (date) => {
+  // Filter events to only show current month events
+  const currentMonthEvents = useMemo(() => {
     if (!events || !events.length) return [];
 
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
     return events.filter((event) => {
+      const eventDate = new Date(event.startDate);
+      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+    });
+  }, [events, currentDate]);
+
+  // Get events for specific date (only current month events)
+  const getEventsForDate = (date) => {
+    if (!currentMonthEvents || !currentMonthEvents.length) return [];
+
+    return currentMonthEvents.filter((event) => {
       const eventDate = new Date(event.startDate);
       return (
         eventDate.getDate() === date.getDate() &&
@@ -165,19 +142,19 @@ const CalendarView = ({
     });
   };
 
-  // Get all dates that have events for highlighting
+  // Get all dates that have events for highlighting (only current month)
   const eventDates = useMemo(() => {
-    if (!events || !events.length) return {};
+    if (!currentMonthEvents || !currentMonthEvents.length) return {};
 
     const dates = {};
-    events.forEach((event) => {
+    currentMonthEvents.forEach((event) => {
       const eventDate = new Date(event.startDate);
       const dateKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
       dates[dateKey] = true;
     });
 
     return dates;
-  }, [events]);
+  }, [currentMonthEvents]);
 
   // Check if a date has events
   const hasEvents = (date) => {
@@ -187,27 +164,25 @@ const CalendarView = ({
 
   // Navigation functions
   const navigatePrevious = () => {
-    const newDate = new Date(currentDate);
-    newDate.setMonth(newDate.getMonth() - 1);
+    const newDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1
+    );
     setCurrentDate(newDate);
     setSelectedDate(null);
-
-    // Notify parent to fetch new events
-    if (onMonthChange) {
-      onMonthChange(newDate);
-    }
+    onMonthChange?.(newDate);
   };
 
   const navigateNext = () => {
-    const newDate = new Date(currentDate);
-    newDate.setMonth(newDate.getMonth() + 1);
+    const newDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      1
+    );
     setCurrentDate(newDate);
     setSelectedDate(null);
-
-    // Notify parent to fetch new events
-    if (onMonthChange) {
-      onMonthChange(newDate);
-    }
+    onMonthChange?.(newDate);
   };
 
   const navigateToday = () => {
@@ -229,14 +204,14 @@ const CalendarView = ({
     });
   };
 
-  // Check if a date is the current date
-
   // Get CSS class for date cell
   const getDateCellClass = (dayInfo) => {
+    if (!dayInfo) return "h-20 border border-gray-200 dark:border-gray-700"; // Empty cell
+
     const { date, isCurrentMonth } = dayInfo;
 
     let classes =
-      "h-full min-h-12 p-1 border border-gray-200 dark:border-gray-700 ";
+      "h-20 p-2 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ";
 
     if (isToday(date)) {
       classes += "bg-blue-50 dark:bg-blue-900/20 ";
@@ -244,11 +219,6 @@ const CalendarView = ({
 
     if (hasEvents(date)) {
       classes += "bg-teal-50 dark:bg-teal-900/10 ";
-    }
-
-    if (!isCurrentMonth) {
-      classes +=
-        "bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 ";
     }
 
     if (
@@ -300,103 +270,134 @@ const CalendarView = ({
         </button>
       </div>
 
+      {/* Show message if no events in current month */}
+      {currentMonthEvents.length === 0 && (
+        <div className="p-6 text-center bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">
+            Haven't scheduled any events for {getMonthLabel()} yet
+          </p>
+        </div>
+      )}
+
       {/* Calendar Grid */}
-      <div>
-        <div className="grid grid-cols-7 min-h-96">
+      <div className="overflow-x-auto">
+        <div className="min-w-full">
           {/* Week day headers */}
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div
-              key={day}
-              className="text-center p-2 font-medium border-b border-gray-200 dark:border-gray-700"
-            >
-              {day}
-            </div>
-          ))}
+          <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div
+                key={day}
+                className="text-center p-3 font-medium text-sm bg-gray-50 dark:bg-gray-900"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
 
           {/* Calendar days by week rows */}
-          {calendarWeeks.map((week, weekIndex) =>
-            week.map((dayInfo, dayIndex) => (
-              <div
-                key={`${weekIndex}-${dayIndex}`}
-                className={getDateCellClass(dayInfo)}
-                onClick={() => setSelectedDate(dayInfo.date)}
-              >
-                <div className="flex justify-between items-start">
-                  <span
-                    className={`inline-block w-6 h-6 rounded-full text-center ${
-                      dayInfo.isToday ? "bg-teal-600 text-white" : ""
-                    }`}
+          <div className="grid grid-cols-1">
+            {calendarWeeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="grid grid-cols-7">
+                {week.map((dayInfo, dayIndex) => (
+                  <div
+                    key={`${weekIndex}-${dayIndex}`}
+                    className={getDateCellClass(dayInfo)}
+                    onClick={() => dayInfo && setSelectedDate(dayInfo.date)}
                   >
-                    {dayInfo.date.getDate()}
-                  </span>
+                    {dayInfo && (
+                      <>
+                        <div className="flex justify-between items-start mb-1">
+                          <span
+                            className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
+                              dayInfo.isToday
+                                ? "bg-teal-600 text-white"
+                                : "text-gray-900 dark:text-gray-100"
+                            }`}
+                          >
+                            {dayInfo.date.getDate()}
+                          </span>
 
-                  {/* Month label for the first day of month */}
-                  {dayInfo.date.getDate() === 1 && (
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {dayInfo.date.toLocaleDateString(undefined, {
-                        month: "short",
-                      })}
-                    </span>
-                  )}
+                          {/* Event indicators */}
+                          <div className="flex space-x-1">
+                            {getEventsForDate(dayInfo.date)
+                              .slice(0, 3)
+                              .map((event) => (
+                                <div
+                                  key={event._id}
+                                  className={`w-2 h-2 rounded-full ${getEventDotColor(
+                                    event
+                                  )}`}
+                                  title={event.title}
+                                ></div>
+                              ))}
+                            {getEventsForDate(dayInfo.date).length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{getEventsForDate(dayInfo.date).length - 3}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                  {/* Event indicators */}
-                  <div className="flex space-x-1">
-                    {getEventsForDate(dayInfo.date)
-                      .slice(0, 3)
-                      .map((event) => (
-                        <div
-                          key={event._id}
-                          className={`w-2 h-2 rounded-full ${getEventDotColor(
-                            event
-                          )}`}
-                          title={event.title}
-                        ></div>
-                      ))}
-                    {getEventsForDate(dayInfo.date).length > 3 && (
-                      <span className="text-xs">
-                        +{getEventsForDate(dayInfo.date).length - 3}
-                      </span>
+                        {/* Event preview - show first event */}
+                        {getEventsForDate(dayInfo.date).length > 0 ? (
+                          <div className="space-y-1">
+                            <div
+                              className={`text-xs truncate px-1 py-0.5 rounded ${
+                                getEventsForDate(dayInfo.date)[0].canceled
+                                  ? "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300"
+                                  : getEventsForDate(dayInfo.date)[0].completed
+                                  ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
+                                  : getEventsForDate(dayInfo.date)[0].featured
+                                  ? "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300"
+                                  : "bg-teal-100 dark:bg-teal-900/20 text-teal-800 dark:text-teal-300"
+                              }`}
+                              title={getEventsForDate(dayInfo.date)[0].title}
+                            >
+                              {getEventsForDate(dayInfo.date)[0]
+                                .scheduledTime &&
+                                `${formatTime(
+                                  getEventsForDate(dayInfo.date)[0]
+                                    .scheduledTime
+                                )} `}
+                              {getEventsForDate(dayInfo.date)[0].title}
+                            </div>
+                            {getEventsForDate(dayInfo.date).length > 1 && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                                +{getEventsForDate(dayInfo.date).length - 1}{" "}
+                                more
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                            {(() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const currentDay = new Date(dayInfo.date);
+                              currentDay.setHours(0, 0, 0, 0);
+
+                              // Check if day is in future
+                              if (currentDay > today) {
+                                return "এইদিনের জন্য এখনো কোন কর্মসূচী ঘোষিত হয়নি";
+                              }
+                              // Check if day is in past
+                              else if (currentDay < today) {
+                                return "কোন কর্মসূচী নেই";
+                              }
+                              // For today (if no events)
+                              else {
+                                return "আজকের জন্য কোন কর্মসূচী নেই";
+                              }
+                            })()}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-                </div>
-
-                {/* Event preview - show 1-2 events based on available space */}
-                {getEventsForDate(dayInfo.date).length > 0 ? (
-                  <div className="mt-1">
-                    <div
-                      className={`text-xs truncate px-1 py-0.5 rounded ${
-                        getEventsForDate(dayInfo.date)[0].canceled
-                          ? "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300"
-                          : getEventsForDate(dayInfo.date)[0].completed
-                          ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
-                          : getEventsForDate(dayInfo.date)[0].featured
-                          ? "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300"
-                          : "bg-teal-100 dark:bg-teal-900/20 text-teal-800 dark:text-teal-300"
-                      }`}
-                      title={getEventsForDate(dayInfo.date)[0].title}
-                    >
-                      {getEventsForDate(dayInfo.date)[0].scheduledTime &&
-                        `${formatTime(
-                          getEventsForDate(dayInfo.date)[0].scheduledTime
-                        )} `}
-                      {getEventsForDate(dayInfo.date)[0].title}
-                    </div>
-                    {getEventsForDate(dayInfo.date).length > 1 && (
-                      <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">
-                        +{getEventsForDate(dayInfo.date).length - 1} more
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  dayInfo.isCurrentMonth && (
-                    <div className="text-xs text-gray-400 mt-1 text-center">
-                      No events
-                    </div>
-                  )
-                )}
+                ))}
               </div>
-            ))
-          )}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -511,6 +512,7 @@ const CalendarView = ({
                           : "Notify Me"}
                       </span>
                     </button>
+
                     <button
                       onClick={() => handleSetViewingEvent(event)}
                       className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"

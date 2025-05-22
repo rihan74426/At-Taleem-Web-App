@@ -38,10 +38,10 @@ export default function ProgrammePage() {
   const isAdmin = user?.publicMetadata?.isAdmin;
 
   // State for view controls
-  const [view, setView] = useState(localStorage.getItem("EventView")); // "list" or "calendar"
+  const [view, setView] = useState(localStorage.getItem("EventView") || "list");
   const [scope, setScope] = useState("weekly");
   const [page, setPage] = useState(1);
-  const [limit] = useState(30); // Items per page
+  const [limit] = useState(20); // Items per page
   const [sortBy, setSortBy] = useState("startDate");
   const [sortOrder, setSortOrder] = useState("asc");
   const [search, setSearch] = useState("");
@@ -64,7 +64,7 @@ export default function ProgrammePage() {
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 30,
+    limit: 20,
     pages: 1,
   });
   const [loading, setLoading] = useState(true);
@@ -91,15 +91,12 @@ export default function ProgrammePage() {
   // Load user preferences on mount
   useEffect(() => {
     if (isLoaded && user) {
-      // Get event preferences from user metadata
       const userPrefs = user.publicMetadata?.eventPrefs || {};
       setPrefs({
         weekly: !!userPrefs.weekly,
         monthly: !!userPrefs.monthly,
         yearly: !!userPrefs.yearly,
       });
-
-      // Also fetch the user's event interactions to display interest/notify status
       fetchUserEventStatus();
     }
   }, [isLoaded, user]);
@@ -109,25 +106,45 @@ export default function ProgrammePage() {
       prev.map((e) => (e._id === updatedEvent._id ? updatedEvent : e))
     );
   };
+
   // Build query string for fetching events
   const getQueryString = useCallback(() => {
     const params = new URLSearchParams();
-    params.append("scope", scope);
     params.append("page", page.toString());
     params.append("limit", limit.toString());
     params.append("sortBy", sortBy);
     params.append("sortOrder", sortOrder);
-
     if (search) params.append("search", search);
     if (filter.featured) params.append("featured", "true");
     if (filter.completed) params.append("completed", "true");
     if (filter.canceled) params.append("canceled", "true");
 
+    // Calculate date range based on scope
+    const now = new Date();
+    let startDate, endDate;
+    if (scope === "weekly") {
+      const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - day); // Start of week (Sunday)
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6); // End of week
+    } else if (scope === "monthly") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (scope === "yearly") {
+      startDate = new Date(now.getFullYear(), 0, 1);
+      endDate = new Date(now.getFullYear(), 11, 31);
+    }
+
+    if (startDate && endDate) {
+      params.append("startDate", startDate.toISOString().split("T")[0]);
+      params.append("endDate", endDate.toISOString().split("T")[0]);
+    }
+
     return params.toString();
   }, [scope, page, limit, sortBy, sortOrder, search, filter]);
 
   // Fetch events based on current filters
-  // Update your fetchEvents function
   const fetchEvents = useCallback(
     async (overrideQueryString = null) => {
       if (!isLoaded) return;
@@ -136,8 +153,8 @@ export default function ProgrammePage() {
       setError("");
 
       try {
-        // Use provided query string or generate default
         const queryString = overrideQueryString || getQueryString();
+        console.log("Fetching events with query:", queryString); // Debugging
         const res = await fetch(`/api/events?${queryString}`);
 
         if (!res.ok) {
@@ -145,13 +162,14 @@ export default function ProgrammePage() {
         }
 
         const data = await res.json();
+        console.log("Received data:", data); // Debugging
         setEvents(data.events || []);
         setPagination(
           data.pagination || {
             total: 0,
             page: 1,
             limit,
-            pages: 1,
+            pages: 3,
           }
         );
       } catch (err) {
@@ -169,17 +187,13 @@ export default function ProgrammePage() {
     if (!isLoaded || !user) return;
 
     try {
-      // This would be a custom endpoint to get all user statuses at once
-      // For now we'll track it client-side when users interact with events
       const newUserStatus = {};
-
       for (const event of events) {
         newUserStatus[event._id] = {
           interested: event.interestedUsers?.includes(user.id) || false,
           notified: event.notificationWants?.includes(user.id) || false,
         };
       }
-
       setUserStatus(newUserStatus);
     } catch (err) {
       console.error("Error fetching user event status:", err);
@@ -238,17 +252,13 @@ export default function ProgrammePage() {
       }
 
       const data = await res.json();
-
-      // Update local state for immediate feedback
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-
       setUserStatus((prev) => ({
         ...prev,
         [eventId]: data.userStatus,
       }));
-
       showModal(
         data.userStatus.interested
           ? "আপনি এখন এই মাহফিলে আগ্রহী!"
@@ -280,17 +290,13 @@ export default function ProgrammePage() {
       }
 
       const data = await res.json();
-
-      // Update local state for immediate feedback
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-
       setUserStatus((prev) => ({
         ...prev,
         [eventId]: data.userStatus,
       }));
-
       showModal(
         data.userStatus.notified
           ? "আপনাকে এই মাহফিলের ব্যাপারে ১ ঘন্টা আগে জানানো হবে!"
@@ -319,12 +325,9 @@ export default function ProgrammePage() {
       }
 
       const data = await res.json();
-
-      // Update local state
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-
       showModal(
         `Event marked as ${data.event.completed ? "completed" : "incomplete"}`,
         "success"
@@ -350,12 +353,9 @@ export default function ProgrammePage() {
       }
 
       const data = await res.json();
-
-      // Update local state
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-
       showModal(
         `Event ${data.event.canceled ? "canceled" : "restored"}`,
         "success"
@@ -381,12 +381,9 @@ export default function ProgrammePage() {
       }
 
       const data = await res.json();
-
-      // Update local state
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-
       showModal(
         `Event ${data.event.featured ? "featured" : "unfeatured"}`,
         "success"
@@ -417,7 +414,6 @@ export default function ProgrammePage() {
         throw new Error("Failed to delete event");
       }
 
-      // Remove from local state
       setEvents((prev) => prev.filter((e) => e._id !== eventId));
       showModal("মাহফিল ডিলিট সম্পন্ন হয়েছে!", "success");
     } catch (err) {
@@ -464,7 +460,7 @@ export default function ProgrammePage() {
   const pageNumbers = useMemo(() => {
     const total = pagination.pages;
     const current = pagination.page;
-    const delta = 1; // How many pages to show before and after current page
+    const delta = 1;
 
     if (total <= 5) {
       return Array.from({ length: total }, (_, i) => i + 1);
@@ -474,18 +470,15 @@ export default function ProgrammePage() {
     const leftBound = Math.max(1, current - delta);
     const rightBound = Math.min(total, current + delta);
 
-    // Always include first page
     if (leftBound > 1) {
       pages.push(1);
       if (leftBound > 2) pages.push("...");
     }
 
-    // Add pages around current page
     for (let i = leftBound; i <= rightBound; i++) {
       pages.push(i);
     }
 
-    // Always include last page
     if (rightBound < total) {
       if (rightBound < total - 1) pages.push("...");
       pages.push(total);
@@ -504,26 +497,26 @@ export default function ProgrammePage() {
   // Handle search
   const handleSearch = (e) => {
     e.preventDefault();
-    // Reset to page 1 when searching
     setPage(1);
     fetchEvents();
   };
+
   const handleMonthChange = (newDate) => {
-    // Update the date filter for API calls
-    const nextMonth = new Date(
+    const firstDayOfMonth = new Date(
+      newDate.getFullYear(),
+      newDate.getMonth(),
+      1
+    );
+    const lastDayOfMonth = new Date(
       newDate.getFullYear(),
       newDate.getMonth() + 1,
       0
     );
 
-    // Set up query parameters with new date range
     const params = new URLSearchParams(getQueryString());
+    params.set("startDate", firstDayOfMonth.toISOString().split("T")[0]);
+    params.set("endDate", lastDayOfMonth.toISOString().split("T")[0]);
 
-    // Add date range parameters
-    params.set("startDate", newDate.toISOString().split("T")[0]);
-    params.set("endDate", nextMonth.toISOString().split("T")[0]);
-
-    // Fetch events for the new month
     fetchEvents(params.toString());
   };
 
@@ -533,11 +526,11 @@ export default function ProgrammePage() {
       ...prev,
       [key]: !prev[key],
     }));
-    setPage(1); // Reset to page 1 when filter changes
+    setPage(1);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-6 ">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-6">
       <div className="space-y-6">
         {/* Hero */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
@@ -590,7 +583,7 @@ export default function ProgrammePage() {
                 key={s.value}
                 onClick={() => {
                   setScope(s.value);
-                  setPage(1); // Reset to page 1 when scope changes
+                  setPage(1);
                 }}
                 className={`px-4 py-2 rounded-full ${
                   scope === s.value
@@ -635,7 +628,7 @@ export default function ProgrammePage() {
                     />
                     <span>Featured</span>
                   </label>
-                  <label className=" flex items-center space-x-2 mt-2">
+                  <label className="flex items-center space-x-2 mt-2">
                     <input
                       type="checkbox"
                       checked={filter.completed}
@@ -778,7 +771,6 @@ export default function ProgrammePage() {
               handleToggleFeatured={handleToggleFeatured}
               handleDeleteEvent={handleDeleteEvent}
               setEditingEvent={setEditingEvent}
-              onMonthChange={handleMonthChange} // Add this new prop
             />
           </div>
         ) : (
@@ -787,19 +779,19 @@ export default function ProgrammePage() {
               <div
                 key={event._id}
                 className={`
-                bg-white dark:bg-gray-800 border rounded-lg p-5 flex flex-col justify-between shadow 
-                ${event.canceled ? "border-red-500 dark:border-red-700" : ""} 
-                ${
-                  event.completed
-                    ? "border-green-500 dark:border-green-700"
-                    : ""
-                }
-                ${
-                  event.featured
-                    ? "ring-2 ring-yellow-400 dark:ring-yellow-600"
-                    : ""
-                }
-              `}
+                  bg-white dark:bg-gray-800 border rounded-lg p-5 flex flex-col justify-between shadow 
+                  ${event.canceled ? "border-red-500 dark:border-red-700" : ""} 
+                  ${
+                    event.completed
+                      ? "border-green-500 dark:border-green-700"
+                      : ""
+                  }
+                  ${
+                    event.featured
+                      ? "ring-2 ring-yellow-400 dark:ring-yellow-600"
+                      : ""
+                  }
+                `}
               >
                 {/* Status indicators */}
                 <div className="flex flex-wrap gap-2 mb-3">
