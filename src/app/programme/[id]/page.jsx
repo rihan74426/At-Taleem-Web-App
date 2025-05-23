@@ -26,9 +26,11 @@ import {
 } from "react-icons/fi";
 import ResponseModal from "@/app/Components/ResponseModal";
 import EventInputModal from "@/app/Components/EventInputModal";
+import { FaUserEdit } from "react-icons/fa";
 
 export default function EventDetailsPage() {
   const { user, isLoaded } = useUser();
+  const [users, setUsers] = useState([]);
   const params = useParams();
   const router = useRouter();
   const eventId = params.id;
@@ -53,6 +55,22 @@ export default function EventDetailsPage() {
   // Show modal helper
   const showModal = (message, status) => {
     setModal({ isOpen: true, message, status });
+  };
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users.data);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
   };
 
   // Fetch event details
@@ -386,6 +404,7 @@ export default function EventDetailsPage() {
   // Load event on mount
   useEffect(() => {
     fetchEvent();
+    fetchUsers();
   }, [eventId, isLoaded, user]);
 
   if (loading) {
@@ -433,7 +452,7 @@ export default function EventDetailsPage() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push(`${window.location.origin}/programme`)}
               className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             >
               <FiArrowLeft className="mr-2" />
@@ -489,7 +508,7 @@ export default function EventDetailsPage() {
                     className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
                     <FiEdit className="mr-2" />
-                    সম্পাদনা
+                    ইডিট
                   </button>
                 </div>
               )}
@@ -579,6 +598,28 @@ export default function EventDetailsPage() {
                     <p className="text-sm">আগ্রহী</p>
                   </div>
                 </div>
+                {event.createdBy && users.length > 0 && (
+                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                    <FaUserEdit className="mr-3 text-teal-600" size={20} />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {event.createdBy !== "System Generated"
+                          ? (() => {
+                              const creator = users.find(
+                                (user) => user.id === event.createdBy
+                              );
+                              return creator
+                                ? `${creator.firstName} ${creator.lastName}`
+                                : "Admin";
+                            })()
+                          : "System Generated"}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        কর্তৃক ঘোষিত
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

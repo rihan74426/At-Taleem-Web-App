@@ -147,6 +147,7 @@ async function runAutoCreateWeeklies() {
         location:
           "আত্-তালীমুন নববী আলিম মাদ্রাসা, শুলকবহর, বহদ্দারহাট, চট্টগ্রাম",
         createdBy: "System Generated",
+        scheduledTime: "2025-05-23T09:00:00.224+00:00",
       });
       createdEvents.push(event);
     }

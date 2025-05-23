@@ -51,7 +51,7 @@ export default function ProgrammePage() {
 
   // List view specific states
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit] = useState(10);
   const [sortBy, setSortBy] = useState("startDate");
   const [sortOrder, setSortOrder] = useState("asc");
   const [search, setSearch] = useState("");
@@ -74,7 +74,7 @@ export default function ProgrammePage() {
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 20,
+    limit: 10,
     pages: 1,
   });
   const [userStatus, setUserStatus] = useState({});
@@ -97,31 +97,27 @@ export default function ProgrammePage() {
   const buildQueryString = useCallback(
     (options = {}) => {
       const params = new URLSearchParams();
+      const effectiveView = options.view || view;
 
-      // Always add month and year for calendar view
-      if (view === "calendar" || options.view === "calendar") {
+      if (effectiveView === "calendar") {
         params.append("month", (options.month || currentMonth).toString());
         params.append("year", (options.year || currentYear).toString());
       } else {
-        // For list view, add pagination
         params.append("page", (options.page || page).toString());
         params.append("limit", limit.toString());
       }
 
-      // Add sorting
       params.append("sortBy", options.sortBy || sortBy);
       params.append("sortOrder", options.sortOrder || sortOrder);
 
-      // Add search for list view
-      if (view === "list" && (options.search || search)) {
-        params.append("search", options.search || search);
+      if (effectiveView === "list" && (options.search ?? search)) {
+        params.append("search", options.search ?? search);
       }
 
-      // Add filters
-      const activeFilter = options.filter || filter;
-      if (activeFilter.featured) params.append("featured", "true");
-      if (activeFilter.completed) params.append("completed", "true");
-      if (activeFilter.canceled) params.append("canceled", "true");
+      const activeFilter = options.filter ?? filter;
+      Object.entries(activeFilter).forEach(([key, value]) => {
+        if (value) params.append(key, "true");
+      });
 
       return params.toString();
     },
@@ -152,33 +148,44 @@ export default function ProgrammePage() {
           cache: "no-store",
         });
 
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
+        if (!res.ok) throw new Error(`HTTP error! ${res.status}`);
         const data = await res.json();
 
         setEvents(data.events || []);
+        const effectiveView = options.view ?? view;
 
-        // Update month info if provided (for calendar view)
-        if (data.monthInfo) {
+        // Atomic state updates
+        setPagination((prev) => ({
+          ...prev,
+          ...(effectiveView === "calendar"
+            ? { page: 1, total: data.events?.length || 0 }
+            : data.pagination),
+        }));
+
+        if (data.monthInfo && effectiveView === "calendar") {
           setMonthInfo(data.monthInfo);
         }
 
-        // Update pagination if provided (for list view)
-        if (data.pagination) {
-          setPagination(data.pagination);
-        }
-
-        // Update current month/year if options were provided
-        if (options.month) setCurrentMonth(options.month);
-        if (options.year) setCurrentYear(options.year);
+        // Batch state updates
+        setCurrentMonth(
+          options.month ??
+            (effectiveView === "calendar"
+              ? currentMonth
+              : new Date().getMonth() + 1)
+        );
+        setCurrentYear(
+          options.year ??
+            (effectiveView === "calendar"
+              ? currentYear
+              : new Date().getFullYear())
+        );
       } catch (err) {
         setError(err.message || "Failed to fetch events");
-        console.error("Fetch error:", err);
       } finally {
         setLoading(false);
       }
     },
-    [isLoaded, buildQueryString]
+    [isLoaded, buildQueryString, view]
   );
 
   // Month navigation handlers
@@ -252,22 +259,20 @@ export default function ProgrammePage() {
 
   // Initial fetch and effects
   useEffect(() => {
-    if (isLoaded) {
-      fetchEvents();
-    }
-  }, [isLoaded, scope, view, page, sortBy, sortOrder, fetchEvents]);
+    if (isLoaded) fetchEvents();
+  }, [isLoaded, scope, view, page, sortBy, sortOrder]);
 
-  // Search effect with debouncing
+  // Debounced search with cleanup
   useEffect(() => {
-    if (isLoaded) {
-      const timeoutId = setTimeout(() => {
-        setPage(1);
-        fetchEvents({ page: 1 });
-      }, 300);
+    if (!isLoaded) return;
 
-      return () => clearTimeout(timeoutId);
-    }
-  }, [search, filter, isLoaded, fetchEvents]);
+    const handler = setTimeout(() => {
+      setPage(1);
+      fetchEvents({ page: 1 });
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [search, filter, isLoaded]);
 
   // User status fetching
   const fetchUserEventStatus = useCallback(async () => {
@@ -748,37 +753,43 @@ export default function ProgrammePage() {
             {events.map((event) => (
               <div
                 key={event._id}
-                className={`bg-white dark:bg-gray-800 border rounded-lg p-5 flex flex-col justify-between shadow ${
+                className={`rounded-xl p-5 shadow transition border dark:border-gray-700 ${
                   event.canceled
                     ? "border-red-500"
                     : event.completed
                     ? "border-green-500"
-                    : ""
-                } ${event.featured ? "ring-2 ring-yellow-400" : ""}`}
+                    : "border-gray-200 dark:border-gray-700"
+                } ${event.featured ? "ring-2 ring-yellow-400" : ""}
+        bg-white dark:bg-gray-900`}
               >
-                <div className="flex flex-wrap gap-2 mb-3">
+                {/* Status Tags */}
+                <div className="flex flex-wrap gap-2 mb-4">
                   {event.featured && (
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center">
+                    <span className="flex items-center px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
                       <FiStar className="mr-1" /> Featured
                     </span>
                   )}
                   {event.completed && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+                    <span className="flex items-center px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                       <FiCheck className="mr-1" /> Completed
                     </span>
                   )}
                   {event.canceled && (
-                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full flex items-center">
+                    <span className="flex items-center px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
                       <FiX className="mr-1" /> Canceled
                     </span>
                   )}
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-                  <div className="text-sm text-gray-500 mb-2 flex flex-col space-y-1">
+
+                {/* Event Details */}
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
+                    {event.title}
+                  </h2>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div className="flex items-center">
-                      <FiCalendar className="mr-2" />{" "}
-                      {formatDate(event.startDate)}{" "}
+                      <FiCalendar className="mr-2" />
+                      {formatDate(event.startDate)}
                       {event.scheduledTime && (
                         <span className="ml-2">
                           {formatTime(event.scheduledTime)}
@@ -787,135 +798,135 @@ export default function ProgrammePage() {
                     </div>
                     {event.location && (
                       <div className="flex items-center">
-                        <FiMap className="mr-2" /> {event.location}
+                        <FiMap className="mr-2" />
+                        {event.location}
                       </div>
                     )}
                   </div>
                   {event.description && (
-                    <p className="text-sm mb-4 line-clamp-3 whitespace-pre-wrap">
+                    <p className="mt-3 text-sm text-gray-700 dark:text-gray-300 line-clamp-3 whitespace-pre-wrap">
                       {event.description}
                     </p>
                   )}
                 </div>
-                <div className="mt-4">
-                  <div className="flex flex-wrap gap-2 mb-3">
+
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => handleToggleInterest(event._id)}
-                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
-                        userStatus[event._id]?.interested
-                          ? "bg-teal-600 text-white"
-                          : "bg-gray-200 hover:bg-gray-300"
-                      }`}
                       disabled={event.canceled}
+                      className={`flex items-center px-4 py-2 rounded-full transition-all
+              ${
+                userStatus[event._id]?.interested
+                  ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              }`}
                     >
-                      <FiStar size={16} />{" "}
-                      <span>
+                      <FiStar className="mr-2 w-4 h-4" />
+                      <span className="text-sm font-medium">
                         {userStatus[event._id]?.interested
                           ? "Interested"
-                          : "Interest"}
+                          : "Show Interest"}
                       </span>
                     </button>
+
                     <button
                       onClick={() => handleToggleNotification(event._id)}
-                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
-                        userStatus[event._id]?.notified
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 hover:bg-gray-300"
-                      }`}
                       disabled={event.canceled}
+                      className={`flex items-center px-4 py-2 rounded-full transition-all
+              ${
+                userStatus[event._id]?.notified
+                  ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              }`}
                     >
-                      <FiBell size={16} />
-                      <span>
+                      <FiBell className="mr-2 w-4 h-4" />
+                      <span className="text-sm font-medium">
                         {userStatus[event._id]?.notified
-                          ? "Notified"
-                          : "Notify"}
+                          ? "Notifying"
+                          : "Notify Me"}
                       </span>
                     </button>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <button
-                      onClick={() => setViewingEvent(event)}
-                      className="text-teal-600 hover:text-teal-700 text-sm font-medium"
-                    >
-                      View Details
-                    </button>
-                    {isAdmin && (
-                      <div className="flex space-x-1">
+
+                  {/* Admin Actions */}
+                  {isAdmin && (
+                    <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        onClick={() => setViewingEvent(event)}
+                        className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 text-sm font-medium flex items-center"
+                      >
+                        View Details
+                        <FiChevronRight className="ml-1.5 w-4 h-4" />
+                      </button>
+
+                      <div className="flex gap-2">
                         <button
                           onClick={() => setEditingEvent(event)}
-                          className="p-1 text-gray-500 hover:text-blue-600"
+                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 transition-colors"
                           title="Edit Event"
                         >
-                          <FiEdit size={16} />
+                          <FiEdit className="w-5 h-5" />
                         </button>
+
                         <button
                           onClick={() =>
-                            handleAdminAction(
-                              event._id,
-                              "toggleFeatured",
-                              (e) =>
-                                `Event ${
-                                  e.featured ? "featured" : "unfeatured"
-                                }`
-                            )
+                            handleAdminAction(event._id, "toggleFeatured")
                           }
-                          className={`p-1 ${
+                          className={`p-2 rounded-lg transition-colors ${
                             event.featured
-                              ? "text-yellow-500"
-                              : "text-gray-500 hover:text-yellow-600"
+                              ? "text-yellow-500 bg-yellow-100/50 dark:bg-yellow-900/20"
+                              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           }`}
-                          title="Toggle Featured"
+                          title={event.featured ? "Unfeature" : "Feature"}
                         >
-                          <FiStar size={16} />
+                          <FiStar className="w-5 h-5" />
                         </button>
+
                         <button
                           onClick={() =>
-                            handleAdminAction(
-                              event._id,
-                              "toggleComplete",
-                              (e) =>
-                                `Event ${
-                                  e.completed ? "completed" : "incomplete"
-                                }`
-                            )
+                            handleAdminAction(event._id, "toggleComplete")
                           }
-                          className={`p-1 ${
+                          className={`p-2 rounded-lg transition-colors ${
                             event.completed
-                              ? "text-green-500"
-                              : "text-gray-500 hover:text-green-600"
+                              ? "text-green-500 bg-green-100/50 dark:bg-green-900/20"
+                              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           }`}
-                          title="Toggle Complete"
+                          title={
+                            event.completed
+                              ? "Mark Incomplete"
+                              : "Mark Complete"
+                          }
                         >
-                          <FiCheck size={16} />
+                          <FiCheck className="w-5 h-5" />
                         </button>
+
                         <button
                           onClick={() =>
-                            handleAdminAction(
-                              event._id,
-                              "toggleCancel",
-                              (e) =>
-                                `Event ${e.canceled ? "canceled" : "restored"}`
-                            )
+                            handleAdminAction(event._id, "toggleCancel")
                           }
-                          className={`p-1 ${
+                          className={`p-2 rounded-lg transition-colors ${
                             event.canceled
-                              ? "text-red-500"
-                              : "text-gray-500 hover:text-red-600"
+                              ? "text-red-500 bg-red-100/50 dark:bg-red-900/20"
+                              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           }`}
-                          title="Toggle Cancel"
+                          title={
+                            event.canceled ? "Restore Event" : "Cancel Event"
+                          }
                         >
-                          <FiAlertCircle size={16} />
+                          <FiAlertCircle className="w-5 h-5" />
                         </button>
+
                         <button
                           onClick={() => handleDeleteEvent(event._id)}
-                          className="p-1 text-gray-500 hover:text-red-600"
+                          className="p-2 text-red-500 hover:bg-red-100/50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete Event"
                         >
-                          <FiTrash2 size={16} />
+                          <FiTrash2 className="w-5 h-5" />
                         </button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -923,7 +934,7 @@ export default function ProgrammePage() {
         )}
 
         {/* Pagination for List View */}
-        {view === "list" && events.length > 0 && pagination.pages > 1 && (
+        {view === "list" && events.length > 0 && (
           <div className="flex justify-center items-center space-x-2 mt-6">
             <button
               onClick={() => {
