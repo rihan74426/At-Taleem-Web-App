@@ -11,36 +11,68 @@ import {
   FiBell,
 } from "react-icons/fi";
 
+// Reusable component for event status tags
+const EventStatusTags = ({ event }) => (
+  <div className="flex flex-wrap gap-2">
+    {event.featured && (
+      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs rounded-full flex items-center">
+        <FiStar className="mr-1" /> Featured
+      </span>
+    )}
+    {event.completed && (
+      <span className="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded-full flex items-center">
+        <FiCheck className="mr-1" /> Completed
+      </span>
+    )}
+    {event.canceled && (
+      <span className="px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs rounded-full flex items-center">
+        <FiX className="mr-1" /> Canceled
+      </span>
+    )}
+  </div>
+);
+
 const CalendarView = ({
-  events,
+  events = [],
   scope,
-  userStatus,
+  currentDate: parentCurrentDate,
+  setCurrentDate: parentSetCurrentDate,
+  onMonthChange,
+  fetchEvents,
+  userStatus = {},
   handleToggleInterest,
   handleToggleNotification,
   handleSetViewingEvent,
-  isAdmin,
+  isAdmin = false,
   handleToggleComplete,
   handleToggleCancel,
   handleToggleFeatured,
   handleDeleteEvent,
   setEditingEvent,
-  onMonthChange, // New prop to handle month changes
 }) => {
-  // State for current view date
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Use parent's currentDate if provided, otherwise use internal state
+  const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
 
-  // Update current date when scope changes
+  const currentDate = parentCurrentDate || internalCurrentDate;
+  const setCurrentDate = parentSetCurrentDate || setInternalCurrentDate;
+
+  // Reset selected date when scope changes
   useEffect(() => {
-    setCurrentDate(new Date());
     setSelectedDate(null);
   }, [scope]);
 
-  // Format date utilities
+  // Sync with parent's currentDate changes
+  useEffect(() => {
+    if (parentCurrentDate) {
+      setSelectedDate(null);
+    }
+  }, [parentCurrentDate]);
+
+  // Date formatting utilities
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -49,8 +81,7 @@ const CalendarView = ({
 
   const formatTime = (dateStr) => {
     if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString(undefined, {
+    return new Date(dateStr).toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -65,74 +96,59 @@ const CalendarView = ({
     );
   };
 
-  // Get only the current month's dates (no padding from other months)
+  // Generate calendar days with padding
   const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-
-    // Always start from the first day of the month
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
-    // Get the day of week for the first day (0 = Sunday, 6 = Saturday)
     const firstDayWeekday = firstDayOfMonth.getDay();
-    // Total days in current month
     const totalDaysInMonth = lastDayOfMonth.getDate();
-
     const days = [];
 
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < firstDayWeekday; i++) {
-      days.push(null);
+    // Previous month padding
+    if (firstDayWeekday > 0) {
+      const prevMonthLastDay = new Date(year, month, 0);
+      const prevMonthDays = prevMonthLastDay.getDate();
+      for (let i = firstDayWeekday - 1; i >= 0; i--) {
+        const date = new Date(year, month - 1, prevMonthDays - i);
+        days.push({ date, isCurrentMonth: false, isToday: isToday(date) });
+      }
     }
 
-    // Add all days of the current month
+    // Current month days
     for (let day = 1; day <= totalDaysInMonth; day++) {
       const date = new Date(year, month, day);
-      days.push({
-        date,
-        isCurrentMonth: true,
-        isToday: isToday(date),
-      });
+      days.push({ date, isCurrentMonth: true, isToday: isToday(date) });
+    }
+
+    // Next month padding
+    const totalCells = Math.ceil((firstDayWeekday + totalDaysInMonth) / 7) * 7;
+    const nextMonthDays = totalCells - days.length;
+    if (nextMonthDays > 0) {
+      const nextMonthYear = month === 11 ? year + 1 : year;
+      const nextMonthMonth = (month + 1) % 12;
+      for (let day = 1; day <= nextMonthDays; day++) {
+        const date = new Date(nextMonthYear, nextMonthMonth, day);
+        days.push({ date, isCurrentMonth: false, isToday: isToday(date) });
+      }
     }
 
     return days;
   }, [currentDate]);
 
-  // Group calendar days into weeks (but only show weeks that have current month days)
+  // Group into weeks
   const calendarWeeks = useMemo(() => {
     const weeks = [];
     for (let i = 0; i < calendarDays.length; i += 7) {
-      const week = calendarDays.slice(i, i + 7);
-      // Only add weeks that have at least one day from current month
-      if (week.some((day) => day !== null)) {
-        // Fill the rest of the week with nulls if needed
-        while (week.length < 7) {
-          week.push(null);
-        }
-        weeks.push(week);
-      }
+      weeks.push(calendarDays.slice(i, i + 7));
     }
     return weeks;
   }, [calendarDays]);
 
-  // Filter events to only show current month events
-  const currentMonthEvents = useMemo(() => {
-    if (!events || !events.length) return [];
-
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-
-    return events.filter((event) => {
-      const eventDate = new Date(event.startDate);
-      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
-    });
-  }, [events, currentDate]);
-
-  // Get events for specific date (only current month events)
+  // Filter events for a specific date
   const getEventsForDate = (date) => {
-    if (!currentMonthEvents || !currentMonthEvents.length) return [];
-
-    return currentMonthEvents.filter((event) => {
+    return events.filter((event) => {
       const eventDate = new Date(event.startDate);
       return (
         eventDate.getDate() === date.getDate() &&
@@ -142,27 +158,23 @@ const CalendarView = ({
     });
   };
 
-  // Get all dates that have events for highlighting (only current month)
+  // Memoized event dates for quick lookup
   const eventDates = useMemo(() => {
-    if (!currentMonthEvents || !currentMonthEvents.length) return {};
-
     const dates = {};
-    currentMonthEvents.forEach((event) => {
+    events.forEach((event) => {
       const eventDate = new Date(event.startDate);
-      const dateKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
-      dates[dateKey] = true;
+      const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
+      dates[key] = true;
     });
-
     return dates;
-  }, [currentMonthEvents]);
+  }, [events]);
 
-  // Check if a date has events
   const hasEvents = (date) => {
-    const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-    return !!eventDates[dateKey];
+    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    return !!eventDates[key];
   };
 
-  // Navigation functions
+  // Navigation handlers
   const navigatePrevious = () => {
     const newDate = new Date(
       currentDate.getFullYear(),
@@ -171,7 +183,14 @@ const CalendarView = ({
     );
     setCurrentDate(newDate);
     setSelectedDate(null);
-    onMonthChange?.(newDate);
+
+    // Call onMonthChange with month and year numbers (1-based month)
+    onMonthChange?.(newDate.getMonth() + 1, newDate.getFullYear());
+
+    // Fetch events if function provided
+    if (fetchEvents) {
+      fetchEvents();
+    }
   };
 
   const navigateNext = () => {
@@ -182,7 +201,14 @@ const CalendarView = ({
     );
     setCurrentDate(newDate);
     setSelectedDate(null);
-    onMonthChange?.(newDate);
+
+    // Call onMonthChange with month and year numbers (1-based month)
+    onMonthChange?.(newDate.getMonth() + 1, newDate.getFullYear());
+
+    // Fetch events if function provided
+    if (fetchEvents) {
+      fetchEvents();
+    }
   };
 
   const navigateToday = () => {
@@ -190,50 +216,34 @@ const CalendarView = ({
     setCurrentDate(today);
     setSelectedDate(null);
 
-    // Notify parent to fetch new events for current month
-    if (onMonthChange) {
-      onMonthChange(today);
+    // Call onMonthChange with month and year numbers (1-based month)
+    onMonthChange?.(today.getMonth() + 1, today.getFullYear());
+
+    // Fetch events if function provided
+    if (fetchEvents) {
+      fetchEvents();
     }
   };
 
-  // Get current month label
-  const getMonthLabel = () => {
-    return currentDate.toLocaleDateString(undefined, {
+  const getMonthLabel = () =>
+    currentDate.toLocaleDateString(undefined, {
       year: "numeric",
       month: "long",
     });
-  };
 
-  // Get CSS class for date cell
   const getDateCellClass = (dayInfo) => {
-    if (!dayInfo) return "h-20 border border-gray-200 dark:border-gray-700"; // Empty cell
-
+    if (!dayInfo) return "h-20 border border-gray-200 dark:border-gray-700";
     const { date, isCurrentMonth } = dayInfo;
-
     let classes =
       "h-20 p-2 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ";
-
-    if (isToday(date)) {
-      classes += "bg-blue-50 dark:bg-blue-900/20 ";
-    }
-
-    if (hasEvents(date)) {
-      classes += "bg-teal-50 dark:bg-teal-900/10 ";
-    }
-
-    if (
-      selectedDate &&
-      date.getDate() === selectedDate.getDate() &&
-      date.getMonth() === selectedDate.getMonth() &&
-      date.getFullYear() === selectedDate.getFullYear()
-    ) {
+    if (isToday(date)) classes += "bg-blue-50 dark:bg-blue-900/20 ";
+    if (hasEvents(date)) classes += "bg-teal-50 dark:bg-teal-900/10 ";
+    if (selectedDate && date.getTime() === selectedDate.getTime())
       classes += "ring-2 ring-inset ring-teal-500 ";
-    }
-
+    if (!isCurrentMonth) classes += "text-gray-400 dark:text-gray-600 ";
     return classes;
   };
 
-  // Event dot indicator colors
   const getEventDotColor = (event) => {
     if (event.canceled) return "bg-red-500";
     if (event.completed) return "bg-green-500";
@@ -242,8 +252,8 @@ const CalendarView = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-      {/* Calendar Header */}
+    <div className="overflow-hidden">
+      {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
@@ -265,16 +275,17 @@ const CalendarView = ({
         <button
           onClick={navigateToday}
           className="px-3 py-1 bg-teal-600 text-white text-sm rounded hover:bg-teal-700"
+          aria-label="Go to today"
         >
           Today
         </button>
       </div>
 
-      {/* Show message if no events in current month */}
-      {currentMonthEvents.length === 0 && (
+      {/* No events message */}
+      {events.length === 0 && (
         <div className="p-6 text-center bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400 text-lg">
-            Haven't scheduled any events for {getMonthLabel()} yet
+            No events scheduled for {getMonthLabel()}
           </p>
         </div>
       )}
@@ -282,7 +293,6 @@ const CalendarView = ({
       {/* Calendar Grid */}
       <div className="overflow-x-auto">
         <div className="min-w-full">
-          {/* Week day headers */}
           <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div
@@ -293,8 +303,6 @@ const CalendarView = ({
               </div>
             ))}
           </div>
-
-          {/* Calendar days by week rows */}
           <div className="grid grid-cols-1">
             {calendarWeeks.map((week, weekIndex) => (
               <div key={weekIndex} className="grid grid-cols-7">
@@ -311,13 +319,13 @@ const CalendarView = ({
                             className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
                               dayInfo.isToday
                                 ? "bg-teal-600 text-white"
-                                : "text-gray-900 dark:text-gray-100"
+                                : dayInfo.isCurrentMonth
+                                ? "text-gray-900 dark:text-gray-100"
+                                : "text-gray-400 dark:text-gray-600"
                             }`}
                           >
                             {dayInfo.date.getDate()}
                           </span>
-
-                          {/* Event indicators */}
                           <div className="flex space-x-1">
                             {getEventsForDate(dayInfo.date)
                               .slice(0, 3)
@@ -328,7 +336,7 @@ const CalendarView = ({
                                     event
                                   )}`}
                                   title={event.title}
-                                ></div>
+                                />
                               ))}
                             {getEventsForDate(dayInfo.date).length > 3 && (
                               <span className="text-xs text-gray-500">
@@ -337,8 +345,6 @@ const CalendarView = ({
                             )}
                           </div>
                         </div>
-
-                        {/* Event preview - show first event */}
                         {getEventsForDate(dayInfo.date).length > 0 ? (
                           <div className="space-y-1">
                             <div
@@ -375,19 +381,10 @@ const CalendarView = ({
                               today.setHours(0, 0, 0, 0);
                               const currentDay = new Date(dayInfo.date);
                               currentDay.setHours(0, 0, 0, 0);
-
-                              // Check if day is in future
-                              if (currentDay > today) {
-                                return "এইদিনের জন্য এখনো কোন কর্মসূচী ঘোষিত হয়নি";
-                              }
-                              // Check if day is in past
-                              else if (currentDay < today) {
-                                return "কোন কর্মসূচী নেই";
-                              }
-                              // For today (if no events)
-                              else {
-                                return "আজকের জন্য কোন কর্মসূচী নেই";
-                              }
+                              if (currentDay > today)
+                                return "এইদিনের জন্য এখনো কোন কর্মসূচী ঘোষিত হয়নি";
+                              if (currentDay < today) return "কোন কর্মসূচী নেই";
+                              return "আজকের জন্য কোন কর্মসূচী নেই";
                             })()}
                           </div>
                         )}
@@ -401,7 +398,7 @@ const CalendarView = ({
         </div>
       </div>
 
-      {/* Event Detail Panel - Shows when a date is selected */}
+      {/* Detail Panel */}
       {selectedDate && (
         <div className="border-t border-gray-200 dark:border-gray-700 p-4">
           <div className="flex justify-between items-center mb-4">
@@ -409,11 +406,11 @@ const CalendarView = ({
             <button
               onClick={() => setSelectedDate(null)}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              aria-label="Close event details"
             >
               <FiX />
             </button>
           </div>
-
           {getEventsForDate(selectedDate).length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400 text-center py-4">
               No events scheduled for this date
@@ -433,60 +430,43 @@ const CalendarView = ({
                       : "border-gray-200 dark:border-gray-700"
                   }`}
                 >
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {event.featured && (
-                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs rounded-full flex items-center">
-                        <FiStar className="mr-1" /> Featured
-                      </span>
-                    )}
-                    {event.completed && (
-                      <span className="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded-full flex items-center">
-                        <FiCheck className="mr-1" /> Completed
-                      </span>
-                    )}
-                    {event.canceled && (
-                      <span className="px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs rounded-full flex items-center">
-                        <FiX className="mr-1" /> Canceled
-                      </span>
-                    )}
-                  </div>
-
-                  <h4 className="font-medium">{event.title}</h4>
-
+                  <EventStatusTags event={event} />
+                  <h4 className="font-medium mt-2">{event.title}</h4>
                   <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    <FiCalendar className="mr-1" />
+                    <FiCalendar className="mr-1" />{" "}
                     <span>{formatDate(event.startDate)}</span>
                     {event.scheduledTime && (
                       <>
-                        <FiClock className="ml-3 mr-1" />
+                        <FiClock className="ml-3 mr-1" />{" "}
                         <span>{formatTime(event.scheduledTime)}</span>
                       </>
                     )}
                   </div>
-
                   {event.location && (
                     <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      <FiMapPin className="mr-1" />
+                      <FiMapPin className="mr-1" />{" "}
                       <span>{event.location}</span>
                     </div>
                   )}
-
                   {event.description && (
                     <p className="text-sm mt-2 line-clamp-2 whitespace-pre-wrap">
                       {event.description}
                     </p>
                   )}
-
-                  {/* Actions */}
                   <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
                     <button
-                      onClick={() => handleToggleInterest(event._id)}
+                      onClick={() => handleToggleInterest?.(event._id)}
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
                         userStatus[event._id]?.interested
                           ? "bg-teal-600 text-white"
                           : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
                       }`}
                       disabled={event.canceled}
+                      aria-label={
+                        userStatus[event._id]?.interested
+                          ? "Remove interest"
+                          : "Mark as interested"
+                      }
                     >
                       <FiStar size={16} />
                       <span>
@@ -495,15 +475,19 @@ const CalendarView = ({
                           : "Interest"}
                       </span>
                     </button>
-
                     <button
-                      onClick={() => handleToggleNotification(event._id)}
+                      onClick={() => handleToggleNotification?.(event._id)}
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
                         userStatus[event._id]?.notified
                           ? "bg-blue-600 text-white"
                           : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
                       }`}
                       disabled={event.canceled}
+                      aria-label={
+                        userStatus[event._id]?.notified
+                          ? "Remove notification"
+                          : "Set notification"
+                      }
                     >
                       <FiBell size={16} />
                       <span>
@@ -512,47 +496,57 @@ const CalendarView = ({
                           : "Notify Me"}
                       </span>
                     </button>
-
                     <button
-                      onClick={() => handleSetViewingEvent(event)}
+                      onClick={() => handleSetViewingEvent?.(event)}
                       className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                      aria-label="View event details"
                     >
                       <span>Details</span>
                     </button>
-
                     {isAdmin && (
                       <>
                         <button
-                          onClick={() => setEditingEvent(event)}
+                          onClick={() => setEditingEvent?.(event)}
                           className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs"
+                          aria-label="Edit event"
                         >
                           Edit
                         </button>
-
                         <button
-                          onClick={() => handleToggleComplete(event._id)}
+                          onClick={() => handleToggleComplete?.(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
+                          aria-label={
+                            event.completed
+                              ? "Mark as incomplete"
+                              : "Mark as complete"
+                          }
                         >
                           {event.completed ? "Mark Incomplete" : "Complete"}
                         </button>
-
                         <button
-                          onClick={() => handleToggleCancel(event._id)}
+                          onClick={() => handleToggleCancel?.(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+                          aria-label={
+                            event.canceled ? "Restore event" : "Cancel event"
+                          }
                         >
                           {event.canceled ? "Restore" : "Cancel"}
                         </button>
-
                         <button
-                          onClick={() => handleToggleFeatured(event._id)}
+                          onClick={() => handleToggleFeatured?.(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
+                          aria-label={
+                            event.featured
+                              ? "Remove featured status"
+                              : "Feature event"
+                          }
                         >
                           {event.featured ? "Unfeature" : "Feature"}
                         </button>
-
                         <button
-                          onClick={() => handleDeleteEvent(event._id)}
+                          onClick={() => handleDeleteEvent?.(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+                          aria-label="Delete event"
                         >
                           Delete
                         </button>

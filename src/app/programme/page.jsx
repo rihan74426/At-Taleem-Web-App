@@ -37,11 +37,21 @@ export default function ProgrammePage() {
   const router = useRouter();
   const isAdmin = user?.publicMetadata?.isAdmin;
 
-  // State for view controls
-  const [view, setView] = useState(localStorage.getItem("EventView") || "list");
-  const [scope, setScope] = useState("weekly");
+  // Core view states
+  const [view, setView] = useState(
+    typeof window !== "undefined"
+      ? localStorage.getItem("EventView") || "calendar"
+      : "calendar"
+  );
+  const [scope, setScope] = useState("monthly");
+
+  // Simplified date state - just track month and year
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  // List view specific states
   const [page, setPage] = useState(1);
-  const [limit] = useState(20); // Items per page
+  const [limit] = useState(20);
   const [sortBy, setSortBy] = useState("startDate");
   const [sortOrder, setSortOrder] = useState("asc");
   const [search, setSearch] = useState("");
@@ -50,22 +60,28 @@ export default function ProgrammePage() {
     completed: false,
     canceled: false,
   });
-  const [viewingEvent, setViewingEvent] = useState(null);
 
-  // State for notification preferences
-  const [prefs, setPrefs] = useState({
-    weekly: false,
-    monthly: false,
-    yearly: false,
-  });
-
-  // State for events data
+  // Data and UI states
   const [events, setEvents] = useState([]);
+  const [monthInfo, setMonthInfo] = useState({
+    currentMonth: new Date().getMonth() + 1,
+    currentYear: new Date().getFullYear(),
+    nextMonth: null,
+    nextYear: null,
+    prevMonth: null,
+    prevYear: null,
+  });
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
     limit: 20,
     pages: 1,
+  });
+  const [userStatus, setUserStatus] = useState({});
+  const [prefs, setPrefs] = useState({
+    weekly: false,
+    monthly: false,
+    yearly: false,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -74,465 +90,404 @@ export default function ProgrammePage() {
     message: "",
     status: "",
   });
-
-  // State for user interactions with events
-  const [userStatus, setUserStatus] = useState({});
+  const [viewingEvent, setViewingEvent] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
 
-  // Show modal helper
-  const showModal = (message, status) => {
-    setModal({
-      isOpen: true,
-      message,
-      status,
-    });
-  };
+  // Simplified query string builder
+  const buildQueryString = useCallback(
+    (options = {}) => {
+      const params = new URLSearchParams();
 
-  // Load user preferences on mount
-  useEffect(() => {
-    if (isLoaded && user) {
-      const userPrefs = user.publicMetadata?.eventPrefs || {};
-      setPrefs({
-        weekly: !!userPrefs.weekly,
-        monthly: !!userPrefs.monthly,
-        yearly: !!userPrefs.yearly,
-      });
-      fetchUserEventStatus();
-    }
-  }, [isLoaded, user]);
+      // Always add month and year for calendar view
+      if (view === "calendar" || options.view === "calendar") {
+        params.append("month", (options.month || currentMonth).toString());
+        params.append("year", (options.year || currentYear).toString());
+      } else {
+        // For list view, add pagination
+        params.append("page", (options.page || page).toString());
+        params.append("limit", limit.toString());
+      }
 
-  const handleEventUpdate = (updatedEvent) => {
-    setEvents((prev) =>
-      prev.map((e) => (e._id === updatedEvent._id ? updatedEvent : e))
-    );
-  };
+      // Add sorting
+      params.append("sortBy", options.sortBy || sortBy);
+      params.append("sortOrder", options.sortOrder || sortOrder);
 
-  // Build query string for fetching events
-  const getQueryString = useCallback(() => {
-    const params = new URLSearchParams();
-    params.append("page", page.toString());
-    params.append("limit", limit.toString());
-    params.append("sortBy", sortBy);
-    params.append("sortOrder", sortOrder);
-    if (search) params.append("search", search);
-    if (filter.featured) params.append("featured", "true");
-    if (filter.completed) params.append("completed", "true");
-    if (filter.canceled) params.append("canceled", "true");
+      // Add search for list view
+      if (view === "list" && (options.search || search)) {
+        params.append("search", options.search || search);
+      }
 
-    // Calculate date range based on scope
-    const now = new Date();
-    let startDate, endDate;
-    if (scope === "weekly") {
-      const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - day); // Start of week (Sunday)
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6); // End of week
-    } else if (scope === "monthly") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else if (scope === "yearly") {
-      startDate = new Date(now.getFullYear(), 0, 1);
-      endDate = new Date(now.getFullYear(), 11, 31);
-    }
+      // Add filters
+      const activeFilter = options.filter || filter;
+      if (activeFilter.featured) params.append("featured", "true");
+      if (activeFilter.completed) params.append("completed", "true");
+      if (activeFilter.canceled) params.append("canceled", "true");
 
-    if (startDate && endDate) {
-      params.append("startDate", startDate.toISOString().split("T")[0]);
-      params.append("endDate", endDate.toISOString().split("T")[0]);
-    }
+      return params.toString();
+    },
+    [
+      view,
+      currentMonth,
+      currentYear,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      search,
+      filter,
+    ]
+  );
 
-    return params.toString();
-  }, [scope, page, limit, sortBy, sortOrder, search, filter]);
-
-  // Fetch events based on current filters
+  // Event fetching function
   const fetchEvents = useCallback(
-    async (overrideQueryString = null) => {
+    async (options = {}) => {
       if (!isLoaded) return;
 
       setLoading(true);
       setError("");
 
       try {
-        const queryString = overrideQueryString || getQueryString();
-        console.log("Fetching events with query:", queryString); // Debugging
-        const res = await fetch(`/api/events?${queryString}`);
+        const queryString = buildQueryString(options);
+        const res = await fetch(`/api/events?${queryString}`, {
+          cache: "no-store",
+        });
 
-        if (!res.ok) {
-          throw new Error("Failed to fetch events");
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
         const data = await res.json();
-        console.log("Received data:", data); // Debugging
+
         setEvents(data.events || []);
-        setPagination(
-          data.pagination || {
-            total: 0,
-            page: 1,
-            limit,
-            pages: 3,
-          }
-        );
+
+        // Update month info if provided (for calendar view)
+        if (data.monthInfo) {
+          setMonthInfo(data.monthInfo);
+        }
+
+        // Update pagination if provided (for list view)
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
+
+        // Update current month/year if options were provided
+        if (options.month) setCurrentMonth(options.month);
+        if (options.year) setCurrentYear(options.year);
       } catch (err) {
-        console.error("Error fetching events:", err);
-        setError("Unable to fetch events. Please try again.");
+        setError(err.message || "Failed to fetch events");
+        console.error("Fetch error:", err);
       } finally {
         setLoading(false);
       }
     },
-    [isLoaded, getQueryString, limit]
+    [isLoaded, buildQueryString]
   );
 
-  // Fetch user's status for events (interested, notifications)
-  const fetchUserEventStatus = useCallback(async () => {
-    if (!isLoaded || !user) return;
+  // Month navigation handlers
+  const handlePreviousMonth = useCallback(() => {
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
-    try {
-      const newUserStatus = {};
-      for (const event of events) {
-        newUserStatus[event._id] = {
-          interested: event.interestedUsers?.includes(user.id) || false,
-          notified: event.notificationWants?.includes(user.id) || false,
-        };
+    fetchEvents({
+      month: prevMonth,
+      year: prevYear,
+      view: "calendar",
+    });
+  }, [currentMonth, currentYear, fetchEvents]);
+
+  const handleNextMonth = useCallback(() => {
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+    fetchEvents({
+      month: nextMonth,
+      year: nextYear,
+      view: "calendar",
+    });
+  }, [currentMonth, currentYear, fetchEvents]);
+
+  const handleMonthChange = useCallback(
+    (newMonth, newYear) => {
+      fetchEvents({
+        month: newMonth,
+        year: newYear,
+        view: "calendar",
+      });
+    },
+    [fetchEvents]
+  );
+
+  // Scope change handler (simplified for monthly focus)
+  const handleScopeChange = useCallback(
+    (newScope) => {
+      setScope(newScope);
+      setPage(1);
+
+      if (newScope === "monthly") {
+        // Reset to current month for monthly view
+        const now = new Date();
+        fetchEvents({
+          month: now.getMonth() + 1,
+          year: now.getFullYear(),
+          page: 1,
+        });
+      } else {
+        // For other scopes, just refetch with current settings
+        fetchEvents({ scope: newScope, page: 1 });
       }
-      setUserStatus(newUserStatus);
-    } catch (err) {
-      console.error("Error fetching user event status:", err);
+    },
+    [fetchEvents]
+  );
+
+  // View change handler
+  const handleViewChange = useCallback(
+    (newView) => {
+      setView(newView);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("EventView", newView);
+      }
+      setPage(1);
+      fetchEvents({ view: newView, page: 1 });
+    },
+    [fetchEvents]
+  );
+
+  // Initial fetch and effects
+  useEffect(() => {
+    if (isLoaded) {
+      fetchEvents();
     }
+  }, [isLoaded, scope, view, page, sortBy, sortOrder, fetchEvents]);
+
+  // Search effect with debouncing
+  useEffect(() => {
+    if (isLoaded) {
+      const timeoutId = setTimeout(() => {
+        setPage(1);
+        fetchEvents({ page: 1 });
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [search, filter, isLoaded, fetchEvents]);
+
+  // User status fetching
+  const fetchUserEventStatus = useCallback(async () => {
+    if (!isLoaded || !user || !events.length) return;
+    const newStatus = {};
+    events.forEach((event) => {
+      newStatus[event._id] = {
+        interested: event.interestedUsers?.includes(user.id) || false,
+        notified: event.notificationWants?.includes(user.id) || false,
+      };
+    });
+    setUserStatus(newStatus);
   }, [isLoaded, user, events]);
 
-  // Update user notification preferences
-  const savePreferences = async () => {
-    if (!isLoaded || !user) {
-      showModal("পছন্দ ঠিক করতে আগে লগিন করতে হবে!", "error");
-      return;
-    }
+  // User interaction handlers
+  const togglePref = (scopeValue) =>
+    setPrefs((prev) => ({ ...prev, [scopeValue]: !prev[scopeValue] }));
 
+  const savePreferences = async () => {
+    if (!isLoaded || !user)
+      return setModal({
+        isOpen: true,
+        message: "Please login first!",
+        status: "error",
+      });
     try {
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventPrefs: prefs, userId: user.id }),
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to save preferences");
-      }
-
-      showModal("নোটিফিকেশন পছন্দ সংরক্ষণ করা হয়েছে!", "success");
+      if (!res.ok) throw new Error("Failed to save preferences");
+      setModal({
+        isOpen: true,
+        message: "Preferences saved!",
+        status: "success",
+      });
     } catch (err) {
-      console.error("Error saving preferences:", err);
-      showModal("পছন্দ সংরক্ষণে কোন সমস্যা হয়েছে!", "error");
+      setModal({
+        isOpen: true,
+        message: "Error saving preferences!",
+        status: "error",
+      });
     }
   };
 
-  // Toggle notification preference for a scope
-  const togglePref = (scopeValue) => {
-    setPrefs((prev) => ({
-      ...prev,
-      [scopeValue]: !prev[scopeValue],
-    }));
-  };
-
-  // Handle event interest toggle
   const handleToggleInterest = async (eventId) => {
-    if (!isLoaded || !user) {
-      showModal("আগ্রহী হওয়ার জন্য দয়া করে আগে লগিন করে নিন!", "error");
-      return;
-    }
-
+    if (!user)
+      return setModal({
+        isOpen: true,
+        message: "Please login!",
+        status: "error",
+      });
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "toggleInterest" }),
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to update interest");
-      }
-
+      if (!res.ok) throw new Error("Failed to toggle interest");
       const data = await res.json();
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-      setUserStatus((prev) => ({
-        ...prev,
-        [eventId]: data.userStatus,
-      }));
-      showModal(
-        data.userStatus.interested
-          ? "আপনি এখন এই মাহফিলে আগ্রহী!"
-          : "আপনি এখন আর এই মাহফিলে আগ্রহী নন!",
-        "success"
-      );
+      setUserStatus((prev) => ({ ...prev, [eventId]: data.userStatus }));
+      setModal({
+        isOpen: true,
+        message: data.userStatus.interested ? "Interested!" : "Not interested!",
+        status: "success",
+      });
     } catch (err) {
-      console.error("Error toggling interest:", err);
-      showModal("Failed to update interest", "error");
+      setModal({
+        isOpen: true,
+        message: "Error toggling interest",
+        status: "error",
+      });
     }
   };
 
-  // Handle notification toggle for specific event
   const handleToggleNotification = async (eventId) => {
-    if (!isLoaded || !user) {
-      showModal("নোটিফিকেশন পাওয়ার জন্য দয়া করে আগে লগিন করে নিন!", "error");
-      return;
-    }
-
+    if (!user)
+      return setModal({
+        isOpen: true,
+        message: "Please login!",
+        status: "error",
+      });
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "toggleNotification" }),
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to update notification preferences");
-      }
-
+      if (!res.ok) throw new Error("Failed to toggle notification");
       const data = await res.json();
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-      setUserStatus((prev) => ({
-        ...prev,
-        [eventId]: data.userStatus,
-      }));
-      showModal(
-        data.userStatus.notified
-          ? "আপনাকে এই মাহফিলের ব্যাপারে ১ ঘন্টা আগে জানানো হবে!"
-          : "আপনাকে এই মাহফিলের ব্যাপারে জানানো হবে না!",
-        "success"
-      );
+      setUserStatus((prev) => ({ ...prev, [eventId]: data.userStatus }));
+      setModal({
+        isOpen: true,
+        message: data.userStatus.notified
+          ? "Notification on!"
+          : "Notification off!",
+        status: "success",
+      });
     } catch (err) {
-      console.error("Error toggling notification:", err);
-      showModal("নোটিফিকেশন সিস্টেম আপডেট করতে একটু সমস্যা হয়েছে!", "error");
+      setModal({
+        isOpen: true,
+        message: "Error toggling notification",
+        status: "error",
+      });
     }
   };
 
-  // Admin functions
-  const handleToggleComplete = async (eventId) => {
+  // Admin handlers
+  const handleAdminAction = async (eventId, action, successMessage) => {
     if (!isAdmin) return;
-
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggleComplete" }),
+        body: JSON.stringify({ action }),
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to update event status");
-      }
-
+      if (!res.ok) throw new Error(`Failed to ${action}`);
       const data = await res.json();
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-      showModal(
-        `Event marked as ${data.event.completed ? "completed" : "incomplete"}`,
-        "success"
-      );
-    } catch (err) {
-      console.error("Error updating event status:", err);
-      showModal("মাহফিলের অবস্থা আপডেট করতে সমস্যা হয়েছে!", "error");
-    }
-  };
-
-  const handleToggleCancel = async (eventId) => {
-    if (!isAdmin) return;
-
-    try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggleCancel" }),
+      setModal({
+        isOpen: true,
+        message: successMessage(data.event),
+        status: "success",
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to update event status");
-      }
-
-      const data = await res.json();
-      setEvents((prev) =>
-        prev.map((e) => (e._id === eventId ? data.event : e))
-      );
-      showModal(
-        `Event ${data.event.canceled ? "canceled" : "restored"}`,
-        "success"
-      );
     } catch (err) {
-      console.error("Error updating event status:", err);
-      showModal("মাহফিলের অবস্থা আপডেট করতে সমস্যা হয়েছে!", "error");
-    }
-  };
-
-  const handleToggleFeatured = async (eventId) => {
-    if (!isAdmin) return;
-
-    try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggleFeatured" }),
+      setModal({
+        isOpen: true,
+        message: `Error ${action}ing event`,
+        status: "error",
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to update featured status");
-      }
-
-      const data = await res.json();
-      setEvents((prev) =>
-        prev.map((e) => (e._id === eventId ? data.event : e))
-      );
-      showModal(
-        `Event ${data.event.featured ? "featured" : "unfeatured"}`,
-        "success"
-      );
-    } catch (err) {
-      console.error("Error updating featured status:", err);
-      showModal("মাহফিলকে বিশেষায়িত করতে সমস্যা হয়েছে!", "error");
     }
   };
 
   const handleDeleteEvent = async (eventId) => {
-    if (!isAdmin) return;
-
     if (
-      !window.confirm(
-        "Are you sure you want to delete this event? This action cannot be undone."
-      )
-    ) {
+      !isAdmin ||
+      !window.confirm("Are you sure you want to delete this event?")
+    )
       return;
-    }
-
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete event");
-      }
-
+      const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
       setEvents((prev) => prev.filter((e) => e._id !== eventId));
-      showModal("মাহফিল ডিলিট সম্পন্ন হয়েছে!", "success");
+      setModal({ isOpen: true, message: "Event deleted!", status: "success" });
     } catch (err) {
-      console.error("Error deleting event:", err);
-      showModal("মাহফিল ডিলিটে সমস্যা হয়েছে!", "error");
+      setModal({
+        isOpen: true,
+        message: "Error deleting event",
+        status: "error",
+      });
     }
   };
 
-  // Format dates for display
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  // Utility functions
+  const formatDate = (dateStr) =>
+    dateStr
+      ? new Date(dateStr).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : "";
+  const formatTime = (dateStr) =>
+    dateStr
+      ? new Date(dateStr).toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "";
 
-  const formatTime = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const pageNumbers = useMemo(() => {
+    const total = pagination.pages;
+    const current = pagination.page;
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    const delta = 1;
+    const pages = [];
+    const left = Math.max(1, current - delta);
+    const right = Math.min(total, current + delta);
+    if (left > 1) pages.push(1, left > 2 ? "..." : null);
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < total) pages.push(right < total - 1 ? "..." : null, total);
+    return pages.filter(Boolean);
+  }, [pagination.pages, pagination.page]);
 
-  // Effect to fetch events when filters change
+  // User preferences effect
   useEffect(() => {
-    if (isLoaded) {
-      fetchEvents();
-    }
-  }, [isLoaded, fetchEvents]);
-
-  // Effect to update user event status when events change
-  useEffect(() => {
-    if (isLoaded && user && events.length > 0) {
+    if (isLoaded && user) {
+      setPrefs(
+        user.publicMetadata?.eventPrefs || {
+          weekly: false,
+          monthly: false,
+          yearly: false,
+        }
+      );
       fetchUserEventStatus();
     }
   }, [isLoaded, user, events, fetchUserEventStatus]);
 
-  // Generate page numbers for pagination
-  const pageNumbers = useMemo(() => {
-    const total = pagination.pages;
-    const current = pagination.page;
-    const delta = 1;
-
-    if (total <= 5) {
-      return Array.from({ length: total }, (_, i) => i + 1);
-    }
-
-    const pages = [];
-    const leftBound = Math.max(1, current - delta);
-    const rightBound = Math.min(total, current + delta);
-
-    if (leftBound > 1) {
-      pages.push(1);
-      if (leftBound > 2) pages.push("...");
-    }
-
-    for (let i = leftBound; i <= rightBound; i++) {
-      pages.push(i);
-    }
-
-    if (rightBound < total) {
-      if (rightBound < total - 1) pages.push("...");
-      pages.push(total);
-    }
-
-    return pages;
-  }, [pagination.pages, pagination.page]);
-
-  // Handle pagination
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.pages) {
-      setPage(newPage);
-    }
+  // Get month label for display
+  const getMonthLabel = () => {
+    const date = new Date(currentYear, currentMonth - 1);
+    return date.toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    });
   };
 
-  // Handle search
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setPage(1);
-    fetchEvents();
-  };
-
-  const handleMonthChange = (newDate) => {
-    const firstDayOfMonth = new Date(
-      newDate.getFullYear(),
-      newDate.getMonth(),
-      1
-    );
-    const lastDayOfMonth = new Date(
-      newDate.getFullYear(),
-      newDate.getMonth() + 1,
-      0
-    );
-
-    const params = new URLSearchParams(getQueryString());
-    params.set("startDate", firstDayOfMonth.toISOString().split("T")[0]);
-    params.set("endDate", lastDayOfMonth.toISOString().split("T")[0]);
-
-    fetchEvents(params.toString());
-  };
-
-  // Toggle filter options
-  const toggleFilter = (key) => {
-    setFilter((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-    setPage(1);
-  };
-
+  // Render
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-6">
       <div className="space-y-6">
-        {/* Hero */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <h1 className="text-3xl md:text-4xl font-bold">
             আমাদের কর্মসূচীসমূহ
@@ -541,16 +496,12 @@ export default function ProgrammePage() {
             {isAdmin && (
               <Link href="/dashboard?tab=events">
                 <button className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                  <FiPlus className="mr-1" />
-                  নতুন মাহফিল
+                  <FiPlus className="mr-1" /> নতুন মাহফিল
                 </button>
               </Link>
             )}
             <button
-              onClick={() => {
-                setView("calendar");
-                localStorage.setItem("EventView", "calendar");
-              }}
+              onClick={() => handleViewChange("calendar")}
               className={`p-2 rounded ${
                 view === "calendar"
                   ? "bg-teal-600 text-white"
@@ -560,10 +511,7 @@ export default function ProgrammePage() {
               <FiCalendar size={20} />
             </button>
             <button
-              onClick={() => {
-                setView("list");
-                localStorage.setItem("EventView", "list");
-              }}
+              onClick={() => handleViewChange("list")}
               className={`p-2 rounded ${
                 view === "list"
                   ? "bg-teal-600 text-white"
@@ -575,16 +523,12 @@ export default function ProgrammePage() {
           </div>
         </header>
 
-        {/* Tabs + search/filters */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex space-x-2">
             {SCOPES.map((s) => (
               <button
                 key={s.value}
-                onClick={() => {
-                  setScope(s.value);
-                  setPage(1);
-                }}
+                onClick={() => handleScopeChange(s.value)}
                 className={`px-4 py-2 rounded-full ${
                   scope === s.value
                     ? "bg-teal-600 text-white"
@@ -595,122 +539,117 @@ export default function ProgrammePage() {
               </button>
             ))}
           </div>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 items-stretch sm:items-center w-full sm:w-auto">
-            <form onSubmit={handleSearch} className="flex flex-1">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search events…"
-                className="px-3 py-2 border rounded-l dark:bg-gray-800 flex-1"
-              />
-              <button
-                type="submit"
-                className="px-3 py-2 bg-teal-600 text-white rounded-r"
-              >
-                Search
-              </button>
-            </form>
-            <Menu as="div" className="relative">
-              <Menu.Button className="flex items-center px-3 py-2 border rounded dark:bg-gray-800">
-                <FiFilter className="mr-1" />
-                Filters
-              </Menu.Button>
-              <Menu.Items className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow-lg focus:outline-none z-10">
-                <div className="p-3">
-                  <p className="text-sm font-medium mb-2">Event Status</p>
-                  <label className="flex items-center space-x-2 mt-2">
-                    <input
-                      type="checkbox"
-                      checked={filter.featured}
-                      onChange={() => toggleFilter("featured")}
-                      className="form-checkbox h-4 w-4 text-teal-600"
-                    />
-                    <span>Featured</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mt-2">
-                    <input
-                      type="checkbox"
-                      checked={filter.completed}
-                      onChange={() => toggleFilter("completed")}
-                      className="form-checkbox h-4 w-4 text-teal-600"
-                    />
-                    <span>Completed</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mt-2">
-                    <input
-                      type="checkbox"
-                      checked={filter.canceled}
-                      onChange={() => toggleFilter("canceled")}
-                      className="form-checkbox h-4 w-4 text-teal-600"
-                    />
-                    <span>Canceled</span>
-                  </label>
-                  <hr className="my-2 border-gray-200 dark:border-gray-700" />
-                  <p className="text-sm font-medium mb-2">Sort By</p>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => {
-                      setSortBy(e.target.value);
-                      setPage(1);
-                    }}
-                    className="w-full p-1 text-sm border rounded dark:bg-gray-700"
-                  >
-                    <option value="startDate">Date</option>
-                    <option value="title">Title</option>
-                    <option value="createdAt">Created</option>
-                  </select>
-                  <div className="flex mt-2">
+          {view === "list" && (
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 items-stretch sm:items-center w-full sm:w-auto">
+              <div className="flex flex-1">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search events…"
+                  className="px-3 py-2 border rounded-l dark:bg-gray-800 flex-1"
+                />
+                <button
+                  onClick={() => {
+                    setPage(1);
+                    fetchEvents();
+                  }}
+                  className="px-3 py-2 bg-teal-600 text-white rounded-r"
+                >
+                  Search
+                </button>
+              </div>
+              <Menu as="div" className="relative">
+                <Menu.Button className="flex items-center px-3 py-2 border rounded dark:bg-gray-800">
+                  <FiFilter className="mr-1" /> Filters
+                </Menu.Button>
+                <Menu.Items className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow-lg focus:outline-none z-10">
+                  <div className="p-3">
+                    <p className="text-sm font-medium mb-2">Event Status</p>
+                    {["featured", "completed", "canceled"].map((key) => (
+                      <label
+                        key={key}
+                        className="flex items-center space-x-2 mt-2"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filter[key]}
+                          onChange={() => {
+                            setFilter((p) => ({ ...p, [key]: !p[key] }));
+                            setPage(1);
+                          }}
+                          className="form-checkbox h-4 w-4 text-teal-600"
+                        />
+                        <span>
+                          {key.charAt(0).toUpperCase() + key.slice(1)}
+                        </span>
+                      </label>
+                    ))}
+                    <hr className="my-2 border-gray-200 dark:border-gray-700" />
+                    <p className="text-sm font-medium mb-2">Sort By</p>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => {
+                        setSortBy(e.target.value);
+                        setPage(1);
+                      }}
+                      className="w-full p-1 text-sm border rounded dark:bg-gray-700"
+                    >
+                      <option value="startDate">Date</option>
+                      <option value="title">Title</option>
+                      <option value="createdAt">Created</option>
+                    </select>
+                    <div className="flex mt-2">
+                      <button
+                        onClick={() => {
+                          setSortOrder("asc");
+                          setPage(1);
+                        }}
+                        className={`flex-1 p-1 text-xs ${
+                          sortOrder === "asc"
+                            ? "bg-teal-100 dark:bg-teal-900"
+                            : "bg-gray-100 dark:bg-gray-700"
+                        } rounded-l`}
+                      >
+                        Ascending
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortOrder("desc");
+                          setPage(1);
+                        }}
+                        className={`flex-1 p-1 text-xs ${
+                          sortOrder === "desc"
+                            ? "bg-teal-100 dark:bg-teal-900"
+                            : "bg-gray-100 dark:bg-gray-700"
+                        } rounded-r`}
+                      >
+                        Descending
+                      </button>
+                    </div>
                     <button
                       onClick={() => {
+                        setFilter({
+                          featured: false,
+                          completed: false,
+                          canceled: false,
+                        });
+                        setSortBy("startDate");
                         setSortOrder("asc");
+                        setSearch("");
                         setPage(1);
                       }}
-                      className={`flex-1 p-1 text-xs ${
-                        sortOrder === "asc"
-                          ? "bg-teal-100 dark:bg-teal-900"
-                          : "bg-gray-100 dark:bg-gray-700"
-                      } rounded-l`}
+                      className="w-full mt-3 px-2 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
                     >
-                      Ascending
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSortOrder("desc");
-                        setPage(1);
-                      }}
-                      className={`flex-1 p-1 text-xs ${
-                        sortOrder === "desc"
-                          ? "bg-teal-100 dark:bg-teal-900"
-                          : "bg-gray-100 dark:bg-gray-700"
-                      } rounded-r`}
-                    >
-                      Descending
+                      Clear All
                     </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      setFilter({
-                        featured: false,
-                        completed: false,
-                        canceled: false,
-                      });
-                      setSortBy("startDate");
-                      setSortOrder("asc");
-                      setSearch("");
-                      setPage(1);
-                    }}
-                    className="w-full mt-3 px-2 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              </Menu.Items>
-            </Menu>
-          </div>
+                </Menu.Items>
+              </Menu>
+            </div>
+          )}
         </div>
 
-        {/* Notification Preferences */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex flex-col sm:flex-row justify-between">
             <div className="flex flex-wrap gap-4 items-center mb-3 sm:mb-0">
@@ -739,36 +678,67 @@ export default function ProgrammePage() {
           </div>
         </div>
 
-        {/* Data / Loading / Error */}
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded relative">
-            <strong className="font-bold">Error: </strong>
-            <span className="block sm:inline">{error}</span>
-          </div>
-        ) : events.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-xl font-semibold">No events found</p>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Try changing your search criteria or filters
-            </p>
+          <div className="bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded">
+            {error}
           </div>
         ) : view === "calendar" ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+              <button
+                onClick={handlePreviousMonth}
+                className="flex items-center px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+              >
+                <FiChevronLeft className="mr-1" /> Previous
+              </button>
+              <h2 className="text-xl font-semibold">{getMonthLabel()}</h2>
+              <button
+                onClick={handleNextMonth}
+                className="flex items-center px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+              >
+                Next <FiChevronRight className="ml-1" />
+              </button>
+            </div>
             <CalendarView
               events={events}
               scope={scope}
+              currentDate={new Date(currentYear, currentMonth - 1)}
+              setCurrentDate={(date) => {
+                setCurrentMonth(date.getMonth() + 1);
+                setCurrentYear(date.getFullYear());
+              }}
+              onMonthChange={handleMonthChange}
+              fetchEvents={fetchEvents}
               userStatus={userStatus}
               handleToggleInterest={handleToggleInterest}
               handleToggleNotification={handleToggleNotification}
               handleSetViewingEvent={setViewingEvent}
               isAdmin={isAdmin}
-              handleToggleComplete={handleToggleComplete}
-              handleToggleCancel={handleToggleCancel}
-              handleToggleFeatured={handleToggleFeatured}
+              handleToggleComplete={(id) =>
+                handleAdminAction(
+                  id,
+                  "toggleComplete",
+                  (e) => `Event ${e.completed ? "completed" : "incomplete"}`
+                )
+              }
+              handleToggleCancel={(id) =>
+                handleAdminAction(
+                  id,
+                  "toggleCancel",
+                  (e) => `Event ${e.canceled ? "canceled" : "restored"}`
+                )
+              }
+              handleToggleFeatured={(id) =>
+                handleAdminAction(
+                  id,
+                  "toggleFeatured",
+                  (e) => `Event ${e.featured ? "featured" : "unfeatured"}`
+                )
+              }
               handleDeleteEvent={handleDeleteEvent}
               setEditingEvent={setEditingEvent}
             />
@@ -778,47 +748,37 @@ export default function ProgrammePage() {
             {events.map((event) => (
               <div
                 key={event._id}
-                className={`
-                  bg-white dark:bg-gray-800 border rounded-lg p-5 flex flex-col justify-between shadow 
-                  ${event.canceled ? "border-red-500 dark:border-red-700" : ""} 
-                  ${
-                    event.completed
-                      ? "border-green-500 dark:border-green-700"
-                      : ""
-                  }
-                  ${
-                    event.featured
-                      ? "ring-2 ring-yellow-400 dark:ring-yellow-600"
-                      : ""
-                  }
-                `}
+                className={`bg-white dark:bg-gray-800 border rounded-lg p-5 flex flex-col justify-between shadow ${
+                  event.canceled
+                    ? "border-red-500"
+                    : event.completed
+                    ? "border-green-500"
+                    : ""
+                } ${event.featured ? "ring-2 ring-yellow-400" : ""}`}
               >
-                {/* Status indicators */}
                 <div className="flex flex-wrap gap-2 mb-3">
                   {event.featured && (
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs rounded-full flex items-center">
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center">
                       <FiStar className="mr-1" /> Featured
                     </span>
                   )}
                   {event.completed && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs rounded-full flex items-center">
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
                       <FiCheck className="mr-1" /> Completed
                     </span>
                   )}
                   {event.canceled && (
-                    <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs rounded-full flex items-center">
+                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full flex items-center">
                       <FiX className="mr-1" /> Canceled
                     </span>
                   )}
                 </div>
-
-                {/* Event details */}
                 <div>
                   <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 flex flex-col space-y-1">
+                  <div className="text-sm text-gray-500 mb-2 flex flex-col space-y-1">
                     <div className="flex items-center">
-                      <FiCalendar className="mr-2" />
-                      <span>{formatDate(event.startDate)}</span>
+                      <FiCalendar className="mr-2" />{" "}
+                      {formatDate(event.startDate)}{" "}
                       {event.scheduledTime && (
                         <span className="ml-2">
                           {formatTime(event.scheduledTime)}
@@ -827,33 +787,28 @@ export default function ProgrammePage() {
                     </div>
                     {event.location && (
                       <div className="flex items-center">
-                        <FiMap className="mr-2" />
-                        <span>{event.location}</span>
+                        <FiMap className="mr-2" /> {event.location}
                       </div>
                     )}
                   </div>
-
                   {event.description && (
                     <p className="text-sm mb-4 line-clamp-3 whitespace-pre-wrap">
                       {event.description}
                     </p>
                   )}
                 </div>
-
-                {/* Event interactions */}
                 <div className="mt-4">
-                  {/* User actions */}
                   <div className="flex flex-wrap gap-2 mb-3">
                     <button
                       onClick={() => handleToggleInterest(event._id)}
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
                         userStatus[event._id]?.interested
                           ? "bg-teal-600 text-white"
-                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          : "bg-gray-200 hover:bg-gray-300"
                       }`}
                       disabled={event.canceled}
                     >
-                      <FiStar size={16} />
+                      <FiStar size={16} />{" "}
                       <span>
                         {userStatus[event._id]?.interested
                           ? "Interested"
@@ -865,144 +820,224 @@ export default function ProgrammePage() {
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
                         userStatus[event._id]?.notified
                           ? "bg-blue-600 text-white"
-                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          : "bg-gray-200 hover:bg-gray-300"
                       }`}
                       disabled={event.canceled}
                     >
                       <FiBell size={16} />
                       <span>
                         {userStatus[event._id]?.notified
-                          ? "Notifying"
-                          : "Notify Me"}
+                          ? "Notified"
+                          : "Notify"}
                       </span>
                     </button>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <button
                       onClick={() => setViewingEvent(event)}
-                      className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                      className="text-teal-600 hover:text-teal-700 text-sm font-medium"
                     >
-                      <span>Details</span>
+                      View Details
                     </button>
+                    {isAdmin && (
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => setEditingEvent(event)}
+                          className="p-1 text-gray-500 hover:text-blue-600"
+                          title="Edit Event"
+                        >
+                          <FiEdit size={16} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleAdminAction(
+                              event._id,
+                              "toggleFeatured",
+                              (e) =>
+                                `Event ${
+                                  e.featured ? "featured" : "unfeatured"
+                                }`
+                            )
+                          }
+                          className={`p-1 ${
+                            event.featured
+                              ? "text-yellow-500"
+                              : "text-gray-500 hover:text-yellow-600"
+                          }`}
+                          title="Toggle Featured"
+                        >
+                          <FiStar size={16} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleAdminAction(
+                              event._id,
+                              "toggleComplete",
+                              (e) =>
+                                `Event ${
+                                  e.completed ? "completed" : "incomplete"
+                                }`
+                            )
+                          }
+                          className={`p-1 ${
+                            event.completed
+                              ? "text-green-500"
+                              : "text-gray-500 hover:text-green-600"
+                          }`}
+                          title="Toggle Complete"
+                        >
+                          <FiCheck size={16} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleAdminAction(
+                              event._id,
+                              "toggleCancel",
+                              (e) =>
+                                `Event ${e.canceled ? "canceled" : "restored"}`
+                            )
+                          }
+                          className={`p-1 ${
+                            event.canceled
+                              ? "text-red-500"
+                              : "text-gray-500 hover:text-red-600"
+                          }`}
+                          title="Toggle Cancel"
+                        >
+                          <FiAlertCircle size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event._id)}
+                          className="p-1 text-gray-500 hover:text-red-600"
+                          title="Delete Event"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Admin actions */}
-                  {isAdmin && (
-                    <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t dark:border-gray-700">
-                      <button
-                        onClick={() => setEditingEvent(event)}
-                        className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs"
-                      >
-                        <FiEdit size={14} />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleToggleComplete(event._id)}
-                        className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
-                      >
-                        <FiCheck size={14} />
-                        <span>
-                          {event.completed ? "Mark Incomplete" : "Complete"}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => handleToggleCancel(event._id)}
-                        className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
-                      >
-                        <FiAlertCircle size={14} />
-                        <span>{event.canceled ? "Restore" : "Cancel"}</span>
-                      </button>
-                      <button
-                        onClick={() => handleToggleFeatured(event._id)}
-                        className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
-                      >
-                        <FiStar size={14} />
-                        <span>{event.featured ? "Unfeature" : "Feature"}</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteEvent(event._id)}
-                        className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
-                      >
-                        <FiTrash2 size={14} />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Pagination */}
-        {!loading && !error && events.length > 0 && (
-          <nav className="flex justify-center mt-6 space-x-2">
+        {/* Pagination for List View */}
+        {view === "list" && events.length > 0 && pagination.pages > 1 && (
+          <div className="flex justify-center items-center space-x-2 mt-6">
             <button
-              onClick={() => handlePageChange(page - 1)}
+              onClick={() => {
+                setPage(Math.max(1, page - 1));
+                fetchEvents({ page: Math.max(1, page - 1) });
+              }}
               disabled={page === 1}
-              className={`px-3 py-1 rounded flex items-center ${
-                page === 1
-                  ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
-                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
+              className="px-3 py-2 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
             >
-              <FiChevronLeft />
+              Previous
             </button>
-
-            {pageNumbers.map((num, idx) =>
-              num === "..." ? (
-                <span key={`ellipsis-${idx}`} className="px-3 py-1">
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={num}
-                  onClick={() => handlePageChange(num)}
-                  className={`px-3 py-1 rounded ${
-                    num === page
-                      ? "bg-teal-600 text-white"
-                      : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {num}
-                </button>
-              )
-            )}
-
+            <div className="flex space-x-1">
+              {pageNumbers.map((pageNum, idx) =>
+                pageNum === "..." ? (
+                  <span key={idx} className="px-3 py-2">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={pageNum}
+                    onClick={() => {
+                      setPage(pageNum);
+                      fetchEvents({ page: pageNum });
+                    }}
+                    className={`px-3 py-2 rounded ${
+                      page === pageNum
+                        ? "bg-teal-600 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                )
+              )}
+            </div>
             <button
-              onClick={() => handlePageChange(page + 1)}
+              onClick={() => {
+                setPage(Math.min(pagination.pages, page + 1));
+                fetchEvents({ page: Math.min(pagination.pages, page + 1) });
+              }}
               disabled={page === pagination.pages}
-              className={`px-3 py-1 rounded flex items-center ${
-                page === pagination.pages
-                  ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
-                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
+              className="px-3 py-2 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
             >
-              <FiChevronRight />
+              Next
             </button>
-          </nav>
+          </div>
         )}
       </div>
 
-      {editingEvent && (
-        <EventInputModal
-          event={editingEvent}
-          onClose={() => setEditingEvent(null)}
-        />
-      )}
+      {/* Modals */}
+      <ResponseModal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ isOpen: false, message: "", status: "" })}
+        message={modal.message}
+        status={modal.status}
+      />
+
       {viewingEvent && (
         <EventDetailModal
           event={viewingEvent}
           onClose={() => setViewingEvent(null)}
-          onEventUpdate={handleEventUpdate}
-          onEventDelete={handleDeleteEvent}
+          userStatus={userStatus[viewingEvent._id] || {}}
+          onToggleInterest={() => handleToggleInterest(viewingEvent._id)}
+          onToggleNotification={() =>
+            handleToggleNotification(viewingEvent._id)
+          }
+          isAdmin={isAdmin}
+          onToggleComplete={() =>
+            handleAdminAction(
+              viewingEvent._id,
+              "toggleComplete",
+              (e) => `Event ${e.completed ? "completed" : "incomplete"}`
+            )
+          }
+          onToggleCancel={() =>
+            handleAdminAction(
+              viewingEvent._id,
+              "toggleCancel",
+              (e) => `Event ${e.canceled ? "canceled" : "restored"}`
+            )
+          }
+          onToggleFeatured={() =>
+            handleAdminAction(
+              viewingEvent._id,
+              "toggleFeatured",
+              (e) => `Event ${e.featured ? "featured" : "unfeatured"}`
+            )
+          }
+          onDelete={() => handleDeleteEvent(viewingEvent._id)}
+          onEdit={() => {
+            setEditingEvent(viewingEvent);
+            setViewingEvent(null);
+          }}
         />
       )}
-      {/* Response Modal */}
-      <ResponseModal
-        isOpen={modal.isOpen}
-        message={modal.message}
-        status={modal.status}
-        onClose={() => setModal({ ...modal, isOpen: false })}
-      />
+
+      {editingEvent && (
+        <EventInputModal
+          isOpen={true}
+          onClose={() => setEditingEvent(null)}
+          event={editingEvent}
+          onEventSaved={(updatedEvent) => {
+            setEvents((prev) =>
+              prev.map((e) => (e._id === updatedEvent._id ? updatedEvent : e))
+            );
+            setEditingEvent(null);
+            setModal({
+              isOpen: true,
+              message: "Event updated successfully!",
+              status: "success",
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

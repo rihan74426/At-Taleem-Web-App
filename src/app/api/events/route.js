@@ -10,31 +10,37 @@ export async function GET(req) {
   try {
     await connect();
     const { searchParams } = new URL(req.url);
-    const filter = buildEventFilter(searchParams);
 
-    // Pagination
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const skip = (page - 1) * limit;
+    // Get month/year from query params with defaults to current month/year
+    const month =
+      parseInt(searchParams.get("month")) || new Date().getMonth() + 1;
+    const year = parseInt(searchParams.get("year")) || new Date().getFullYear();
 
-    // Sorting
+    // Calculate month boundaries
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    // Build filter using the helper function, passing default month range
+    const filter = buildEventFilter(searchParams, startDate, endDate);
+
+    // Set sorting options
     const sortField = searchParams.get("sortBy") || "startDate";
     const sortOrder = searchParams.get("sortOrder") === "desc" ? -1 : 1;
     const sort = { [sortField]: sortOrder };
 
-    // Execute query with pagination
-    const [events, totalCount] = await Promise.all([
-      Event.find(filter).sort(sort).skip(skip).limit(limit).lean(),
-      Event.countDocuments(filter),
-    ]);
+    // Fetch all events matching the filter (no pagination)
+    const events = await Event.find(filter).sort(sort).lean();
 
+    // Return events with month navigation info
     return Response.json({
       events,
-      pagination: {
-        total: totalCount,
-        page,
-        limit,
-        pages: Math.ceil(totalCount / limit),
+      monthInfo: {
+        currentMonth: month,
+        currentYear: year,
+        nextMonth: month === 12 ? 1 : month + 1,
+        nextYear: month === 12 ? year + 1 : year,
+        prevMonth: month === 1 ? 12 : month - 1,
+        prevYear: month === 1 ? year - 1 : year,
       },
     });
   } catch (error) {
@@ -47,8 +53,6 @@ export async function GET(req) {
  * POST /api/events - Create a new event or update user preferences
  */
 export async function POST(req) {
-  // const {createdBy}= req.body;
-  // const user = await currentUser()
   try {
     await connect();
     const body = await req.json();
@@ -63,7 +67,6 @@ export async function POST(req) {
       });
 
       // Case 1: Update user preferences
-
       revalidatePath("/programme");
       return Response.json({ success: true }, { status: 200 });
     }
@@ -117,23 +120,51 @@ export async function POST(req) {
 
 /**
  * Helper function to build event filter based on query parameters
+ * @param {URLSearchParams} searchParams - Query parameters from the request
+ * @param {Date} defaultStart - Start of the month
+ * @param {Date} defaultEnd - End of the month
+ * @returns {Object} MongoDB filter object
  */
-function buildEventFilter(searchParams) {
+function buildEventFilter(searchParams, defaultStart, defaultEnd) {
   const filter = {};
+
+  // Handle date filters
+  if (searchParams.has("date")) {
+    const dateStr = searchParams.get("date");
+    const date = new Date(dateStr);
+    const nextDay = new Date(date);
+    nextDay.setDate(date.getDate() + 1);
+    filter.startDate = { $gte: date, $lt: nextDay };
+  } else if (
+    searchParams.has("startAfter") ||
+    searchParams.has("startBefore")
+  ) {
+    if (searchParams.has("startAfter")) {
+      filter.startDate = {
+        $gte: new Date(searchParams.get("startAfter")),
+      };
+    }
+    if (searchParams.has("startBefore")) {
+      filter.startDate = {
+        ...filter.startDate,
+        $lte: new Date(searchParams.get("startBefore")),
+      };
+    }
+  } else {
+    // Default to the entire month if no specific date filters are provided
+    filter.startDate = { $gte: defaultStart, $lte: defaultEnd };
+  }
 
   // Basic filters
   if (searchParams.has("scope")) {
     filter.scope = searchParams.get("scope");
   }
-
   if (searchParams.has("featured")) {
     filter.featured = searchParams.get("featured") === "true";
   }
-
   if (searchParams.has("completed")) {
     filter.completed = searchParams.get("completed") === "true";
   }
-
   if (searchParams.has("canceled")) {
     filter.canceled = searchParams.get("canceled") === "true";
   }
@@ -148,35 +179,10 @@ function buildEventFilter(searchParams) {
     ];
   }
 
-  // Date filters
-  if (searchParams.has("date")) {
-    const dateStr = searchParams.get("date");
-    const date = new Date(dateStr);
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-
-    filter.startDate = { $gte: date, $lt: nextDay };
-  } else {
-    if (searchParams.has("startAfter")) {
-      filter.startDate = {
-        ...filter.startDate,
-        $gte: new Date(searchParams.get("startAfter")),
-      };
-    }
-
-    if (searchParams.has("startBefore")) {
-      filter.startDate = {
-        ...filter.startDate,
-        $lte: new Date(searchParams.get("startBefore")),
-      };
-    }
-  }
-
   // User participation filters
   if (searchParams.has("createdBy")) {
     filter.createdBy = searchParams.get("createdBy");
   }
-
   if (searchParams.has("interestedUser")) {
     filter.interestedUsers = searchParams.get("interestedUser");
   }
