@@ -375,16 +375,15 @@ const CalendarView = ({
                             )}
                           </div>
                         ) : (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-1 sm:px-2 md:px-3">
                             {(() => {
                               const today = new Date();
                               today.setHours(0, 0, 0, 0);
                               const currentDay = new Date(dayInfo.date);
                               currentDay.setHours(0, 0, 0, 0);
-                              if (currentDay > today)
-                                return "এইদিনের জন্য এখনো কোন কর্মসূচী ঘোষিত হয়নি";
+                              if (currentDay > today) return "এখনো ঘোষিত হয়নি";
                               if (currentDay < today) return "কোন কর্মসূচী নেই";
-                              return "আজকের জন্য কোন কর্মসূচী নেই";
+                              return "আজকে কোন কর্মসূচী নেই";
                             })()}
                           </div>
                         )}

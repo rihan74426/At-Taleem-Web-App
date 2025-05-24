@@ -1,4 +1,4 @@
-// src/app/api/cron/daily/route.js
+// src/app/api/events/reminders/daily/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Institution from "@/lib/models/Institution";
 import Event from "@/lib/models/Event";
