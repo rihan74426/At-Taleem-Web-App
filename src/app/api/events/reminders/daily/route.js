@@ -1,14 +1,13 @@
-// src/app/api/events/reminders/daily/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Institution from "@/lib/models/Institution";
 import Event from "@/lib/models/Event";
 import { clerkClient } from "@clerk/nextjs/server";
 
-// reuse your existing HTML generators...
-async function fetchUserEmails(userIds) {
+// Fetch emails for given user IDs, with array safety
+async function fetchUserEmails(userIds, allUsers) {
   if (!userIds?.length) return [];
-  const users = await clerkClient.users.getUserList({ userId: userIds });
-  return users.data
+  const users = allUsers.filter((user) => userIds.includes(user.id));
+  return users
     .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
     .filter(Boolean);
 }
@@ -17,12 +16,7 @@ async function fetchUserEmails(userIds) {
 async function runOpenAdmissions() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
 
-  //
-  // —— A) Admissions-Open Notifications ——
-  //
   const insts = await Institution.find({
     admissionStatus: false,
     "admissionPeriod.openDate": { $lte: new Date() },
@@ -64,7 +58,7 @@ async function runOpenAdmissions() {
   </table>
 </body></html>`;
 
-  for (let inst of insts) {
+  for (const inst of insts) {
     if (!inst.interestedEmails?.length) continue;
     const emails = inst.interestedEmails;
     try {
@@ -94,38 +88,43 @@ function getMatchingDates(start, end, weekdays) {
   }
   return dates;
 }
-async function runAutoCreateWeeklies() {
+
+async function runAutoCreateWeeklies(allUsers) {
   const today = new Date();
   const nextMonth = new Date(today);
   nextMonth.setMonth(today.getMonth() + 1);
 
-  const mainDays = getMatchingDates(today, nextMonth, [2, 4, 6]); // Tue,Thu,Sat
+  const mainDays = getMatchingDates(today, nextMonth, [2, 4, 6]); // Tue, Thu, Sat
   const womenDays = getMatchingDates(today, nextMonth, [0]); // Sun
-  const createdEvents = [];
   const scope = "weekly";
-  const prefsUsers = await clerkClient.users.getUserList({
-    query: `publicMetadata.eventPrefs.weekly:true`,
-  });
-  const notifyList = prefsUsers.map((u) => u.id);
-  for (let date of mainDays) {
-    const existing = await Event.findOne({ startDate: date, scope });
 
+  // Filter users with eventPrefs.weekly: true
+  const prefsUsers = allUsers.filter(
+    (user) => user.publicMetadata?.eventPrefs?.weekly === true
+  );
+  const notifyList = prefsUsers.map((u) => u.id);
+
+  for (const date of mainDays) {
+    const existing = await Event.findOne({ startDate: date, scope });
     if (!existing) {
-      const event = await Event.create({
-        title: "তালিমের মাহফিল",
-        description: ` তারিখঃ (${date.toLocaleDateString()})
-            আল্লামা মুহাম্মদ নিজাম উদ্দীন রশিদী 
+      try {
+        await Event.create({
+          title: "তালিমের মাহফিল",
+          description: `তারিখঃ (${date.toLocaleDateString()})
+          আল্লামা মুহাম্মদ নিজাম উদ্দীন রশিদী 
     খতিব-বহদ্দারহাট জামে মসজিদ 
     মুহাদ্দিস -ছোবাহানিয়া আলিয়া কামিল মাদ্রাসা 
     প্রতিষ্ঠাতা :আত-তালিমুন নববী আলিম মাদ্রাসা`,
-        startDate: date,
-        scope: "weekly",
-        location: "বহদ্দারহাট জামে মসজিদ, বহদ্দারহাট, চট্টগ্রাম", // your default location
-        createdBy: "System Generated", // or some default user/system id
-        scheduledTime: "2025-05-20T13:00:00.729+00:00",
-        notifyList: notifyList,
-      });
-      createdEvents.push(event);
+          startDate: date,
+          scope: "weekly",
+          location: "বহদ্দারহাট জামে মসজিদ, বহদ্দারহাট, চট্টগ্রাম",
+          createdBy: "System Generated",
+          scheduledTime: "2025-05-20T13:00:00.729+00:00",
+          notifyList: notifyList,
+        });
+      } catch (error) {
+        console.error(`Error cron: creating weekly event for ${date}:`, error);
+      }
     }
   }
 
@@ -135,21 +134,24 @@ async function runAutoCreateWeeklies() {
       title: "মহিলা তালিম",
     });
     if (!existing) {
-      const event = await Event.create({
-        title: "মহিলা তালিম",
-        description: `তারিখঃ (${date.toLocaleDateString()})
+      try {
+        await Event.create({
+          title: "মহিলা তালিম",
+          description: `তারিখঃ (${date.toLocaleDateString()})
     আল্লামা মুহাম্মদ নিজাম উদ্দীন রশিদী 
     খতিব-বহদ্দারহাট জামে মসজিদ 
     মুহাদ্দিস -ছোবাহানিয়া আলিয়া কামিল মাদ্রাসা 
     প্রতিষ্ঠাতা :আত-তালিমুন নববী আলিম মাদ্রাসা`,
-        startDate: date,
-        scope: "weekly",
-        location:
-          "আত্-তালীমুন নববী আলিম মাদ্রাসা, শুলকবহর, বহদ্দারহাট, চট্টগ্রাম",
-        createdBy: "System Generated",
-        scheduledTime: "2025-05-23T09:00:00.224+00:00",
-      });
-      createdEvents.push(event);
+          startDate: date,
+          scope: "weekly",
+          location:
+            "আত্-তালীমুন নববী আলিম মাদ্রাসা, শুলকবহর, বহদ্দারহাট, চট্টগ্রাম",
+          createdBy: "System Generated",
+          scheduledTime: "2025-05-23T09:00:00.224+00:00",
+        });
+      } catch (error) {
+        console.log("error cron creating events", error);
+      }
     }
   }
 }
@@ -158,8 +160,7 @@ async function runAutoCreateWeeklies() {
 async function runMarkComplete() {
   const yesterdayEnd = new Date();
   yesterdayEnd.setHours(0, 0, 0, 0);
-  yesterdayEnd.setDate(yesterdayEnd.getDate()); // midnight today
-  // mark all past events as completed
+
   await Event.updateMany(
     {
       startDate: { $lt: yesterdayEnd },
@@ -170,7 +171,7 @@ async function runMarkComplete() {
 }
 
 // ### D) Daily event-morning reminders
-async function runDailyReminders() {
+async function runDailyReminders(allUsers) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -182,21 +183,26 @@ async function runDailyReminders() {
     startDate: { $gte: today, $lt: tomorrow },
   }).lean();
 
-  for (let ev of events) {
-    const prefs = await clerkClient.users.getUserList({
-      query: `publicMetadata.eventPrefs.${ev.scope}:true`,
-    });
-    const prefsIds = prefs.map((u) => u.id);
+  for (const ev of events) {
+    // Filter users with eventPrefs[ev.scope]: true
+    const prefsUsers = allUsers.filter(
+      (user) => user.publicMetadata?.eventPrefs?.[ev.scope] === true
+    );
+    const prefsIds = prefsUsers.map((u) => u.id);
+
     const allIds = Array.from(
       new Set([
-        ...(ev.notificationWants || []),
-        ...(ev.interestedUsers || []),
+        ...(Array.isArray(ev.notificationWants) ? ev.notificationWants : []),
+        ...(Array.isArray(ev.interestedUsers) ? ev.interestedUsers : []),
         ...prefsIds,
       ])
     );
+
     if (!allIds.length) continue;
-    // fetch emails
-    const emails = await fetchUserEmails(allIds);
+
+    const emails = await fetchUserEmails(allIds, allUsers);
+    if (!emails.length) continue;
+
     const dateStr = new Date(ev.startDate).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -246,7 +252,6 @@ async function runDailyReminders() {
   </table>
 </body></html>`;
 
-    if (!emails.length) continue;
     await fetch(`${process.env.URL}/api/emails`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -259,19 +264,25 @@ async function runDailyReminders() {
   }
 }
 
-// ---- The single daily cron handler ----
+// Single daily cron handler
 export async function GET(req) {
   if (
     req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
   ) {
     return new Response("Unauthorized", { status: 401 });
   }
+
   await connect();
   console.log("🏃 Starting daily cron…");
+
+  // Fetch all users once and reuse
+  const allUsers = (await clerkClient.users.getUserList()).data;
+
   await runOpenAdmissions();
-  await runAutoCreateWeeklies();
+  await runAutoCreateWeeklies(allUsers);
   await runMarkComplete();
-  await runDailyReminders();
+  await runDailyReminders(allUsers);
+
   console.log("✅ Daily cron complete");
   return new Response(null, { status: 204 });
 }
