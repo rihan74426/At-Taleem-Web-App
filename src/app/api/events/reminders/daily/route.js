@@ -211,7 +211,6 @@ export async function GET(req) {
   // Fetch all users once and reuse
   const allUsers = (await clerkClient.users.getUserList()).data;
 
-  await runOpenAdmissions();
   await runAutoCreateWeeklies(allUsers);
   await runMarkComplete();
   await runDailyReminders(allUsers);
