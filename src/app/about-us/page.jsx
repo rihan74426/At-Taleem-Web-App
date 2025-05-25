@@ -14,6 +14,7 @@ import {
 import { FaBookOpen, FaMapPin, FaQuran, FaUsers } from "react-icons/fa";
 import { FiMail } from "react-icons/fi";
 import { motion } from "framer-motion";
+import AboutUsPage from "../Components/ReviewCard";
 
 export default function AtTaleemAbout() {
   const [activeTab, setActiveTab] = useState("mission");
@@ -398,6 +399,10 @@ export default function AtTaleemAbout() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="py-16 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+        <AboutUsPage />
       </section>
 
       {/* Contact Section */}

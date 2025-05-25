@@ -101,12 +101,12 @@ async function runAutoCreateWeeklies() {
 
   const mainDays = getMatchingDates(today, nextMonth, [2, 4, 6]); // Tue,Thu,Sat
   const womenDays = getMatchingDates(today, nextMonth, [0]); // Sun
-
+  const createdEvents = [];
+  const scope = "weekly";
   const prefsUsers = await clerkClient.users.getUserList({
     query: `publicMetadata.eventPrefs.weekly:true`,
   });
   const notifyList = prefsUsers.map((u) => u.id);
-
   for (let date of mainDays) {
     const existing = await Event.findOne({ startDate: date, scope });
 
@@ -196,7 +196,7 @@ async function runDailyReminders() {
     );
     if (!allIds.length) continue;
     // fetch emails
-    const emails = fetchUserEmails(allIds);
+    const emails = await fetchUserEmails(allIds);
     const dateStr = new Date(ev.startDate).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -267,9 +267,11 @@ export async function GET(req) {
     return new Response("Unauthorized", { status: 401 });
   }
   await connect();
+  console.log("🏃 Starting daily cron…");
   await runOpenAdmissions();
   await runAutoCreateWeeklies();
   await runMarkComplete();
   await runDailyReminders();
+  console.log("✅ Daily cron complete");
   return new Response(null, { status: 204 });
 }

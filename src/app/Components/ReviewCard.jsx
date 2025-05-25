@@ -20,6 +20,34 @@ export function ReviewCard({
 }) {
   const loved = review.likes?.includes(user.user?.id);
   const animation = useAnimation();
+  const [users, setUsers] = useState([]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users.data);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [review, user]);
+
+  const getUserName = (id) => {
+    const u = users.find((u) => u.id === id);
+    return u ? `${u.firstName} ${u.lastName}` : "Unknown";
+  };
+  const names = review.likes.map(getUserName).filter(Boolean);
 
   return (
     <div
@@ -55,20 +83,34 @@ export function ReviewCard({
               {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
             </span>
             {review.status === "approved" && (
-              <motion.button
-                onClick={() => toggleLove(review)}
-                whileTap={{ scale: 0.8 }}
-                whileHover={{ scale: 1.5 }}
-                className=" flex items-center space-x-1 ml-auto mt-2 sm:mt-0"
-                aria-label={loved ? "Unlove" : "Love"}
-              >
-                {loved ? (
-                  <AiFillHeart className="text-red-500" size={30} />
-                ) : (
-                  <AiOutlineHeart className="text-gray-500" size={30} />
+              <div className="relative inline-block group">
+                <motion.button
+                  onClick={() => toggleLove(review)}
+                  whileTap={{ scale: 0.8 }}
+                  whileHover={{ scale: 1.5 }}
+                  className=" flex items-center space-x-1 ml-auto mt-2 sm:mt-0"
+                  aria-label={loved ? "Unlove" : "Love"}
+                >
+                  {loved ? (
+                    <AiFillHeart className="text-red-500" size={30} />
+                  ) : (
+                    <AiOutlineHeart className="text-gray-500" size={30} />
+                  )}
+                  <span className="">{review.likes.length}</span>
+                </motion.button>
+                {names.length > 0 && (
+                  <div
+                    className="absolute left-1/2 transform -translate-x-1/2 mt-2 
+                     hidden group-hover:block
+                     bg-black bg-opacity-80 text-white text-sm rounded px-2 py-1
+                     whitespace-nowrap z-10"
+                  >
+                    {names.map((name, index) => (
+                      <div key={index}>{name}</div>
+                    ))}
+                  </div>
                 )}
-                <span className="">{review.likes.length}</span>
-              </motion.button>
+              </div>
             )}
           </div>
           <p className="italic text-justify whitespace-pre-wrap">
@@ -83,6 +125,7 @@ export function ReviewCard({
               src={review.userProfilePic}
               width={100}
               height={100}
+              unoptimized
               className="rounded-full"
               alt={review.userName}
             />
