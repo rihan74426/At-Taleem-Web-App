@@ -8,7 +8,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 async function fetchUserEmails(userIds) {
   if (!userIds?.length) return [];
   const users = await clerkClient.users.getUserList({ userId: userIds });
-  return users
+  return users.data
     .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
     .filter(Boolean);
 }
