@@ -1,13 +1,81 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
 import { clerkClient } from "@clerk/nextjs/server";
+import Institution from "@/lib/models/Institution";
 
 /**
  * Helper: fetch all email addresses for a list of Clerk user IDs
+ 
  */
+async function runOpenAdmissions() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const insts = await Institution.find({
+    admissionStatus: false,
+    "admissionPeriod.openDate": { $lte: new Date() },
+  });
+
+  const admissionsHtml = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><title>Admissions Now Open!</title></head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif">
+  <table role="presentation" width="100%" style="max-width:600px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden">
+    <tr>
+      <td style="background:#2563eb;padding:40px;text-align:center;color:#fff">
+        <h1 style="margin:0;font-size:28px">Admissions Now Open!</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:30px;color:#333;line-height:1.5">
+        <p>Good news!</p>
+        <p>Admissions are now open at <strong>At-Taleem</strong>.  
+           Join us to expand your skills and network with experts.</p>
+        <ul style="margin:16px 0 16px 20px">
+          <li>Flexible schedules</li>
+          <li>Expert instructors</li>
+          <li>Career support</li>
+        </ul>
+        <p style="text-align:center">
+          <a href="${process.env.URL}/institutions"
+             style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:4px;
+                    text-decoration:none;font-weight:bold">
+            Apply Now
+          </a>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#f4f4f7;padding:20px;text-align:center;font-size:12px;color:#888">
+        © ${new Date().getFullYear()} At-Taleem. You're receiving this because you signed up for updates.
+      </td>
+    </tr>
+  </table>
+</body></html>`;
+
+  for (const inst of insts) {
+    if (!inst.interestedEmails?.length) continue;
+    const emails = inst.interestedEmails;
+    try {
+      await fetch(`${process.env.URL}/api/emails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: emails,
+          subject: `Admissions open now at ${inst.title}!`,
+          html: admissionsHtml,
+        }),
+      });
+      inst.admissionStatus = true;
+      await inst.save();
+    } catch (err) {
+      console.error(`Failed admissions email for ${inst._id}:`, err);
+    }
+  }
+}
+
 export async function fetchUserEmails(userIds) {
   const users = await clerkClient.users.getUserList({ userId: userIds });
-  return users
+  return users.data
     .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
     .filter(Boolean);
 }
@@ -21,6 +89,8 @@ export async function GET(req) {
   }
 
   await connect();
+
+  await runOpenAdmissions();
 
   const now = new Date();
   const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
