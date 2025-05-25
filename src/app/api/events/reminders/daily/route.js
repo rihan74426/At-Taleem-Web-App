@@ -7,7 +7,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 // reuse your existing HTML generators...
 async function fetchUserEmails(userIds) {
   if (!userIds?.length) return [];
-  const { users } = await clerkClient.users.getUserList({ userId: userIds });
+  const users = await clerkClient.users.getUserList({ userId: userIds });
   return users
     .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
     .filter(Boolean);
@@ -183,7 +183,7 @@ async function runDailyReminders() {
   }).lean();
 
   for (let ev of events) {
-    const { users: prefs } = await clerkClient.users.getUserList({
+    const prefs = await clerkClient.users.getUserList({
       query: `publicMetadata.eventPrefs.${ev.scope}:true`,
     });
     const prefsIds = prefs.map((u) => u.id);
