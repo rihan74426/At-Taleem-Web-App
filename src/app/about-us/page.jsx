@@ -180,7 +180,7 @@ export default function AtTaleemAbout() {
                         ? "text-white dark:text-gray-900"
                         : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                     }`}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: 1 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
@@ -193,7 +193,7 @@ export default function AtTaleemAbout() {
                         ? "text-white dark:text-gray-900"
                         : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                     }`}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: 1 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
@@ -484,7 +484,8 @@ export default function AtTaleemAbout() {
             style={{ animationDelay: "0.2s" }}
           >
             ইসলামি জ্ঞান অর্জন করুন এবং আপনার জীবনকে আলোকিত করুন আল্লাহর হুকুম
-            অনুযায়ী
+            অনুযায়ী এবং দাওয়াতী কার্যক্রমে অংশ নিয়ে আল্লাহর সন্তুষ্টি হাসিল
+            করুন
           </p>
           <div
             className={`flex flex-col sm:flex-row gap-4 justify-center ${fadeInUp}`}

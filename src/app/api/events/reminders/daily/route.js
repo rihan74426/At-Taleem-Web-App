@@ -36,9 +36,20 @@ async function runAutoCreateWeeklies(allUsers) {
     (user) => user.publicMetadata?.eventPrefs?.weekly === true
   );
   const notifyList = prefsUsers.map((u) => u.id);
-
+  function dayBounds(d) {
+    const start = new Date(d);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return [start, end];
+  }
   for (const date of mainDays) {
-    const existing = await Event.findOne({ startDate: date, scope });
+    const [dayStart, dayEnd] = dayBounds(date);
+
+    const existing = await Event.findOne({
+      startDate: { $gte: dayStart, $lt: dayEnd },
+      scope,
+    });
     if (!existing) {
       try {
         await Event.create({
@@ -49,7 +60,7 @@ async function runAutoCreateWeeklies(allUsers) {
     মুহাদ্দিস -ছোবাহানিয়া আলিয়া কামিল মাদ্রাসা 
     প্রতিষ্ঠাতা :আত-তালিমুন নববী আলিম মাদ্রাসা`,
           startDate: date,
-          scope: "weekly",
+          scope,
           location: "বহদ্দারহাট জামে মসজিদ, বহদ্দারহাট, চট্টগ্রাম",
           createdBy: "System Generated",
           scheduledTime: "2025-05-20T13:00:00.729+00:00",
@@ -62,9 +73,10 @@ async function runAutoCreateWeeklies(allUsers) {
   }
 
   for (const date of womenDays) {
+    const [dayStart, dayEnd] = dayBounds(date);
     const existing = await Event.findOne({
-      startDate: date,
-      title: "মহিলা তালিম",
+      startDate: { $gte: dayStart, $lt: dayEnd },
+      scope,
     });
     if (!existing) {
       try {
@@ -76,7 +88,7 @@ async function runAutoCreateWeeklies(allUsers) {
     মুহাদ্দিস -ছোবাহানিয়া আলিয়া কামিল মাদ্রাসা 
     প্রতিষ্ঠাতা :আত-তালিমুন নববী আলিম মাদ্রাসা`,
           startDate: date,
-          scope: "weekly",
+          scope,
           location:
             "আত্-তালীমুন নববী আলিম মাদ্রাসা, শুলকবহর, বহদ্দারহাট, চট্টগ্রাম",
           createdBy: "System Generated",

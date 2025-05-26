@@ -422,7 +422,12 @@ export default function ProgrammePage() {
     )
       return;
     try {
-      const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "DELETE",
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      });
       if (!res.ok) throw new Error("Failed to delete");
       setEvents((prev) => prev.filter((e) => e._id !== eventId));
       setModal({ isOpen: true, message: "Event deleted!", status: "success" });

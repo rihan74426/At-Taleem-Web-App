@@ -141,15 +141,15 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await connect();
-    const auth = getAuth(req);
-    if (!auth.userId) {
-      console.error("[API] DELETE: No userId found in auth:", auth);
+    const { userId } = await req.json();
+    if (!userId) {
+      console.error("[API] DELETE: No userId found in auth:");
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await clerkClient().users.getUser(auth.userId);
+    const user = await clerkClient().users.getUser(userId);
     if (!user?.publicMetadata?.isAdmin) {
-      console.error("[API] DELETE: User is not admin:", auth.userId);
+      console.error("[API] DELETE: User is not admin:");
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
