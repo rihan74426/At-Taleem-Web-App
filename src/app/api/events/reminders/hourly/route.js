@@ -3,10 +3,6 @@ import Event from "@/lib/models/Event";
 import { clerkClient } from "@clerk/nextjs/server";
 import Institution from "@/lib/models/Institution";
 
-/**
- * Helper: fetch all email addresses for a list of Clerk user IDs
- 
- */
 async function runOpenAdmissions() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -52,8 +48,9 @@ async function runOpenAdmissions() {
   </table>
 </body></html>`;
 
-  for (const inst of insts) {
-    if (!inst.interestedEmails?.length) continue;
+  // Process all institutions concurrently
+  const emailPromises = insts.map(async (inst) => {
+    if (!inst.interestedEmails?.length) return;
     const emails = inst.interestedEmails;
     try {
       await fetch(`${process.env.URL}/api/emails`, {
@@ -70,18 +67,15 @@ async function runOpenAdmissions() {
     } catch (err) {
       console.error(`Failed admissions email for ${inst._id}:`, err);
     }
-  }
+  });
+
+  await Promise.all(emailPromises);
 }
 
-export async function fetchUserEmails(userIds) {
-  const users = await clerkClient.users.getUserList({ userId: userIds });
-  return users.data
-    .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
-    .filter(Boolean);
-}
+// Note: fetchUserEmails is no longer needed since we’ll fetch all users once and use a map
 
 export async function GET(req) {
-  // authorize
+  // Authorize
   if (
     req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
   ) {
@@ -90,12 +84,26 @@ export async function GET(req) {
 
   await connect();
 
+  // Fetch all users once and build lookup maps
+  const allUsers = (await clerkClient.users.getUserList()).data;
+  const userMap = new Map(allUsers.map((user) => [user.id, user]));
+  const scopeToUserIds = {};
+  allUsers.forEach((user) => {
+    const eventPrefs = user.publicMetadata?.eventPrefs || {};
+    Object.keys(eventPrefs).forEach((scope) => {
+      if (eventPrefs[scope] === true) {
+        if (!scopeToUserIds[scope]) scopeToUserIds[scope] = [];
+        scopeToUserIds[scope].push(user.id);
+      }
+    });
+  });
+
+  // Run admissions task
   await runOpenAdmissions();
 
+  // Find events needing reminders
   const now = new Date();
   const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-
-  // look at scheduledTime (not startDate!)
   const events = await Event.find({
     canceled: false,
     reminderSent: { $ne: "hour" },
@@ -105,32 +113,32 @@ export async function GET(req) {
     },
   }).lean();
 
-  for (let ev of events) {
-    // who’s opted in via prefs?
-    const { users: prefsUsers } = await clerkClient.users.getUserList({
-      query: `publicMetadata.eventPrefs.${ev.scope}:true`,
-    });
-    const prefsIds = prefsUsers.map((u) => u.id);
+  // Process all events concurrently
+  const reminderPromises = events.map(async (ev) => {
+    try {
+      // Get user IDs from precomputed scope map and notificationWants
+      const prefsIds = scopeToUserIds[ev.scope] || [];
+      const allIds = Array.from(
+        new Set([...prefsIds, ...(ev.notificationWants || [])])
+      );
+      if (!allIds.length) return;
 
-    // merge with ad‑hoc notificationWants, dedupe:
-    const recipients = Array.from(
-      new Set([...prefsIds, ...(ev.notificationWants || [])])
-    );
-    if (!recipients.length) continue;
+      // Extract emails from userMap
+      const emails = allIds
+        .map((id) => userMap.get(id))
+        .filter(Boolean)
+        .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
+        .filter(Boolean);
+      if (!emails.length) return;
 
-    // fetch their email addresses
-    const emails = await fetchUserEmails(recipients);
-    if (!emails.length) continue;
-
-    // build our template
-    const eventDate = new Date(ev.startDate).toLocaleDateString();
-    const eventTime = new Date(ev.scheduledTime).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const detailsUrl = `${process.env.URL}/programme/${ev._id}`;
-
-    const html = `<!DOCTYPE html>
+      // Build HTML template
+      const eventDate = new Date(ev.startDate).toLocaleDateString();
+      const eventTime = new Date(ev.scheduledTime).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const detailsUrl = `${process.env.URL}/programme/${ev._id}`;
+      const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"/><title>Event Reminder</title></head>
 <body style="margin:0;padding:0;background:#f2f3f5;font-family:Arial,sans-serif">
@@ -185,18 +193,16 @@ export async function GET(req) {
 </body>
 </html>`;
 
-    // send reminder
-    try {
+      // Send email and update event
       await fetch(`${process.env.URL}/api/emails`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: emails,
-          subject: `Reminder: ${ev.title} starts in 1 hour`,
+          subject: `Reminder: ${ev.title} starts in 1 hour`,
           html,
         }),
       });
-      // mark as sent
       await Event.updateOne(
         { _id: ev._id },
         { $push: { reminderSent: "hour" } }
@@ -204,7 +210,9 @@ export async function GET(req) {
     } catch (err) {
       console.error(`Failed to send reminder for ${ev._id}:`, err);
     }
-  }
+  });
+
+  await Promise.all(reminderPromises);
 
   return new Response(null, { status: 204 });
 }
