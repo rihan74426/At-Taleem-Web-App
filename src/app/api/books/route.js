@@ -23,10 +23,7 @@ export async function GET(request) {
       }
       return new Response(JSON.stringify({ book }), {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=59",
-        },
+        headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
       console.error("Error fetching book:", error);
