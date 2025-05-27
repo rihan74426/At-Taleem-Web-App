@@ -1,10 +1,14 @@
 import Review from "@/lib/models/Review";
 import { connect } from "@/lib/mongodb/mongoose";
+
 export async function GET(req) {
   await connect();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = parseInt(searchParams.get("limit") || "10", 10);
+  const search = searchParams.get("search") || "";
+  const skip = (page - 1) * limit;
 
   if (id) {
     try {
@@ -27,8 +31,44 @@ export async function GET(req) {
       });
     }
   }
-  const reviews = await Review.find({}).sort({ createdAt: -1 }).limit(limit);
-  return new Response(JSON.stringify({ reviews }));
+
+  // Build search query
+  const searchQuery = search
+    ? {
+        $or: [
+          { userName: { $regex: search, $options: "i" } },
+          { reviewText: { $regex: search, $options: "i" } },
+          { profession: { $regex: search, $options: "i" } },
+        ],
+      }
+    : {};
+
+  // Get total count for pagination
+  const total = await Review.countDocuments(searchQuery);
+
+  // Fetch reviews with pagination and search
+  const reviews = await Review.find(searchQuery)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  return new Response(
+    JSON.stringify({
+      reviews,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=10, stale-while-revalidate=59",
+      },
+    }
+  );
 }
 
 export async function POST(req) {

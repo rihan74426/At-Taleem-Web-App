@@ -1,8 +1,9 @@
 "use client";
 import { SignInButton, useUser } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
-import { AiFillEdit } from "react-icons/ai"; // Example edit icon
-import { BsTrash } from "react-icons/bs"; // Example delete icon
+import { useEffect, useState, useMemo } from "react";
+import { AiFillEdit } from "react-icons/ai";
+import { BsTrash } from "react-icons/bs";
+import TimeAgo from "react-timeago";
 
 export default function BookComments({ bookId }) {
   const [comments, setComments] = useState([]);
@@ -11,32 +12,48 @@ export default function BookComments({ bookId }) {
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingText, setEditingText] = useState("");
-  const user = useUser();
+  const [users, setUsers] = useState([]);
+  const { user } = useUser();
 
-  // Fetch comments (including nested replies via population in API)
-  const fetchComments = async () => {
-    try {
-      const res = await fetch(
-        `/api/comments?entityId=${bookId}&commentType=book`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setComments(data.comments);
-      }
-    } catch (err) {
-      console.error("Error fetching comments:", err);
-    }
-  };
-
+  // Fetch comments and users concurrently
   useEffect(() => {
-    fetchComments();
+    const fetchData = async () => {
+      try {
+        const [commentsRes, usersRes] = await Promise.all([
+          fetch(`/api/comments?entityId=${bookId}&commentType=book`),
+          fetch("/api/user", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          }),
+        ]);
+        if (commentsRes.ok) {
+          const data = await commentsRes.json();
+          setComments(data.comments);
+        }
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          setUsers(data.users.data);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    };
+    fetchData();
   }, [bookId]);
+
+  // Memoized user map for efficient name lookups
+  const userMap = useMemo(() => {
+    const map = {};
+    users.forEach((u) => {
+      map[u.id] = `${u.firstName} ${u.lastName}`;
+    });
+    return map;
+  }, [users]);
 
   // Submit a new comment
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (!user?.user) return alert("You must be logged in to Review.");
-    if (!newComment.trim()) return;
+    if (!user || !newComment.trim()) return;
 
     const res = await fetch("/api/comments", {
       method: "POST",
@@ -44,23 +61,22 @@ export default function BookComments({ bookId }) {
       body: JSON.stringify({
         entityId: bookId,
         commentType: "book",
-        userId: user?.user.id,
-        username: user?.user.fullName,
+        userId: user.id,
+        username: user.fullName,
         content: newComment.trim(),
       }),
     });
 
     if (res.ok) {
       setNewComment("");
-      fetchComments();
+      await fetchData();
     }
   };
 
-  // Submit a reply (nested comment)
-  const handleReplySubmit = async (e, parentComment) => {
+  // Submit a reply
+  const handleReplySubmit = async (e, parentCommentId) => {
     e.preventDefault();
-    if (!user?.user) return alert("You must be logged in to reply a review.");
-    if (!replyText.trim()) return;
+    if (!user || !replyText.trim()) return;
 
     const res = await fetch("/api/comments", {
       method: "POST",
@@ -68,261 +84,328 @@ export default function BookComments({ bookId }) {
       body: JSON.stringify({
         entityId: bookId,
         commentType: "book",
-        userId: user?.user.id,
-        username: user?.user.fullName,
+        userId: user.id,
+        username: user.fullName,
         content: replyText.trim(),
-        parentComment, // Associate reply with parent comment
+        parentComment: parentCommentId,
       }),
     });
 
     if (res.ok) {
       setReplyText("");
       setReplyingTo(null);
-      fetchComments();
+      await fetchData();
     }
   };
 
   // Like/unlike a comment or reply
   const handleLike = async (commentId) => {
-    if (!user?.user) return alert("You must be logged in to like a review.");
+    if (!user) {
+      alert("You must be logged in to like a review.");
+      return;
+    }
 
     const res = await fetch("/api/comments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commentId, userId: user?.user.id }),
+      body: JSON.stringify({ commentId, userId: user.id }),
     });
 
     if (res.ok) {
-      fetchComments();
+      await fetchData();
     }
   };
 
-  // Start editing a comment
+  // Start editing
   const handleStartEdit = (comment) => {
     setEditingCommentId(comment._id);
     setEditingText(comment.content);
   };
 
-  // Submit an edit
+  // Submit edit
   const handleEditSubmit = async (e, commentId) => {
     e.preventDefault();
     if (!editingText.trim()) return;
+
     const res = await fetch(`/api/comments/${commentId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: editingText.trim() }),
     });
+
     if (res.ok) {
       setEditingCommentId(null);
       setEditingText("");
-      fetchComments();
+      await fetchData();
     }
   };
 
-  // Delete a comment
+  // Delete comment
   const handleDelete = async (commentId) => {
     if (!window.confirm("Are you sure you want to delete this review?")) return;
+
     const res = await fetch(`/api/comments/${commentId}`, {
       method: "DELETE",
     });
+
     if (res.ok) {
-      fetchComments();
+      await fetchData();
+    }
+  };
+
+  // Helper to fetch data (for reuse after actions)
+  const fetchData = async () => {
+    const res = await fetch(
+      `/api/comments?entityId=${bookId}&commentType=book`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setComments(data.comments);
     }
   };
 
   return (
-    <div className="dark:text-white text-black mt-10">
-      <h2 className="text-4xl font-bold mb-4 text-center">Reviews:</h2>
+    <div className="mt-10 dark:text-white text-black">
+      <h2 className="text-4xl font-bold mb-6 text-center">Reviews</h2>
 
-      {/* Primary Comment Input */}
-      {user?.user ? (
-        <form onSubmit={handleCommentSubmit} className="mb-4">
+      {/* Comment Form */}
+      {user ? (
+        <div className="mb-6">
           <textarea
-            className="w-full border rounded p-2 dark:bg-black"
+            className="w-full border rounded p-3 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Write a review..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
+            rows="3"
             required
           />
           <button
-            type="submit"
-            className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
+            onClick={handleCommentSubmit}
+            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
           >
             Submit
           </button>
-        </form>
+        </div>
       ) : (
-        <p className="text-gray-500 text-center">
-          Please Log in to Review.{" "}
-          <button className="bg-blue-800 text-white px-4 py-2 rounded ">
+        <p className="text-gray-500 text-center mb-6">
+          Please log in to review.{" "}
+          <button className="bg-blue-800 text-white px-4 py-2 rounded">
             <SignInButton />
           </button>
         </p>
       )}
 
-      {/* Comments & Replies List */}
-      <ul className="space-y-4">
-        {comments.map((comment) => (
-          <li key={comment._id} className="border-b pb-2">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold italic">{comment.username}</p>
-            </div>
+      {/* Comments List */}
+      <ul className="space-y-6">
+        {comments.map((comment) => {
+          const likeNames = comment.likes
+            .map((id) => userMap[id] || "Unknown")
+            .filter(Boolean);
 
-            {editingCommentId === comment._id ? (
-              <form
-                onSubmit={(e) => handleEditSubmit(e, comment._id)}
-                className="mt-2"
-              >
-                <textarea
-                  className="w-full border rounded p-2 dark:bg-black"
-                  value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
-                  required
-                />
-                <button
-                  type="submit"
-                  className="mt-2 bg-blue-500 text-white p-1 px-3 rounded"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingCommentId(null)}
-                  className="mt-2 ml-2 bg-red-300 hover:bg-red-500 text-black p-1 rounded"
-                >
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <p>{comment.content}</p>
-            )}
+          return (
+            <li key={comment._id} className="border-b pb-4">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="font-semibold italic text-gray-700 dark:text-gray-300">
+                  {comment.username}
+                </span>
+                <span className="text-xs text-gray-500">
+                  <TimeAgo date={comment.createdAt} />
+                </span>
+              </div>
 
-            <div className="flex items-center gap-3 text-gray-500 text-sm">
-              <button
-                onClick={() => handleLike(comment._id)}
-                className="text-blue-400 hover:text-blue-600"
-              >
-                ❤️ {comment?.likes?.length || 0}
-              </button>
-              <button
-                onClick={() => {
-                  if (!user?.user) alert("You must be logged in to reply.");
-                  else setReplyingTo(comment._id);
-                }}
-                className="text-green-400 hover:text-green-600"
-              >
-                Reply
-              </button>
-              {user?.user?.id === comment.userId && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleStartEdit(comment)}
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(comment._id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    Delete
-                  </button>
+              {editingCommentId === comment._id ? (
+                <div className="mt-2">
+                  <textarea
+                    className="w-full border rounded p-3 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    rows="2"
+                    required
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={(e) => handleEditSubmit(e, comment._id)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingCommentId(null)}
+                      className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <p className="text-gray-800 dark:text-gray-200">
+                  {comment.content}
+                </p>
               )}
-            </div>
 
-            {replyingTo === comment._id && (
-              <form
-                onSubmit={(e) => handleReplySubmit(e, comment._id)}
-                className="mt-2 ml-5 border-l p-2"
-              >
-                <textarea
-                  className="w-full border rounded p-2 dark:bg-black"
-                  placeholder="Write a reply..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  required
-                />
+              <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
+                <div className="relative group">
+                  <button
+                    onClick={() => handleLike(comment._id)}
+                    className="flex items-center text-blue-400 hover:text-blue-600 transition"
+                  >
+                    ❤️ {comment.likes.length || 0}
+                  </button>
+                  {likeNames.length > 0 && (
+                    <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 hidden group-hover:block bg-gray-900 bg-opacity-90 text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
+                      {likeNames.map((name, index) => (
+                        <div key={index}>{name}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
-                  type="submit"
-                  className="m-2 bg-blue-500 text-white p-1 rounded"
+                  onClick={() =>
+                    user
+                      ? setReplyingTo(comment._id)
+                      : alert("Please log in to reply.")
+                  }
+                  className="text-green-400 hover:text-green-600 transition"
                 >
                   Reply
                 </button>
-                <button
-                  type="cancel"
-                  onClick={() => setReplyingTo(null)}
-                  className="m-2 bg-red-500 text-white p-1 rounded"
-                >
-                  Cancel
-                </button>
-              </form>
-            )}
 
-            {comment.replies &&
-              comment.replies.map((reply) => (
-                <div key={reply._id} className="ml-8 mt-2 border-l pl-4">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold">{reply.username}</p>
-                  </div>
-
-                  {editingCommentId === reply._id ? (
-                    <form
-                      onSubmit={(e) => handleEditSubmit(e, reply._id)}
-                      className="mt-2"
-                    >
-                      <textarea
-                        className="w-full border rounded p-2 dark:bg-black"
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="submit"
-                        className="m-2 bg-blue-500 text-white p-1 px-3 rounded"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingCommentId(null)}
-                        className="m-2 bg-red-300 hover:bg-red-500 text-black p-1 rounded"
-                      >
-                        Cancel
-                      </button>
-                    </form>
-                  ) : (
-                    <p>{reply.content}</p>
-                  )}
-
-                  <div className="flex items-center gap-3 text-gray-500 text-sm">
+                {user?.id === comment.userId && (
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => handleLike(reply._id)}
-                      className="text-blue-400 hover:text-blue-600"
+                      onClick={() => handleStartEdit(comment)}
+                      className="text-blue-500 hover:text-blue-700 transition"
                     >
-                      ❤️ {reply?.likes?.length || 0}
+                      <AiFillEdit className="inline mr-1" /> Edit
                     </button>
-                    {user?.user?.id === reply.userId && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleStartEdit(reply)}
-                          className="text-blue-500  hover:text-blue-700"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(reply._id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    <button
+                      onClick={() => handleDelete(comment._id)}
+                      className="text-red-500 hover:text-red-700 transition"
+                    >
+                      <BsTrash className="inline mr-1" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {replyingTo === comment._id && (
+                <div className="mt-4 ml-8 border-l-2 pl-4">
+                  <textarea
+                    className="w-full border rounded p-3 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Write a reply..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows="2"
+                    required
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={(e) => handleReplySubmit(e, comment._id)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                    >
+                      Reply
+                    </button>
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
-              ))}
-          </li>
-        ))}
+              )}
+
+              {comment.replies && (
+                <ul className="mt-4 space-y-4">
+                  {comment.replies.map((reply) => {
+                    const replyLikeNames = reply.likes
+                      .map((id) => userMap[id] || "Unknown")
+                      .filter(Boolean);
+
+                    return (
+                      <li key={reply._id} className="ml-8 border-l-2 pl-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">
+                            {reply.username}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            <TimeAgo date={reply.createdAt} />
+                          </span>
+                        </div>
+
+                        {editingCommentId === reply._id ? (
+                          <div className="mt-2">
+                            <textarea
+                              className="w-full border rounded p-3 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              rows="2"
+                              required
+                            />
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                onClick={(e) => handleEditSubmit(e, reply._id)}
+                                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingCommentId(null)}
+                                className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-800 dark:text-gray-200">
+                            {reply.content}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
+                          <div className="relative group">
+                            <button
+                              onClick={() => handleLike(reply._id)}
+                              className="flex items-center text-blue-400 hover:text-blue-600 transition"
+                            >
+                              ❤️ {reply.likes.length || 0}
+                            </button>
+                            {replyLikeNames.length > 0 && (
+                              <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 hidden group-hover:block bg-gray-900 bg-opacity-90 text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
+                                {replyLikeNames.map((name, index) => (
+                                  <div key={index}>{name}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {user?.id === reply.userId && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleStartEdit(reply)}
+                                className="text-blue-500 hover:text-blue-700 transition"
+                              >
+                                <AiFillEdit className="inline mr-1" /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(reply._id)}
+                                className="text-red-500 hover:text-red-700 transition"
+                              >
+                                <BsTrash className="inline mr-1" /> Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

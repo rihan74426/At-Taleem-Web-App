@@ -21,6 +21,7 @@ export function ReviewCard({
   const loved = review.likes?.includes(user.user?.id);
   const animation = useAnimation();
   const [users, setUsers] = useState([]);
+  const [imageError, setImageError] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -29,6 +30,7 @@ export function ReviewCard({
         headers: {
           "Content-Type": "application/json",
         },
+        next: { revalidate: 3600 }, // Cache for 1 hour
       });
       const data = await res.json();
       if (res.ok) {
@@ -114,21 +116,26 @@ export function ReviewCard({
             )}
           </div>
           <p className="italic text-justify whitespace-pre-wrap">
-            “{review.reviewText}”
+            "{review.reviewText}"
           </p>
         </div>
 
         {/* Sidebar spans full width on sm, 1 col on md */}
         <div className="col-span-1 flex flex-col items-center sm:mt-20 space-y-3">
-          {review.userProfilePic ? (
-            <Image
-              src={review.userProfilePic}
-              width={100}
-              height={100}
-              unoptimized
-              className="rounded-full"
-              alt={review.userName}
-            />
+          {review.userProfilePic && !imageError ? (
+            <div className="relative w-24 h-24">
+              <Image
+                src={review.userProfilePic}
+                alt={review.userName}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="rounded-full object-cover"
+                onError={() => setImageError(true)}
+                priority={false}
+                loading="lazy"
+                quality={75}
+              />
+            </div>
           ) : (
             <div className="w-24 h-24 border rounded-full flex items-center justify-center">
               ছবি নেই
@@ -190,33 +197,41 @@ export default function AboutUsPage() {
     message: "",
     status: "",
   });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const showModal = (message, status) =>
     setModal({ isOpen: true, message, status });
 
   const user = useUser();
   const router = useRouter();
 
-  // Function to generate a random hex color
-  const getRandomColor = () => {
-    const letters = "0123456789ABCDEF";
-    let color = "#";
-    for (let i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-  };
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
 
-  // Fetch reviews and assign random colors
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch reviews with pagination and search
   const fetchReview = async () => {
     try {
-      const res = await fetch("/api/reviews");
+      setLoading(true);
+      const res = await fetch(
+        `/api/reviews?page=${pagination.page}&limit=${pagination.limit}&search=${debouncedSearch}`
+      );
       if (res.ok) {
         const data = await res.json();
-        const reviewsWithColor = data.reviews.map((review) => ({
-          ...review,
-          color: getRandomColor(),
-        }));
-        setReviews(reviewsWithColor);
+        setReviews(data.reviews);
+        setPagination(data.pagination);
       }
     } catch (error) {
       console.log("Error fetching reviews", error);
@@ -224,9 +239,19 @@ export default function AboutUsPage() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchReview();
-  }, []);
+  }, [pagination.page, pagination.limit, debouncedSearch]);
+
+  const handlePageChange = (newPage) => {
+    setPagination((prev) => ({ ...prev, page: newPage }));
+  };
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    setPagination((prev) => ({ ...prev, page: 1 })); // Reset to first page on search
+  };
 
   const submitReview = () => {
     if (!user.isSignedIn) {
@@ -359,12 +384,21 @@ export default function AboutUsPage() {
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           তালিমের সদস্যদের মন্তব্য
         </h1>
-        <button
-          onClick={submitReview}
-          className="self-start md:self-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          আপনার মন্তব্য জানান
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <input
+            type="text"
+            placeholder="Search reviews..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={submitReview}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            আপনার মন্তব্য জানান
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -372,18 +406,43 @@ export default function AboutUsPage() {
           <Loader />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {visibleReviews.map((r) => (
-            <ReviewCard
-              key={r._id}
-              review={r}
-              user={user}
-              toggleLove={toggleLove}
-              deleteReview={deleteReview}
-              toggleStatus={toggleStatus}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {visibleReviews.map((r) => (
+              <ReviewCard
+                key={r._id}
+                review={r}
+                user={user}
+                toggleLove={toggleLove}
+                deleteReview={deleteReview}
+                toggleStatus={toggleStatus}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex justify-center mt-8 gap-2">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+                className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+                className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <ResponseModal

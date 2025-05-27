@@ -3,6 +3,7 @@ import { SignInButton, useUser } from "@clerk/nextjs";
 import { useEffect, useState, useMemo } from "react";
 import { AiFillEdit } from "react-icons/ai";
 import { BsTrash } from "react-icons/bs";
+import TimeAgo from "react-timeago";
 
 export default function QuestionComments({ questionId }) {
   const [comments, setComments] = useState([]);
@@ -201,15 +202,13 @@ export default function QuestionComments({ questionId }) {
 
           return (
             <li key={comment._id} className="border-b pb-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3 mb-2">
                 <span className="font-semibold italic text-gray-700 dark:text-gray-300">
                   {comment.username}
                 </span>
-                {comment.createdAt && (
-                  <span className="text-xs text-gray-500">
-                    {new Date(comment.createdAt).toLocaleString()}
-                  </span>
-                )}
+                <span className="text-xs text-gray-500">
+                  <TimeAgo date={comment.createdAt} />
+                </span>
               </div>
 
               {editingCommentId === comment._id ? (
@@ -252,7 +251,9 @@ export default function QuestionComments({ questionId }) {
                   </button>
                   {likeNames.length > 0 && (
                     <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 hidden group-hover:block bg-gray-900 bg-opacity-90 text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
-                      {likeNames.join(", ")}
+                      {likeNames.map((name, index) => (
+                        <div key={index}>{name}</div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -322,15 +323,13 @@ export default function QuestionComments({ questionId }) {
 
                     return (
                       <li key={reply._id} className="ml-8 border-l-2 pl-4">
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3 mb-2">
                           <span className="font-semibold text-gray-700 dark:text-gray-300">
                             {reply.username}
                           </span>
-                          {reply.createdAt && (
-                            <span className="text-xs text-gray-500">
-                              {new Date(reply.createdAt).toLocaleString()}
-                            </span>
-                          )}
+                          <span className="text-xs text-gray-500">
+                            <TimeAgo date={reply.createdAt} />
+                          </span>
                         </div>
 
                         {editingCommentId === reply._id ? (
@@ -373,7 +372,9 @@ export default function QuestionComments({ questionId }) {
                             </button>
                             {replyLikeNames.length > 0 && (
                               <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 hidden group-hover:block bg-gray-900 bg-opacity-90 text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
-                                {replyLikeNames.join(", ")}
+                                {replyLikeNames.map((name, index) => (
+                                  <div key={index}>{name}</div>
+                                ))}
                               </div>
                             )}
                           </div>
