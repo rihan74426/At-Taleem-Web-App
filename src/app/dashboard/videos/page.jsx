@@ -112,12 +112,20 @@ export default function AdminVideosPage({
           <option value="YouTube">YouTube</option>
           <option value="Facebook">Facebook</option>
         </select>
+        {platform === "Facebook" && (
+          <p>
+            ডেস্কটপ কিংবা মোবাইলের ব্রাউজারের ডেস্কটপ ভিউ থেকে ভিডিওটির অরিজিনাল
+            লিংক বের করতে হবে। সরাসরি ভিডিওটির উপর ক্লিক করলে ভিডিও পেজের উপরে
+            https://www.facebook.com/100064076645371/ videos/1317270549372806
+            এধরণের লিংক দেখবেন যা কপি করে এনে এখানে পেস্ট করুন।
+          </p>
+        )}
         <input
           type="text"
           placeholder={
             platform === "YouTube"
               ? "Please place the YouTube video link here"
-              : "Please put the collected video embed link from desktop Facebook"
+              : "Please put the original video link from desktop Facebook"
           }
           value={videoUrl}
           onChange={(e) => setVideoUrl(e.target.value)}

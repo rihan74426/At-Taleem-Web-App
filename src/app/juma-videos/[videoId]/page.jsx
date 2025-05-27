@@ -8,6 +8,7 @@ import AdminVideosPage from "@/app/dashboard/videos/page";
 import { useUser } from "@clerk/nextjs";
 import ResponseModal from "@/app/Components/ResponseModal";
 import Loader from "@/app/Components/Loader";
+import { FacebookEmbed } from "react-social-media-embed";
 
 export default function VideoDetailPage() {
   const params = useParams();
@@ -131,9 +132,12 @@ export default function VideoDetailPage() {
             controls
           />
         ) : (
-          <div
-            className="inset-0 flex items-center justify-center"
-            dangerouslySetInnerHTML={{ __html: video.videoUrl }}
+          <FacebookEmbed
+            url={video.videoUrl}
+            width="100%"
+            height="100%"
+            className="absolute inset-0"
+            controls
           />
         )}
       </div>

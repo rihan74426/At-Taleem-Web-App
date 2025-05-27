@@ -88,15 +88,6 @@ export async function POST(request) {
       );
     }
 
-    // If it's a Facebook embed code, replace the width & height
-    if (platform === "Facebook") {
-      videoUrl = videoUrl
-        .replace(/width="\d+"/g, 'width="720"')
-        .replace(/height="\d+"/g, 'height="405"')
-        .replace(/([?&]width=)\d+/g, "$1" + 720)
-        .replace(/([?&]height=)\d+/g, "$1" + 405);
-    }
-
     // Create a new video document
     const newVideo = await Videos.create({
       title,
