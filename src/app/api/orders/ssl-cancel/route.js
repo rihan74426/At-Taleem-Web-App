@@ -1,4 +1,3 @@
-// src/app/api/orders/ssl-success/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
 
@@ -7,8 +6,6 @@ export async function POST(req) {
     const body = await req.json();
     const {
       tran_id,
-      status,
-      error,
       value_a, // orderId
     } = body;
 
@@ -24,29 +21,27 @@ export async function POST(req) {
     }
 
     // Update order status
-    order.paymentStatus = "Failed";
-    order.status = "failed";
+    order.paymentStatus = "Unpaid";
+    order.status = "cancelled";
     order.paymentDetails = {
       transactionId: tran_id,
-      status,
-      error,
-      failedAt: new Date(),
+      cancelledAt: new Date(),
     };
 
     // Add tracking update
     order.tracking.push({
-      status: "failed",
-      message: `Payment failed: ${error || "Unknown error"}`,
+      status: "cancelled",
+      message: "Payment cancelled by user",
       timestamp: new Date(),
     });
 
     await order.save();
 
-    // Return error response
+    // Return response
     return new Response(
       JSON.stringify({
-        status: "error",
-        message: "Payment failed",
+        status: "cancelled",
+        message: "Payment cancelled",
         orderId: order.orderId,
       }),
       {
@@ -57,7 +52,7 @@ export async function POST(req) {
       }
     );
   } catch (error) {
-    console.error("Error processing failed payment:", error);
+    console.error("Error processing cancelled payment:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
     });
