@@ -128,8 +128,18 @@ export default function Homepage() {
               </>
             )
           ) : (
-            <div className="flex place-content-center">
-              <Loader />
+            <div className="flex flex-col items-center gap-4 animate-pulse">
+              <div className="h-6 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+              <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+              <div className="w-full max-w-3xl">
+                <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                </div>
+              </div>
+              <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
             </div>
           )}
         </div>

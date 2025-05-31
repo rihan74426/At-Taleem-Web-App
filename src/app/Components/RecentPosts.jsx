@@ -34,13 +34,18 @@ const useDataFetching = (endpoint, limit) => {
 
     const fetchData = async () => {
       try {
-        const response = await fetch(`${endpoint}?limit=${limit}`);
+        const response = await fetch(`${endpoint}?limit=${limit}&page=1`);
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const result = await response.json();
 
         if (!cancelled) {
-          setData(result[endpoint.split("/").pop()]);
+          // Handle different response structures
+          if (endpoint === "/api/books") {
+            setData(result.books);
+          } else {
+            setData(result[endpoint.split("/").pop()]);
+          }
           setState(DataState.SUCCESS);
         }
       } catch (err) {
@@ -70,6 +75,53 @@ const Card = ({ children, index, className = "" }) => (
   >
     {children}
   </motion.div>
+);
+
+// Skeleton loader components
+const VideoSkeleton = () => (
+  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
+    <div className="relative h-40 w-full bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+    <div className="mt-2 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+  </div>
+);
+
+const QuestionSkeleton = () => (
+  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
+    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+    <div className="space-y-2">
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+    </div>
+    <div className="mt-4 flex gap-2">
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+    </div>
+  </div>
+);
+
+const BookSkeleton = () => (
+  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
+    <div className="relative h-56 w-full bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+    <div className="mt-2 h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+    <div className="mt-1 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+    <div className="mt-1 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+  </div>
+);
+
+const ReviewSkeleton = () => (
+  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
+    <div className="flex items-center gap-4">
+      <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+      </div>
+    </div>
+    <div className="mt-4 space-y-2">
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+    </div>
+  </div>
 );
 
 export default function RecentPosts({
@@ -110,7 +162,15 @@ export default function RecentPosts({
     </div>
   );
 
-  const renderSection = (title, linkText, linkHref, content, state, error) => (
+  const renderSection = (
+    title,
+    linkText,
+    linkHref,
+    content,
+    state,
+    error,
+    skeletonComponent
+  ) => (
     <section>
       <div className="flex justify-between items-baseline mb-4">
         <h2 className="text-2xl font-bold">{title}</h2>
@@ -119,7 +179,11 @@ export default function RecentPosts({
         </Link>
       </div>
       {state === DataState.LOADING ? (
-        <Loader />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i}>{skeletonComponent}</div>
+          ))}
+        </div>
       ) : state === DataState.ERROR ? (
         renderError(error)
       ) : (
@@ -229,7 +293,8 @@ export default function RecentPosts({
         "/taleem-videos",
         renderVideos(),
         videosState,
-        videosError
+        videosError,
+        <VideoSkeleton />
       )}
 
       {renderSection(
@@ -238,7 +303,8 @@ export default function RecentPosts({
         "/questionnaires",
         renderQuestions(),
         questionsState,
-        questionsError
+        questionsError,
+        <QuestionSkeleton />
       )}
 
       {renderSection(
@@ -247,7 +313,8 @@ export default function RecentPosts({
         "/published-books",
         renderBooks(),
         booksState,
-        booksError
+        booksError,
+        <BookSkeleton />
       )}
 
       {renderSection(
@@ -260,7 +327,8 @@ export default function RecentPosts({
           <ReviewCarousel reviews={reviews} />
         ),
         reviewsState,
-        reviewsError
+        reviewsError,
+        <ReviewSkeleton />
       )}
     </div>
   );
