@@ -156,11 +156,16 @@ export async function POST(req) {
 function buildEventFilter(searchParams) {
   const filter = {};
 
-  // Basic filters
+  // Scope-based filtering
   if (searchParams.has("scope")) {
-    filter.scope = searchParams.get("scope");
+    const scope = searchParams.get("scope");
+    // Only add scope filter if it's not null
+    if (scope !== "null") {
+      filter.scope = scope;
+    }
   }
 
+  // Basic filters
   if (searchParams.has("featured")) {
     filter.featured = searchParams.get("featured") === "true";
   }
@@ -183,37 +188,13 @@ function buildEventFilter(searchParams) {
     ];
   }
 
-  // Date filters
-  if (searchParams.has("date")) {
-    const dateStr = searchParams.get("date");
-    const date = new Date(dateStr);
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-
-    filter.startDate = { $gte: date, $lt: nextDay };
-  } else {
-    if (searchParams.has("startAfter")) {
-      filter.startDate = {
-        ...filter.startDate,
-        $gte: new Date(searchParams.get("startAfter")),
-      };
-    }
-
-    if (searchParams.has("startBefore")) {
-      filter.startDate = {
-        ...filter.startDate,
-        $lte: new Date(searchParams.get("startBefore")),
-      };
-    }
-  }
-
-  // User participation filters
-  if (searchParams.has("createdBy")) {
-    filter.createdBy = searchParams.get("createdBy");
-  }
-
-  if (searchParams.has("interestedUser")) {
-    filter.interestedUsers = searchParams.get("interestedUser");
+  // Calendar view date filters
+  if (searchParams.has("month") && searchParams.has("year")) {
+    const month = parseInt(searchParams.get("month"));
+    const year = parseInt(searchParams.get("year"));
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    filter.startDate = { $gte: startDate, $lte: endDate };
   }
 
   return filter;

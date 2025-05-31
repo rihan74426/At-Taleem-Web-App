@@ -43,7 +43,7 @@ export default function ProgrammePage() {
       ? localStorage.getItem("EventView") || "calendar"
       : "calendar"
   );
-  const [scope, setScope] = useState("monthly");
+  const [scope, setScope] = useState(null);
 
   // Simplified date state - just track month and year
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -99,6 +99,9 @@ export default function ProgrammePage() {
       const params = new URLSearchParams();
       const effectiveView = options.view || view;
 
+      // Add scope parameter
+      params.append("scope", options.scope || scope);
+
       if (effectiveView === "calendar") {
         params.append("month", (options.month || currentMonth).toString());
         params.append("year", (options.year || currentYear).toString());
@@ -131,6 +134,7 @@ export default function ProgrammePage() {
       sortOrder,
       search,
       filter,
+      scope,
     ]
   );
 
@@ -222,26 +226,15 @@ export default function ProgrammePage() {
     [fetchEvents]
   );
 
-  // Scope change handler (simplified for monthly focus)
+  // Scope change handler
   const handleScopeChange = useCallback(
     (newScope) => {
-      setScope(newScope);
-      setPage(1);
-
-      if (newScope === "monthly") {
-        // Reset to current month for monthly view
-        const now = new Date();
-        fetchEvents({
-          month: now.getMonth() + 1,
-          year: now.getFullYear(),
-          page: 1,
-        });
-      } else {
-        // For other scopes, just refetch with current settings
-        fetchEvents({ scope: newScope, page: 1 });
-      }
+      // If clicking the same scope, clear it (show all events)
+      const effectiveScope = scope === newScope ? null : newScope;
+      setScope(effectiveScope);
+      fetchEvents({ scope: effectiveScope });
     },
-    [fetchEvents]
+    [fetchEvents, scope]
   );
 
   // View change handler
@@ -259,8 +252,10 @@ export default function ProgrammePage() {
 
   // Initial fetch and effects
   useEffect(() => {
-    if (isLoaded) fetchEvents();
-  }, [isLoaded, scope, view, page, sortBy, sortOrder]);
+    if (isLoaded) {
+      fetchEvents({ scope });
+    }
+  }, [isLoaded, fetchEvents, scope]);
 
   // Debounced search with cleanup
   useEffect(() => {
@@ -340,7 +335,9 @@ export default function ProgrammePage() {
       setUserStatus((prev) => ({ ...prev, [eventId]: data.userStatus }));
       setModal({
         isOpen: true,
-        message: data.userStatus.interested ? "Interested!" : "Not interested!",
+        message: data.userStatus.interested
+          ? "Set Interested!"
+          : "Set not interested!",
         status: "success",
       });
     } catch (err) {
@@ -535,6 +532,16 @@ export default function ProgrammePage() {
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex space-x-2">
+            <button
+              onClick={() => handleScopeChange(null)}
+              className={`px-4 py-2 rounded-full ${
+                scope === null
+                  ? "bg-teal-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              }`}
+            >
+              All Events
+            </button>
             {SCOPES.map((s) => (
               <button
                 key={s.value}
@@ -732,21 +739,22 @@ export default function ProgrammePage() {
                 handleAdminAction(
                   id,
                   "toggleComplete",
-                  (e) => `Event ${e.completed ? "completed" : "incomplete"}`
+                  (e) =>
+                    `Event Marked ${e.completed ? "completed" : "incomplete"}`
                 )
               }
               handleToggleCancel={(id) =>
                 handleAdminAction(
                   id,
                   "toggleCancel",
-                  (e) => `Event ${e.canceled ? "canceled" : "restored"}`
+                  (e) => `Event Marked ${e.canceled ? "canceled" : "restored"}`
                 )
               }
               handleToggleFeatured={(id) =>
                 handleAdminAction(
                   id,
                   "toggleFeatured",
-                  (e) => `Event ${e.featured ? "featured" : "unfeatured"}`
+                  (e) => `Event Set ${e.featured ? "featured" : "unfeatured"}`
                 )
               }
               handleDeleteEvent={handleDeleteEvent}

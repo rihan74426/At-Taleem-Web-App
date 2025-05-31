@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -57,17 +57,128 @@ const CalendarView = ({
   const currentDate = parentCurrentDate || internalCurrentDate;
   const setCurrentDate = parentSetCurrentDate || setInternalCurrentDate;
 
-  // Reset selected date when scope changes
+  // Only reset selectedDate when scope changes or when explicitly navigating months
   useEffect(() => {
-    setSelectedDate(null);
-  }, [scope]);
-
-  // Sync with parent's currentDate changes
-  useEffect(() => {
-    if (parentCurrentDate) {
+    if (scope) {
       setSelectedDate(null);
     }
-  }, [parentCurrentDate]);
+  }, [scope]);
+
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleToggleInterestMemo = useCallback(
+    async (eventId) => {
+      await handleToggleInterest?.(eventId);
+      // Don't reset selectedDate here
+    },
+    [handleToggleInterest]
+  );
+
+  const handleToggleNotificationMemo = useCallback(
+    async (eventId) => {
+      await handleToggleNotification?.(eventId);
+      // Don't reset selectedDate here
+    },
+    [handleToggleNotification]
+  );
+
+  const handleToggleCompleteMemo = useCallback(
+    async (eventId) => {
+      await handleToggleComplete?.(eventId);
+      // Don't reset selectedDate here
+    },
+    [handleToggleComplete]
+  );
+
+  const handleToggleCancelMemo = useCallback(
+    async (eventId) => {
+      await handleToggleCancel?.(eventId);
+      // Don't reset selectedDate here
+    },
+    [handleToggleCancel]
+  );
+
+  const handleToggleFeaturedMemo = useCallback(
+    async (eventId) => {
+      await handleToggleFeatured?.(eventId);
+      // Don't reset selectedDate here
+    },
+    [handleToggleFeatured]
+  );
+
+  const handleDeleteEventMemo = useCallback(
+    async (eventId) => {
+      await handleDeleteEvent?.(eventId);
+      // Don't reset selectedDate here
+    },
+    [handleDeleteEvent]
+  );
+
+  // Memoize navigation handlers
+  const navigatePrevious = useCallback(() => {
+    const newDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1
+    );
+    setCurrentDate(newDate);
+    setSelectedDate(null); // Reset selectedDate only on month navigation
+    onMonthChange?.(newDate.getMonth() + 1, newDate.getFullYear());
+    fetchEvents?.();
+  }, [currentDate, setCurrentDate, onMonthChange, fetchEvents]);
+
+  const navigateNext = useCallback(() => {
+    const newDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      1
+    );
+    setCurrentDate(newDate);
+    setSelectedDate(null); // Reset selectedDate only on month navigation
+    onMonthChange?.(newDate.getMonth() + 1, newDate.getFullYear());
+    fetchEvents?.();
+  }, [currentDate, setCurrentDate, onMonthChange, fetchEvents]);
+
+  const navigateToday = useCallback(() => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(null); // Reset selectedDate only on month navigation
+    onMonthChange?.(today.getMonth() + 1, today.getFullYear());
+    fetchEvents?.();
+  }, [setCurrentDate, onMonthChange, fetchEvents]);
+
+  // Memoize event filtering functions
+  const getEventsForDate = useCallback(
+    (date) => {
+      return events.filter((event) => {
+        const eventDate = new Date(event.startDate);
+        return (
+          eventDate.getDate() === date.getDate() &&
+          eventDate.getMonth() === date.getMonth() &&
+          eventDate.getFullYear() === date.getFullYear()
+        );
+      });
+    },
+    [events]
+  );
+
+  // Memoize event dates lookup
+  const eventDates = useMemo(() => {
+    const dates = {};
+    events.forEach((event) => {
+      const eventDate = new Date(event.startDate);
+      const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
+      dates[key] = true;
+    });
+    return dates;
+  }, [events]);
+
+  const hasEvents = useCallback(
+    (date) => {
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      return !!eventDates[key];
+    },
+    [eventDates]
+  );
 
   // Date formatting utilities
   const formatDate = (dateStr) => {
@@ -145,85 +256,6 @@ const CalendarView = ({
     }
     return weeks;
   }, [calendarDays]);
-
-  // Filter events for a specific date
-  const getEventsForDate = (date) => {
-    return events.filter((event) => {
-      const eventDate = new Date(event.startDate);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
-    });
-  };
-
-  // Memoized event dates for quick lookup
-  const eventDates = useMemo(() => {
-    const dates = {};
-    events.forEach((event) => {
-      const eventDate = new Date(event.startDate);
-      const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
-      dates[key] = true;
-    });
-    return dates;
-  }, [events]);
-
-  const hasEvents = (date) => {
-    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-    return !!eventDates[key];
-  };
-
-  // Navigation handlers
-  const navigatePrevious = () => {
-    const newDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() - 1,
-      1
-    );
-    setCurrentDate(newDate);
-    setSelectedDate(null);
-
-    // Call onMonthChange with month and year numbers (1-based month)
-    onMonthChange?.(newDate.getMonth() + 1, newDate.getFullYear());
-
-    // Fetch events if function provided
-    if (fetchEvents) {
-      fetchEvents();
-    }
-  };
-
-  const navigateNext = () => {
-    const newDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      1
-    );
-    setCurrentDate(newDate);
-    setSelectedDate(null);
-
-    // Call onMonthChange with month and year numbers (1-based month)
-    onMonthChange?.(newDate.getMonth() + 1, newDate.getFullYear());
-
-    // Fetch events if function provided
-    if (fetchEvents) {
-      fetchEvents();
-    }
-  };
-
-  const navigateToday = () => {
-    const today = new Date();
-    setCurrentDate(today);
-    setSelectedDate(null);
-
-    // Call onMonthChange with month and year numbers (1-based month)
-    onMonthChange?.(today.getMonth() + 1, today.getFullYear());
-
-    // Fetch events if function provided
-    if (fetchEvents) {
-      fetchEvents();
-    }
-  };
 
   const getMonthLabel = () =>
     currentDate.toLocaleDateString(undefined, {
@@ -454,7 +486,7 @@ const CalendarView = ({
                   )}
                   <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
                     <button
-                      onClick={() => handleToggleInterest?.(event._id)}
+                      onClick={() => handleToggleInterestMemo(event._id)}
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
                         userStatus[event._id]?.interested
                           ? "bg-teal-600 text-white"
@@ -475,7 +507,7 @@ const CalendarView = ({
                       </span>
                     </button>
                     <button
-                      onClick={() => handleToggleNotification?.(event._id)}
+                      onClick={() => handleToggleNotificationMemo(event._id)}
                       className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
                         userStatus[event._id]?.notified
                           ? "bg-blue-600 text-white"
@@ -505,14 +537,7 @@ const CalendarView = ({
                     {isAdmin && (
                       <>
                         <button
-                          onClick={() => setEditingEvent?.(event)}
-                          className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs"
-                          aria-label="Edit event"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleToggleComplete?.(event._id)}
+                          onClick={() => handleToggleCompleteMemo(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
                           aria-label={
                             event.completed
@@ -523,7 +548,7 @@ const CalendarView = ({
                           {event.completed ? "Mark Incomplete" : "Complete"}
                         </button>
                         <button
-                          onClick={() => handleToggleCancel?.(event._id)}
+                          onClick={() => handleToggleCancelMemo(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
                           aria-label={
                             event.canceled ? "Restore event" : "Cancel event"
@@ -532,7 +557,7 @@ const CalendarView = ({
                           {event.canceled ? "Restore" : "Cancel"}
                         </button>
                         <button
-                          onClick={() => handleToggleFeatured?.(event._id)}
+                          onClick={() => handleToggleFeaturedMemo(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
                           aria-label={
                             event.featured
@@ -543,7 +568,7 @@ const CalendarView = ({
                           {event.featured ? "Unfeature" : "Feature"}
                         </button>
                         <button
-                          onClick={() => handleDeleteEvent?.(event._id)}
+                          onClick={() => handleDeleteEventMemo(event._id)}
                           className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
                           aria-label="Delete event"
                         >
