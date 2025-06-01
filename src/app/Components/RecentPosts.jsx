@@ -43,6 +43,12 @@ const useDataFetching = (endpoint, limit) => {
           // Handle different response structures
           if (endpoint === "/api/books") {
             setData(result.books);
+          } else if (endpoint === "/api/videos") {
+            setData(result.videos);
+          } else if (endpoint === "/api/questions") {
+            setData(result.questions);
+          } else if (endpoint === "/api/reviews") {
+            setData(result.reviews);
           } else {
             setData(result[endpoint.split("/").pop()]);
           }
@@ -269,7 +275,7 @@ export default function RecentPosts({
           <Link href={`/published-books/${b._id}`}>
             <div className="relative h-56 w-full overflow-hidden rounded-lg">
               <Image
-                src={b.coverImage}
+                src={b.coverImage || "/book-placeholder.png"}
                 alt={b.title}
                 fill
                 className="object-cover"
@@ -279,6 +285,18 @@ export default function RecentPosts({
             <h3 className="mt-2 font-bold truncate">{b.title}</h3>
             <p className="text-sm text-gray-500">{b.author}</p>
             <p className="text-green-600 font-bold mt-1">{b.price} BDT</p>
+            {b.categories && b.categories.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {b.categories.map((cat) => (
+                  <span
+                    key={cat._id}
+                    className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded"
+                  >
+                    {cat.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </Link>
         </Card>
       ))}
