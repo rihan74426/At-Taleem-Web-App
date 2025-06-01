@@ -93,14 +93,10 @@ const OrderSchema = new mongoose.Schema(
       default: "Unpaid",
       index: true,
     },
-    paymentMethod: {
-      type: String,
-      enum: ["bkash", "nagad", "rocket", "card"],
-      required: true,
-    },
     paymentDetails: {
       transactionId: String,
-      gatewayResponse: Object,
+      validationId: String,
+      amount: Number,
       paidAt: Date,
     },
     tracking: {
@@ -109,14 +105,6 @@ const OrderSchema = new mongoose.Schema(
     },
     sessionKey: String,
     gatewayPageURL: String,
-    notes: String,
-    estimatedDeliveryDate: Date,
-    actualDeliveryDate: Date,
-    refundDetails: {
-      amount: Number,
-      reason: String,
-      processedAt: Date,
-    },
   },
   {
     timestamps: true,
@@ -183,22 +171,6 @@ OrderSchema.methods.addTrackingUpdate = async function (
     timestamp: new Date(),
   });
   this.status = status;
-  return this.save();
-};
-
-// Instance method for refund processing
-OrderSchema.methods.processRefund = async function (amount, reason) {
-  if (this.paymentStatus !== "Paid") {
-    throw new Error("Cannot refund unpaid order");
-  }
-
-  this.paymentStatus = "Refunded";
-  this.refundDetails = {
-    amount,
-    reason,
-    processedAt: new Date(),
-  };
-
   return this.save();
 };
 

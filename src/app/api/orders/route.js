@@ -89,7 +89,7 @@ export async function POST(req) {
     cus_email: buyerEmail,
     cus_phone: deliveryPhone,
     cus_add1: deliveryAddress,
-    cus_city: deliveryAddress,
+    cus_city: "Dhaka",
     cus_postcode: "4000",
     cus_country: "Bangladesh",
     shipping_method: "No",

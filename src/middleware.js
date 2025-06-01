@@ -1,10 +1,26 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
+// Define public routes that don't require authentication
+const publicRoutes = [
+  "/api/orders/ssl-success",
+  "/api/orders/ssl-fail",
+  "/api/orders/ssl-cancel",
+  "/api/orders/ssl-ipn",
+  "/api/orders/verify-payment",
+  "/payment-success",
+];
+
 // Protect specific routes (e.g., dashboard, API routes)
 const isProtectedRoute = createRouteMatcher([""]);
 
 export default clerkMiddleware((auth, req) => {
   const { userId, redirectToSignIn } = auth();
+  const path = req.nextUrl.pathname;
+
+  // Allow public routes to bypass authentication
+  if (publicRoutes.some((route) => path.startsWith(route))) {
+    return;
+  }
 
   if (!userId && isProtectedRoute(req)) {
     return redirectToSignIn({ returnBackUrl: req.url });
