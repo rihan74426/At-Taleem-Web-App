@@ -49,8 +49,87 @@ export default function OrderDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="flex justify-between items-start mb-8">
+            <div className="space-y-2">
+              <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+
+          {/* Order Status Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Information Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="space-y-3">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Items Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="w-[60px] h-[90px] bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Timeline Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4"></div>
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                >
+                  <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full animate-pulse"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
+                    <div className="h-3 w-1/3 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -74,7 +153,7 @@ export default function OrderDetailsPage() {
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Order #{order.orderId}</h1>
+            <h1 className="text-3xl font-bold">Order #{order._id}</h1>
             <p className="text-gray-500">
               Placed on {format(new Date(order.createdAt), "PPP")}
             </p>
@@ -110,6 +189,35 @@ export default function OrderDetailsPage() {
               </span>
             </div>
           </div>
+          {order.paymentDetails && (
+            <div className="mt-4 pt-4 border-t">
+              <h3 className="text-lg font-semibold mb-2">Payment Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p>
+                    <span className="text-gray-500">Transaction ID:</span>{" "}
+                    {order.paymentDetails.transactionId}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Paid At:</span>{" "}
+                    {order.paymentDetails.paidAt
+                      ? format(new Date(order.paymentDetails.paidAt), "PPP")
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p>
+                    <span className="text-gray-500">Validation ID:</span>{" "}
+                    {order.paymentDetails.validationId || "N/A"}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Amount Paid:</span>{" "}
+                    {order.paymentDetails.amount || order.amount} BDT
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Customer Information */}
@@ -140,32 +248,66 @@ export default function OrderDetailsPage() {
         {/* Order Items */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Order Items</h2>
-          <div className="space-y-4">
-            {order.items.map((item) => (
-              <div
-                key={item._id}
-                className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-              >
-                <Image
-                  src={item.book?.coverImage}
-                  alt={item.book?.title}
-                  width={80}
-                  height={120}
-                  className="rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <h3 className="font-medium">{item.book?.title}</h3>
-                  <p className="text-gray-500">
-                    Quantity: {item.qty} × {item.price} BDT
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    {(item.qty * item.price).toFixed(2)} BDT
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Book
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Quantity
+                  </th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Unit Price
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Subtotal
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {order.items.map((item) => (
+                  <tr
+                    key={item._id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="w-14 h-20 flex items-center justify-center">
+                        <Image
+                          src={item.bookId?.coverImage}
+                          alt={item.bookId?.title}
+                          width={56}
+                          height={80}
+                          className="rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{item.bookId?.title}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-block bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm font-semibold">
+                        {item.qty}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-gray-700 dark:text-gray-200">
+                        {item.price} BDT
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="font-semibold">
+                        {(item.qty * item.price).toFixed(2)} BDT
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div className="mt-6 pt-4 border-t">
             <div className="flex justify-between items-center">
@@ -182,7 +324,7 @@ export default function OrderDetailsPage() {
             <div className="space-y-4">
               {order.tracking.map((update, index) => (
                 <div
-                  key={update._id}
+                  key={index}
                   className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
                 >
                   <div className="flex-shrink-0">

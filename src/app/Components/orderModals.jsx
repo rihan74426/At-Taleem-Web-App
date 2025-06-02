@@ -24,33 +24,44 @@ export function OrderDetailsModal({ order, onClose }) {
     failed: "❌",
     cancelled: "🚫",
   };
+
   if (!order) return null;
+
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
         <button
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-900"
+          className="absolute top-3 right-3 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
           onClick={onClose}
         >
           ✖
         </button>
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h2 className="text-2xl font-bold">Order #{order.orderId}</h2>
+            <h2 className="text-2xl font-bold">Order #{order._id}</h2>
             <p className="text-gray-500">
               Placed on {format(new Date(order.createdAt), "PPP")}
             </p>
           </div>
-          <span
-            className={`px-3 py-1 rounded-full text-sm ${
-              order.paymentStatus === "Paid"
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {order.paymentStatus}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-full text-sm ${
+                order.paymentStatus === "Paid"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {order.paymentStatus}
+            </span>
+            <span
+              className={`px-3 py-1 rounded-full text-sm ${
+                STATUS_COLORS[order.status]
+              }`}
+            >
+              {STATUS_ICONS[order.status]} {order.status}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -82,19 +93,31 @@ export function OrderDetailsModal({ order, onClose }) {
                 {order.amount} BDT
               </p>
               <p>
-                <span className="text-gray-500">Payment Method:</span>{" "}
-                {order.paymentMethod}
-              </p>
-              <p>
-                <span className="text-gray-500">Status:</span>{" "}
+                <span className="text-gray-500">Payment Status:</span>{" "}
                 <span
-                  className={`px-2 py-1 rounded-full text-sm ${
-                    STATUS_COLORS[order.status]
+                  className={`${
+                    order.paymentStatus === "Paid"
+                      ? "text-green-600"
+                      : "text-red-600"
                   }`}
                 >
-                  {STATUS_ICONS[order.status]} {order.status}
+                  {order.paymentStatus}
                 </span>
               </p>
+              {order.paymentDetails && (
+                <>
+                  <p>
+                    <span className="text-gray-500">Transaction ID:</span>{" "}
+                    {order.paymentDetails.transactionId}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Paid At:</span>{" "}
+                    {order.paymentDetails.paidAt
+                      ? format(new Date(order.paymentDetails.paidAt), "PPP")
+                      : "N/A"}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -105,14 +128,14 @@ export function OrderDetailsModal({ order, onClose }) {
             {order.items.map((item) => (
               <div key={item._id} className="flex items-center gap-4">
                 <Image
-                  src={item.book?.coverImage}
-                  alt={item.book?.title}
+                  src={item.bookId?.coverImage || "/placeholder-book.png"}
+                  alt={item.bookId?.title || "Book"}
                   width={60}
                   height={90}
                   className="rounded-lg object-cover"
                 />
                 <div>
-                  <p className="font-medium">{item.book?.title}</p>
+                  <p className="font-medium">{item.bookId?.title || "Book"}</p>
                   <p className="text-gray-500">
                     {item.qty} x {item.price} BDT
                   </p>
@@ -124,17 +147,19 @@ export function OrderDetailsModal({ order, onClose }) {
 
         {order.tracking && order.tracking.length > 0 && (
           <div className="mt-6">
-            <h3 className="font-semibold mb-2">Latest Update</h3>
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-              <p className="text-sm">
-                {order.tracking[order.tracking.length - 1].message}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {format(
-                  new Date(order.tracking[order.tracking.length - 1].timestamp),
-                  "PPp"
-                )}
-              </p>
+            <h3 className="font-semibold mb-2">Order Tracking</h3>
+            <div className="space-y-4">
+              {order.tracking.map((track, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg"
+                >
+                  <p className="text-sm">{track.message}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {format(new Date(track.timestamp), "PPp")}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -142,7 +167,7 @@ export function OrderDetailsModal({ order, onClose }) {
         <div className="mt-6 flex justify-end gap-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Close
           </button>

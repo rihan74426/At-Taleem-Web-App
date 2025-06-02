@@ -85,7 +85,6 @@ export async function POST(req) {
     orderDate: new Date(order.createdAt).toLocaleDateString(),
     totalAmount,
     paymentStatus: order.paymentStatus,
-    paymentMethod: "SSLCommerz",
     deliveryAddress,
     items: books.map((book) => ({
       title: book.title,

@@ -59,7 +59,7 @@ export default function OrderTracking({ orderId }) {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Order #{order.orderId}</h2>
+            <h2 className="text-2xl font-bold mb-2">Order #{order._id}</h2>
             <p className="text-gray-600">
               Placed on {format(new Date(order.createdAt), "PPP")}
             </p>
@@ -158,10 +158,6 @@ export default function OrderTracking({ orderId }) {
           <div>
             <h4 className="font-semibold mb-2">Payment Information</h4>
             <div className="space-y-2">
-              <p>
-                <span className="text-gray-600">Payment Method:</span>{" "}
-                {order.paymentMethod}
-              </p>
               <p>
                 <span className="text-gray-600">Payment Status:</span>{" "}
                 <span

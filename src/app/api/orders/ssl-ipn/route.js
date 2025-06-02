@@ -101,7 +101,7 @@ export async function POST(req) {
       JSON.stringify({
         status: "success",
         message: "IPN processed successfully",
-        orderId: order.orderId,
+        orderId: order._id,
       }),
       {
         status: 200,

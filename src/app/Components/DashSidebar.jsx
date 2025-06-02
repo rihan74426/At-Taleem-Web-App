@@ -60,6 +60,16 @@ export default function DashSidebar() {
               Profile
             </Sidebar.Item>
           </Link>
+          <Link href="/dashboard?tab=orders">
+            <Sidebar.Item
+              active={tab === "orders"}
+              icon={HiUser}
+              labelColor="dark"
+              as="div"
+            >
+              My orders
+            </Sidebar.Item>
+          </Link>
           <Link href="/dashboard?tab=review">
             <Sidebar.Item
               active={tab === "review"}

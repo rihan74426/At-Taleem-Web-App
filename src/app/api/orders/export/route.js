@@ -1,8 +1,8 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
-import { auth } from "@clerk/nextjs";
 import { rateLimit } from "@/lib/rate-limit";
 import { format } from "date-fns";
+import { getAuth } from "@clerk/nextjs/server";
 
 // Rate limiter: 5 requests per minute
 const limiter = rateLimit({
@@ -16,7 +16,7 @@ export async function POST(req) {
     await limiter.check(5);
 
     // Authentication check
-    const { userId } = auth();
+    const { userId } = getAuth(req);
     if (!userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -55,7 +55,7 @@ export async function POST(req) {
 
     if (searchQuery) {
       query.$or = [
-        { orderId: { $regex: searchQuery, $options: "i" } },
+        { _id: { $regex: searchQuery, $options: "i" } },
         { buyerName: { $regex: searchQuery, $options: "i" } },
         { buyerEmail: { $regex: searchQuery, $options: "i" } },
         { deliveryPhone: { $regex: searchQuery, $options: "i" } },
@@ -116,17 +116,16 @@ export async function POST(req) {
         .join(" | ");
 
       return [
-        order.orderId,
+        order._id,
         format(new Date(order.createdAt), "PPp"),
         order.buyerName,
         order.buyerEmail,
         order.deliveryPhone,
         order.deliveryAddress,
-        items,
+        items.map((item) => `${item.bookId.title} (${item.qty})`).join(", "),
         order.amount,
         order.paymentStatus,
         order.status,
-        order.paymentMethod,
         tracking,
       ];
     });

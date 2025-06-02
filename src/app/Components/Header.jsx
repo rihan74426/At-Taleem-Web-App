@@ -329,7 +329,7 @@ export default function Header() {
         )}
 
         {user?.publicMetadata.isAdmin && (
-          <Link href="/orders" passHref>
+          <Link href="/admin/orders" passHref>
             <Navbar.Link active={path === "/orders"} as={"div"}>
               অর্ডারসমূহ
             </Navbar.Link>

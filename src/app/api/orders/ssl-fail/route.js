@@ -16,7 +16,7 @@ export async function POST(req) {
     await connect();
 
     // Find and update order
-    const order = await Order.findOne({ orderId: value_a });
+    const order = await Order.findOne({ _id: value_a });
     if (!order) {
       return new Response(JSON.stringify({ error: "Order not found" }), {
         status: 404,
@@ -47,7 +47,7 @@ export async function POST(req) {
       JSON.stringify({
         status: "error",
         message: "Payment failed",
-        orderId: order.orderId,
+        orderId: order._id,
       }),
       {
         status: 200,

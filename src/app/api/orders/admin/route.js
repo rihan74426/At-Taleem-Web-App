@@ -41,7 +41,7 @@ export async function GET(req) {
       query.paymentStatus = paymentStatus;
     if (search) {
       query.$or = [
-        { orderId: { $regex: search, $options: "i" } },
+        { _id: { $regex: search, $options: "i" } },
         { buyerName: { $regex: search, $options: "i" } },
         { buyerEmail: { $regex: search, $options: "i" } },
         { deliveryPhone: { $regex: search, $options: "i" } },

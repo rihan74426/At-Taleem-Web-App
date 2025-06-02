@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
 import { FiChevronDown, FiFilter, FiSearch, FiDownload } from "react-icons/fi";
+import SendEmailModal from "@/app/Components/sendEmail";
 
 // Status colors and icons
 const STATUS_COLORS = {
@@ -40,6 +41,8 @@ export default function AdminOrdersPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedOrderForEmail, setSelectedOrderForEmail] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -50,6 +53,11 @@ export default function AdminOrdersPage() {
     cancelled: 0,
     totalRevenue: 0,
   });
+
+  const handleSendEmail = (order) => {
+    setSelectedOrderForEmail(order);
+    setShowEmailModal(true);
+  };
 
   useEffect(() => {
     if (isSignedIn) {
@@ -156,7 +164,7 @@ export default function AdminOrdersPage() {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (
-        order.orderId.toLowerCase().includes(searchLower) ||
+        order._id.toLowerCase().includes(searchLower) ||
         order.buyerName.toLowerCase().includes(searchLower) ||
         order.buyerEmail.toLowerCase().includes(searchLower) ||
         order.deliveryPhone.includes(searchQuery) ||
@@ -209,14 +217,14 @@ export default function AdminOrdersPage() {
         <div className="flex gap-4">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            className="flex dark:bg-gray-800 items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <FiFilter />
             Filters
           </button>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            className="flex dark:bg-gray-800 items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <FiDownload />
             Export
@@ -250,7 +258,7 @@ export default function AdminOrdersPage() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6"
+          className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow mb-6"
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <select
@@ -258,15 +266,50 @@ export default function AdminOrdersPage() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, status: e.target.value }))
               }
-              className="border rounded-lg px-4 py-2"
+              className="border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="delivery">Delivery</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-              <option value="cancelled">Cancelled</option>
+              <option
+                value="all"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                All Statuses
+              </option>
+              <option
+                value="pending"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Pending
+              </option>
+              <option
+                value="processing"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Processing
+              </option>
+              <option
+                value="delivery"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Delivery
+              </option>
+              <option
+                value="completed"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Completed
+              </option>
+              <option
+                value="failed"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Failed
+              </option>
+              <option
+                value="cancelled"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Cancelled
+              </option>
             </select>
 
             <select
@@ -277,13 +320,38 @@ export default function AdminOrdersPage() {
                   paymentStatus: e.target.value,
                 }))
               }
-              className="border rounded-lg px-4 py-2"
+              className="border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Payment Statuses</option>
-              <option value="Unpaid">Unpaid</option>
-              <option value="Paid">Paid</option>
-              <option value="Failed">Failed</option>
-              <option value="Refunded">Refunded</option>
+              <option
+                value="all"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                All Payment Statuses
+              </option>
+              <option
+                value="Unpaid"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Unpaid
+              </option>
+              <option
+                value="Paid"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Paid
+              </option>
+              <option
+                value="Failed"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Failed
+              </option>
+              <option
+                value="Refunded"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Refunded
+              </option>
             </select>
 
             <select
@@ -291,12 +359,32 @@ export default function AdminOrdersPage() {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, dateRange: e.target.value }))
               }
-              className="border rounded-lg px-4 py-2"
+              className="border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
+              <option
+                value="all"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                All Time
+              </option>
+              <option
+                value="today"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Today
+              </option>
+              <option
+                value="week"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Last 7 Days
+              </option>
+              <option
+                value="month"
+                className="dark:bg-gray-800 dark:text-gray-100"
+              >
+                Last 30 Days
+              </option>
             </select>
           </div>
         </motion.div>
@@ -311,13 +399,13 @@ export default function AdminOrdersPage() {
             placeholder="Search orders..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-800"
           />
         </div>
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="border rounded-lg px-4 py-2"
+          className="border rounded-lg px-4 py-2 dark:bg-gray-800"
         >
           <option value="newest">Newest First</option>
           <option value="oldest">Oldest First</option>
@@ -396,7 +484,7 @@ export default function AdminOrdersPage() {
                     />
                     <div>
                       <h2 className="text-xl font-semibold mb-2">
-                        Order #{order.orderId}
+                        Order #{order._id}
                       </h2>
                       <p className="text-gray-500">
                         {format(new Date(order.createdAt), "PPP")}
@@ -412,7 +500,7 @@ export default function AdminOrdersPage() {
                       {STATUS_ICONS[order.status]} {order.status}
                     </span>
                     <Link
-                      href={`/admin/orders/${order.orderId}`}
+                      href={`/admin/orders/${order._id}`}
                       className="text-blue-600 hover:text-blue-800"
                     >
                       View Details
@@ -462,10 +550,7 @@ export default function AdminOrdersPage() {
                           {order.paymentStatus}
                         </span>
                       </p>
-                      <p>
-                        <span className="text-gray-500">Payment Method:</span>{" "}
-                        {order.paymentMethod}
-                      </p>
+
                       <p>
                         <span className="text-gray-500">Items:</span>{" "}
                         {order.items.length}
@@ -514,7 +599,7 @@ export default function AdminOrdersPage() {
                     Mark as Completed
                   </button>
                   <button
-                    onClick={() => handleBulkAction("send-email")}
+                    onClick={() => handleSendEmail(order)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                   >
                     Send Email
@@ -524,6 +609,42 @@ export default function AdminOrdersPage() {
             </motion.div>
           ))}
         </div>
+      )}
+      {showEmailModal && selectedOrderForEmail && (
+        <SendEmailModal
+          recipientEmail={selectedOrderForEmail.buyerEmail}
+          defaultHeader={`Order Update - #${selectedOrderForEmail._id}`}
+          defaultBody={`<p>Dear ${selectedOrderForEmail.buyerName},</p>
+            <p>We hope this email finds you well.</p>
+            <p>
+              This is regarding your order #${selectedOrderForEmail._id}.<br/>
+              We are pleased to inform you that your order has been successfully processed.
+            </p>
+            <p>Your order details are as follows:</p>
+            <p>
+              <strong>Order ID:</strong> #${selectedOrderForEmail._id}<br/>
+              <strong>Order Date:</strong> ${format(
+                new Date(selectedOrderForEmail.createdAt),
+                "PPP"
+              )}<br/>
+              <strong>Total Amount:</strong> ${
+                selectedOrderForEmail.amount
+              } BDT<br/>
+              <strong>Payment Status:</strong> ${
+                selectedOrderForEmail.paymentStatus
+              }<br/>
+              <strong>Delivery Address:</strong> ${
+                selectedOrderForEmail.deliveryAddress
+              }
+            </p>
+            <p>We will notify you once your order is shipped.</p>
+            <p>Thank you for choosing At-Taleem. We look forward to serving you again.</p>`}
+          defaultFooter="© 2025 At-Taleem. All rights reserved."
+          onClose={() => {
+            setShowEmailModal(false);
+            setSelectedOrderForEmail(null);
+          }}
+        />
       )}
     </div>
   );

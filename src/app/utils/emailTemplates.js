@@ -4,7 +4,6 @@ export const buildOrderEmailTemplate = ({
   orderDate,
   totalAmount,
   paymentStatus,
-  paymentMethod,
   deliveryAddress,
   items,
   type = "confirmation", // confirmation, update, shipping, etc.
@@ -92,10 +91,6 @@ export const buildOrderEmailTemplate = ({
                   <tr>
                     <td style="padding: 8px 0; color: #4b5563;">Payment Status:</td>
                     <td style="padding: 8px 0; color: #1f2937;">${paymentStatus}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #4b5563;">Payment Method:</td>
-                    <td style="padding: 8px 0; color: #1f2937;">${paymentMethod}</td>
                   </tr>
                   <tr>
                     <td style="padding: 8px 0; color: #4b5563;">Delivery Address:</td>

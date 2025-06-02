@@ -5,7 +5,11 @@ import { buildOrderEmailTemplate } from "@/app/utils/emailTemplates";
 
 export async function GET(req, { params }) {
   await connect();
-  const order = await Order.findById(params.id);
+  const order = await Order.findById(params.id).populate({
+    path: "items.bookId",
+    model: "Book",
+    select: "title coverImage price",
+  });
   if (!order) {
     return new Response(JSON.stringify({ error: "Order not found" }), {
       status: 404,
@@ -60,7 +64,6 @@ export async function PATCH(req, { params }) {
       orderDate: new Date(order.createdAt).toLocaleDateString(),
       totalAmount: order.amount,
       paymentStatus: order.paymentStatus,
-      paymentMethod: order.paymentMethod || "SSLCommerz",
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => ({
         title: item.bookId?.title || "Book",

@@ -73,7 +73,7 @@ export default function OrderAnalytics() {
         headers.join(","),
         ...data.map((order) =>
           [
-            order.orderId,
+            order._id,
             format(new Date(order.date), "yyyy-MM-dd"),
             order.status,
             order.paymentStatus,
@@ -248,24 +248,6 @@ export default function OrderAnalytics() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </div>
-
-      {/* Payment Methods */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-4">Payment Methods</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Object.entries(analytics.paymentMethodDistribution).map(
-            ([method, count]) => (
-              <div key={method} className="p-4 border rounded-lg text-center">
-                <h4 className="font-semibold capitalize">{method}</h4>
-                <p className="text-2xl">{count}</p>
-                <p className="text-sm text-gray-500">
-                  {Math.round((count / analytics.totalOrders) * 100)}%
-                </p>
-              </div>
-            )
-          )}
         </div>
       </div>
     </div>
