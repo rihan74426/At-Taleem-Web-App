@@ -2,6 +2,7 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
 import Book from "@/lib/models/Book";
+import { buildOrderEmailTemplate } from "@/app/utils/emailTemplates";
 
 export async function GET(req) {
   await connect();
@@ -75,6 +76,35 @@ export async function POST(req) {
     deliveryAddress,
     deliveryPhone,
     amount: totalAmount,
+  });
+
+  // Send order confirmation email
+  const emailTemplate = buildOrderEmailTemplate({
+    orderId: order._id,
+    buyerName,
+    orderDate: new Date(order.createdAt).toLocaleDateString(),
+    totalAmount,
+    paymentStatus: order.paymentStatus,
+    paymentMethod: "SSLCommerz",
+    deliveryAddress,
+    items: books.map((book) => ({
+      title: book.title,
+      coverImage: book.coverImage,
+      qty: items.find((item) => item.bookId === book._id.toString()).qty,
+      price: book.price,
+    })),
+    type: "confirmation",
+  });
+
+  // Send email
+  await fetch(`${process.env.URL}/api/emails`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to: buyerEmail,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    }),
   });
 
   // Prepare SSLCommerz payload
