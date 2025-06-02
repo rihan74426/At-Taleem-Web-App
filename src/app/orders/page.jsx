@@ -8,13 +8,13 @@ import { format } from "date-fns";
 import {
   OrderDetailsModal,
   EditOrderModal,
-  SendEmailModal,
 } from "@/app/Components/orderModals";
-import { FiChevronDown } from "react-icons/fi";
+import { FiChevronDown, FiMail } from "react-icons/fi";
 import Loader from "@/app/Components/Loader";
 import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import SendEmailModal from "@/app/Components/sendEmail";
 
 // Status colors and icons
 const STATUS_COLORS = {
@@ -43,6 +43,8 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedOrderForEmail, setSelectedOrderForEmail] = useState(null);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -76,7 +78,7 @@ export default function OrdersPage() {
         order.buyerName.toLowerCase().includes(searchLower) ||
         order.buyerEmail.toLowerCase().includes(searchLower) ||
         order.items.some((item) =>
-          item.book?.title.toLowerCase().includes(searchLower)
+          item.bookId?.title.toLowerCase().includes(searchLower)
         )
       );
     })
@@ -89,6 +91,11 @@ export default function OrdersPage() {
       if (sortBy === "amount-low") return a.amount - b.amount;
       return 0;
     });
+
+  const handleSendEmail = (order) => {
+    setSelectedOrderForEmail(order);
+    setShowEmailModal(true);
+  };
 
   if (!isSignedIn) {
     return (
@@ -188,6 +195,14 @@ export default function OrdersPage() {
                     >
                       {STATUS_ICONS[order.status]} {order.status}
                     </span>
+                    {user?.publicMetadata.isAdmin && (
+                      <button
+                        onClick={() => handleSendEmail(order)}
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <FiMail /> Send Email
+                      </button>
+                    )}
                     <button
                       onClick={() => setSelectedOrder(order)}
                       className="text-blue-600 hover:text-blue-800"
@@ -204,14 +219,14 @@ export default function OrdersPage() {
                       {order.items.map((item) => (
                         <div key={item._id} className="flex items-center gap-4">
                           <Image
-                            src={item.book?.coverImage}
-                            alt={item.book?.title}
+                            src={item.bookId?.coverImage}
+                            alt={item.bookId?.title}
                             width={60}
                             height={90}
                             className="rounded-lg object-cover"
                           />
                           <div>
-                            <p className="font-medium">{item.book?.title}</p>
+                            <p className="font-medium">{item.bookId?.title}</p>
                             <p className="text-gray-500">
                               {item.qty} x {item.price} BDT
                             </p>
@@ -279,6 +294,36 @@ export default function OrdersPage() {
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+        />
+      )}
+
+      {showEmailModal && selectedOrderForEmail && (
+        <SendEmailModal
+          recipientEmail={selectedOrderForEmail.buyerEmail}
+          defaultHeader={`Order Update - #${selectedOrderForEmail._id}`}
+          defaultBody={`Dear ${
+            selectedOrderForEmail.buyerName
+          },\n\nWe hope this email finds you well. This is regarding your order #${
+            selectedOrderForEmail._id
+          }. We are pleased to inform you that your order has been successfully processed. Your order details are as follows:\n\nOrder ID: #${
+            selectedOrderForEmail._id
+          }\n. Order Date: ${format(
+            new Date(selectedOrderForEmail.createdAt),
+            "PPP"
+          )}\n. Total Amount: ${
+            selectedOrderForEmail.amount
+          } BDT\n\n. Payment Status: ${
+            selectedOrderForEmail.paymentStatus
+          }\n\n. Payment Method: ${
+            selectedOrderForEmail.paymentMethod
+          }\n\n. Delivery Address: ${
+            selectedOrderForEmail.deliveryAddress
+          }\n\n. We will notify you once your order is shipped. Thank you for choosing At-Taleem. We look forward to serving you again.`}
+          defaultFooter="© 2025 At-Taleem. All rights reserved."
+          onClose={() => {
+            setShowEmailModal(false);
+            setSelectedOrderForEmail(null);
+          }}
         />
       )}
     </div>

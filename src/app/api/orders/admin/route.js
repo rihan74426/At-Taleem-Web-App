@@ -1,7 +1,7 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
-import { auth } from "@clerk/nextjs";
 import { rateLimit } from "@/lib/rate-limit";
+import { getAuth } from "@clerk/nextjs/server";
 
 // Rate limiter: 10 requests per minute
 const limiter = rateLimit({
@@ -15,7 +15,7 @@ export async function GET(req) {
     await limiter.check(10);
 
     // Authentication check
-    const { userId } = auth();
+    const { userId } = getAuth(req);
     if (!userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -146,7 +146,7 @@ export async function POST(req) {
     await limiter.check(10);
 
     // Authentication check
-    const { userId } = auth();
+    const { userId } = getAuth(req);
     if (!userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,

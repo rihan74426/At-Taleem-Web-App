@@ -11,7 +11,13 @@ export async function GET(req) {
   const filter = {};
   if (userId) filter.userId = userId;
 
-  const orders = await Order.find(filter).sort({ createdAt: -1 });
+  const orders = await Order.find(filter)
+    .populate({
+      path: "items.bookId",
+      model: "Book",
+      select: "title coverImage price",
+    })
+    .sort({ createdAt: -1 });
   return new Response(JSON.stringify({ orders }), {
     headers: { "Content-Type": "application/json" },
   });

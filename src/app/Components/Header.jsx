@@ -126,6 +126,10 @@ export default function Header() {
     [debouncedSearch]
   );
 
+  const handleInputFocus = useCallback(() => {
+    setShowSuggestions(true);
+  }, []);
+
   const handleSearchSelect = useCallback((result) => {
     setSearchTerm("");
     setSearchResults([]);
@@ -253,14 +257,16 @@ export default function Header() {
             className="w-full"
             value={searchTerm}
             onChange={handleSearchChange}
+            onFocus={handleInputFocus}
           />
         </form>
         <SearchSuggestions
           results={searchResults}
-          isOpen={showSuggestions && searchTerm.length > 0}
+          isOpen={showSuggestions}
           onClose={handleSearchClose}
           onSelect={handleSearchSelect}
           searchTerm={searchTerm}
+          isSearching={isSearching}
         />
       </div>
 
