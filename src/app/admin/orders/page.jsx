@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiChevronDown, FiFilter, FiSearch, FiDownload } from "react-icons/fi";
 import SendEmailModal from "@/app/Components/sendEmail";
+import ResponseModal from "@/app/Components/ResponseModal";
 
 // Status colors and icons
 const STATUS_COLORS = {
@@ -53,6 +54,12 @@ export default function AdminOrdersPage() {
     cancelled: 0,
     totalRevenue: 0,
   });
+  const [modal, setModal] = useState({
+    isOpen: false,
+    message: "",
+    status: "",
+  });
+  const showModal = (m, s) => setModal({ isOpen: true, message: m, status: s });
 
   const handleSendEmail = (order) => {
     setSelectedOrderForEmail(order);
@@ -79,6 +86,55 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleOrderAction = async (orderId, status) => {
+    try {
+      const res = await fetch("/api/orders/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, status }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update order status");
+
+      const data = await res.json();
+      toast.success(data.message || "Order status updated successfully");
+      showModal(
+        "Order status updated to " + status + " successfully",
+        "success"
+      );
+      fetchOrders();
+    } catch (error) {
+      toast.error(error.message);
+      showModal("Failed to update order status", "error");
+    }
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this order? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete order");
+
+      const data = await res.json();
+      toast.success(data.message || "Order deleted successfully");
+      showModal("Order deleted successfully", "success");
+      fetchOrders();
+    } catch (error) {
+      toast.error(error.message);
+      showModal("Failed to delete order", "error");
+    }
+  };
+
   const handleBulkAction = async (action) => {
     if (selectedOrders.length === 0) {
       toast.error("Please select orders first");
@@ -86,7 +142,7 @@ export default function AdminOrdersPage() {
     }
 
     try {
-      const res = await fetch("/api/orders/bulk-action", {
+      const res = await fetch("/api/orders/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -97,11 +153,14 @@ export default function AdminOrdersPage() {
 
       if (!res.ok) throw new Error("Failed to perform bulk action");
 
-      toast.success("Bulk action completed successfully");
+      const data = await res.json();
+      toast.success(data.message || "Bulk action completed successfully");
+      showModal("Bulk action completed successfully", "success");
       fetchOrders();
       setSelectedOrders([]);
     } catch (error) {
       toast.error(error.message);
+      showModal("Failed to perform bulk action", "error");
     }
   };
 
@@ -128,8 +187,10 @@ export default function AdminOrdersPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      showModal("Orders exported successfully", "success");
     } catch (error) {
       toast.error(error.message);
+      showModal("Failed to export orders", "error");
     }
   };
 
@@ -441,6 +502,18 @@ export default function AdminOrdersPage() {
                 Mark as Completed
               </button>
               <button
+                onClick={() => handleBulkAction("mark-cancelled")}
+                className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              >
+                Cancel Orders
+              </button>
+              <button
+                onClick={() => handleBulkAction("delete")}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete Orders
+              </button>
+              <button
                 onClick={() => setSelectedOrders([])}
                 className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
               >
@@ -561,19 +634,28 @@ export default function AdminOrdersPage() {
 
                 {order.tracking && order.tracking.length > 0 && (
                   <div className="mt-6">
-                    <h3 className="font-semibold mb-2">Latest Update</h3>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-sm">
-                        {order.tracking[order.tracking.length - 1].message}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {format(
-                          new Date(
-                            order.tracking[order.tracking.length - 1].timestamp
-                          ),
-                          "PPp"
-                        )}
-                      </p>
+                    <h3 className="font-semibold mb-2">Order Timeline</h3>
+                    <div className="space-y-2">
+                      {order.tracking.map((update, index) => (
+                        <div
+                          key={index}
+                          className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                STATUS_COLORS[update.status]
+                              }`}
+                            >
+                              {STATUS_ICONS[update.status]}
+                            </span>
+                            <p className="text-sm">{update.message}</p>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {format(new Date(update.timestamp), "PPp")}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -581,22 +663,34 @@ export default function AdminOrdersPage() {
                 {/* Quick Actions */}
                 <div className="mt-6 flex gap-2">
                   <button
-                    onClick={() => handleBulkAction("mark-processing")}
+                    onClick={() => handleOrderAction(order._id, "processing")}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
                     Mark as Processing
                   </button>
                   <button
-                    onClick={() => handleBulkAction("mark-delivery")}
+                    onClick={() => handleOrderAction(order._id, "delivered")}
                     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
                   >
-                    Mark as Delivery
+                    Mark as Delivered
                   </button>
                   <button
-                    onClick={() => handleBulkAction("mark-completed")}
+                    onClick={() => handleOrderAction(order._id, "completed")}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     Mark as Completed
+                  </button>
+                  <button
+                    onClick={() => handleOrderAction(order._id, "cancelled")}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                  >
+                    Cancel Order
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOrder(order._id)}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Delete Order
                   </button>
                   <button
                     onClick={() => handleSendEmail(order)}
@@ -646,6 +740,12 @@ export default function AdminOrdersPage() {
           }}
         />
       )}
+      <ResponseModal
+        isOpen={modal.isOpen}
+        message={modal.message}
+        status={modal.status}
+        onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
+      />
     </div>
   );
 }

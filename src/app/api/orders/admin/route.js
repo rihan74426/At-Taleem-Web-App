@@ -1,7 +1,7 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
 import { rateLimit } from "@/lib/rate-limit";
-import { getAuth } from "@clerk/nextjs/server";
+import { buildOrderEmailTemplate } from "@/app/utils/emailTemplates";
 
 // Rate limiter: 10 requests per minute
 const limiter = rateLimit({
@@ -14,14 +14,6 @@ export async function GET(req) {
     // Rate limiting
     await limiter.check(10);
 
-    // Authentication check
-    const { userId } = getAuth(req);
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
-    }
-
     // Connect to database
     await connect();
 
@@ -33,6 +25,7 @@ export async function GET(req) {
     const paymentStatus = searchParams.get("paymentStatus");
     const dateRange = searchParams.get("dateRange");
     const search = searchParams.get("search");
+    const sortBy = searchParams.get("sortBy") || "newest";
 
     // Build query
     const query = {};
@@ -68,14 +61,33 @@ export async function GET(req) {
       query.createdAt = { $gte: startDate };
     }
 
+    // Build sort options
+    let sortOptions = {};
+    switch (sortBy) {
+      case "newest":
+        sortOptions = { createdAt: -1 };
+        break;
+      case "oldest":
+        sortOptions = { createdAt: 1 };
+        break;
+      case "amount-high":
+        sortOptions = { amount: -1 };
+        break;
+      case "amount-low":
+        sortOptions = { amount: 1 };
+        break;
+      default:
+        sortOptions = { createdAt: -1 };
+    }
+
     // Get orders with pagination
     const skip = (page - 1) * limit;
     const [orders, total] = await Promise.all([
-      Order.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("items.bookId"),
+      Order.find(query).sort(sortOptions).skip(skip).limit(limit).populate({
+        path: "items.bookId",
+        model: "Book",
+        select: "title coverImage price",
+      }),
       Order.countDocuments(query),
     ]);
 
@@ -94,6 +106,9 @@ export async function GET(req) {
           },
           delivery: {
             $sum: { $cond: [{ $eq: ["$status", "delivery"] }, 1, 0] },
+          },
+          delivered: {
+            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
           },
           completed: {
             $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
@@ -120,6 +135,7 @@ export async function GET(req) {
           pending: 0,
           processing: 0,
           delivery: 0,
+          delivered: 0,
           completed: 0,
           failed: 0,
           cancelled: 0,
@@ -145,20 +161,76 @@ export async function POST(req) {
     // Rate limiting
     await limiter.check(10);
 
-    // Authentication check
-    const { userId } = getAuth(req);
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
-    }
-
     // Connect to database
     await connect();
 
     const body = await req.json();
-    const { action, orderIds } = body;
+    const { action, orderIds, orderId, status } = body;
 
+    // Handle single order update
+    if (orderId && status) {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        return new Response(JSON.stringify({ error: "Order not found" }), {
+          status: 404,
+        });
+      }
+
+      // Add tracking update
+      const trackingUpdate = {
+        status,
+        message: `Order status updated to ${status}`,
+        timestamp: new Date(),
+      };
+
+      order.tracking.push(trackingUpdate);
+      order.status = status;
+
+      // Send email notification
+      try {
+        const emailTemplate = buildOrderEmailTemplate({
+          orderId: order._id,
+          buyerName: order.buyerName,
+          orderDate: order.createdAt,
+          totalAmount: order.amount,
+          paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod,
+          deliveryAddress: order.deliveryAddress,
+          items: order.items,
+          type: "update",
+        });
+
+        await fetch(process.env.URL + "/api/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: order.buyerEmail,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to send email notification:", error);
+      }
+
+      await order.save();
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Order updated successfully",
+          order,
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Handle bulk actions
     if (!action || !orderIds || !Array.isArray(orderIds)) {
       return new Response(
         JSON.stringify({ error: "Invalid request parameters" }),
@@ -166,23 +238,41 @@ export async function POST(req) {
       );
     }
 
-    let update = {};
+    let newStatus;
     switch (action) {
       case "mark-processing":
-        update = { status: "processing" };
+        newStatus = "processing";
         break;
       case "mark-delivery":
-        update = { status: "delivery" };
+        newStatus = "delivery";
+        break;
+      case "mark-delivered":
+        newStatus = "delivered";
         break;
       case "mark-completed":
-        update = { status: "completed" };
-        break;
-      case "mark-failed":
-        update = { status: "failed" };
+        newStatus = "completed";
         break;
       case "mark-cancelled":
-        update = { status: "cancelled" };
+        newStatus = "cancelled";
         break;
+      case "mark-failed":
+        newStatus = "failed";
+        break;
+      case "delete":
+        // Delete orders
+        const deleteResult = await Order.deleteMany({ _id: { $in: orderIds } });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Successfully deleted ${deleteResult.deletedCount} orders`,
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
       default:
         return new Response(JSON.stringify({ error: "Invalid action" }), {
           status: 400,
@@ -191,8 +281,8 @@ export async function POST(req) {
 
     // Add tracking update
     const trackingUpdate = {
-      status: update.status,
-      message: `Order status updated to ${update.status}`,
+      status: newStatus,
+      message: `Order status updated to ${newStatus}`,
       timestamp: new Date(),
     };
 
@@ -200,10 +290,42 @@ export async function POST(req) {
     const result = await Order.updateMany(
       { _id: { $in: orderIds } },
       {
-        $set: update,
+        $set: { status: newStatus },
         $push: { tracking: trackingUpdate },
       }
     );
+
+    // Send email notifications for status changes
+    if (newStatus) {
+      const orders = await Order.find({ _id: { $in: orderIds } });
+      for (const order of orders) {
+        try {
+          const emailTemplate = buildOrderEmailTemplate({
+            orderId: order._id,
+            buyerName: order.buyerName,
+            orderDate: order.createdAt,
+            totalAmount: order.amount,
+            paymentStatus: order.paymentStatus,
+            paymentMethod: order.paymentMethod,
+            deliveryAddress: order.deliveryAddress,
+            items: order.items,
+            type: "update",
+          });
+
+          await fetch(`${process.env.URL}/api/emails`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: order.buyerEmail,
+              subject: emailTemplate.subject,
+              html: emailTemplate.html,
+            }),
+          });
+        } catch (error) {
+          console.error("Failed to send email notification:", error);
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({
