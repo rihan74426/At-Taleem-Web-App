@@ -122,7 +122,7 @@ export async function POST(req) {
         order.buyerEmail,
         order.deliveryPhone,
         order.deliveryAddress,
-        items.map((item) => `${item.bookId.title} (${item.qty})`).join(", "),
+        items,
         order.amount,
         order.paymentStatus,
         order.status,

@@ -167,7 +167,9 @@ export const buildOrderEmailTemplate = ({
 
               <!-- Call to Action -->
               <div style="text-align: center; margin: 25px 0;">
-                <a href="https://at-taleem.vercel.app/orders" style="background-color: #1e40af; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block; transition: background-color 0.2s;">
+                <a href={"${
+                  process.env.URL
+                }/orders/${orderId}"} style="background-color: #1e40af; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block; transition: background-color 0.2s;">
                   View Order Details
                 </a>
               </div>
