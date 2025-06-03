@@ -16,6 +16,7 @@ import ReviewInputPage from "../Components/ReviewInput";
 import InstitutionInputPage from "../Components/InstitutionsInput";
 import EventInputPage from "../Components/EventsInput";
 import OrdersPage from "../orders/page";
+import MasalahInput from "../Components/MasalahInput";
 
 export default function Dashboard() {
   const { isSignedIn, user } = useUser();
@@ -67,6 +68,8 @@ export default function Dashboard() {
         return isAdmin ? <EventInputPage /> : <NotAdmin />;
       case "orders":
         return <OrdersPage />;
+      case "masalah":
+        return <MasalahInput />;
       default:
         return (
           <div className="flex justify-center items-center min-h-screen">

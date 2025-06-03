@@ -35,6 +35,7 @@ const NAV_ITEMS = {
     { label: "প্রকাশিত বইসমূহ", href: "/published-books" },
     { label: "প্রতিষ্ঠানসমূহ", href: "/institutions" },
     { label: "আমাদের সম্পর্কে", href: "/about-us" },
+    { label: "গুরুত্বপূর্ণ মাসায়েল", href: "/masalah" },
   ],
 };
 

@@ -15,9 +15,9 @@ import { useSearchParams } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { AiOutlineVideoCamera } from "react-icons/ai";
+import { AiOutlineIssuesClose, AiOutlineVideoCamera } from "react-icons/ai";
 import { BsCalendarEvent, BsQuestionOctagon } from "react-icons/bs";
-import { FaRegCommentDots, FaSchool } from "react-icons/fa";
+import { FaJediOrder, FaRegCommentDots, FaSchool } from "react-icons/fa";
 export default function DashSidebar() {
   const [tab, setTab] = useState("");
   const searchParams = useSearchParams();
@@ -63,7 +63,7 @@ export default function DashSidebar() {
           <Link href="/dashboard?tab=orders">
             <Sidebar.Item
               active={tab === "orders"}
-              icon={HiUser}
+              icon={FaJediOrder}
               labelColor="dark"
               as="div"
             >
@@ -153,6 +153,17 @@ export default function DashSidebar() {
                 as="div"
               >
                 Add an Institution
+              </Sidebar.Item>
+            </Link>
+          )}
+          {user?.publicMetadata?.isAdmin && (
+            <Link href="/dashboard?tab=masalah">
+              <Sidebar.Item
+                active={tab === "masalah"}
+                icon={AiOutlineIssuesClose}
+                as="div"
+              >
+                Add a Masalah
               </Sidebar.Item>
             </Link>
           )}
