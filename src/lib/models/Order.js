@@ -23,15 +23,22 @@ const BookItemSchema = new mongoose.Schema({
 const TrackingSchema = new mongoose.Schema({
   status: {
     type: String,
-    enum: ["pending", "processing", "shipped", "delivered", "failed"],
+    enum: [
+      "pending",
+      "processing",
+      "delivery",
+      "delivered",
+      "completed",
+      "failed",
+      "cancelled",
+    ],
     default: "pending",
   },
-  location: String,
+  message: String,
   timestamp: {
     type: Date,
     default: Date.now,
   },
-  notes: String,
 });
 
 const OrderSchema = new mongoose.Schema(

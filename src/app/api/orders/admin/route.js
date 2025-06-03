@@ -169,22 +169,35 @@ export async function POST(req) {
 
     // Handle single order update
     if (orderId && status) {
-      const order = await Order.findById(orderId);
+      const order = await Order.findById(orderId).populate({
+        path: "items.bookId",
+        model: "Book",
+        select: "title coverImage price",
+      });
       if (!order) {
         return new Response(JSON.stringify({ error: "Order not found" }), {
           status: 404,
         });
       }
 
-      // Add tracking update
-      const trackingUpdate = {
-        status,
-        message: `Order status updated to ${status}`,
-        timestamp: new Date(),
-      };
+      // Handle payment status update
+      if (status === "paid") {
+        order.paymentStatus = "Paid";
+        order.paymentDetails = {
+          ...order.paymentDetails,
+          paidAt: new Date(),
+        };
+      } else {
+        // Add tracking update for order status
+        const trackingUpdate = {
+          status,
+          message: `Order status updated to ${status}`,
+          timestamp: new Date(),
+        };
 
-      order.tracking.push(trackingUpdate);
-      order.status = status;
+        order.tracking.push(trackingUpdate);
+        order.status = status;
+      }
 
       // Send email notification
       try {
@@ -258,6 +271,29 @@ export async function POST(req) {
       case "mark-failed":
         newStatus = "failed";
         break;
+      case "mark-paid":
+        // Update payment status instead of order status
+        const updateResult = await Order.updateMany(
+          { _id: { $in: orderIds } },
+          {
+            $set: {
+              paymentStatus: "Paid",
+              "paymentDetails.paidAt": new Date(),
+            },
+          }
+        );
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Successfully marked ${updateResult.modifiedCount} orders as paid`,
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
       case "delete":
         // Delete orders
         const deleteResult = await Order.deleteMany({ _id: { $in: orderIds } });

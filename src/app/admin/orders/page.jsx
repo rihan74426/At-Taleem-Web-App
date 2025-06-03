@@ -1,32 +1,61 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
-import { FiChevronDown, FiFilter, FiSearch, FiDownload } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiFilter,
+  FiSearch,
+  FiDownload,
+  FiPackage,
+  FiTruck,
+  FiCheckCircle,
+  FiXCircle,
+  FiAlertCircle,
+  FiClock,
+  FiMail,
+  FiTrash2,
+  FiDollarSign,
+  FiRefreshCw,
+} from "react-icons/fi";
 import SendEmailModal from "@/app/Components/sendEmail";
 import ResponseModal from "@/app/Components/ResponseModal";
 
 // Status colors and icons
 const STATUS_COLORS = {
-  pending: "bg-yellow-100 text-yellow-800",
-  processing: "bg-blue-100 text-blue-800",
-  delivery: "bg-purple-100 text-purple-800",
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-  cancelled: "bg-gray-100 text-gray-800",
+  pending:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  processing: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  delivery:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  completed:
+    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
+  delivered:
+    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
 };
 
 const STATUS_ICONS = {
-  pending: "⏳",
-  processing: "🔄",
-  delivery: "🚚",
-  completed: "✅",
-  failed: "❌",
-  cancelled: "🚫",
+  pending: <FiClock className="w-4 h-4" />,
+  processing: <FiRefreshCw className="w-4 h-4" />,
+  delivery: <FiTruck className="w-4 h-4" />,
+  delivered: <FiPackage className="w-4 h-4" />,
+  completed: <FiCheckCircle className="w-4 h-4" />,
+  failed: <FiXCircle className="w-4 h-4" />,
+  cancelled: <FiAlertCircle className="w-4 h-4" />,
+};
+
+const PAYMENT_STATUS_COLORS = {
+  Paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+  Unpaid: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  Refunded:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  Failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
 export default function AdminOrdersPage() {
@@ -272,201 +301,175 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Order Management</h1>
-        <div className="flex gap-4">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Order Management
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage and track all orders
+          </p>
+        </div>
+        <div className="flex gap-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex dark:bg-gray-800 items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <FiFilter />
-            Filters
+            <FiFilter className="w-5 h-5" />
+            <span>Filters</span>
           </button>
           <button
             onClick={handleExport}
-            className="flex dark:bg-gray-800 items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <FiDownload />
-            Export
+            <FiDownload className="w-5 h-5" />
+            <span>Export</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Total Orders</h3>
-          <p className="text-2xl font-bold">{stats.total}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Total Orders
+              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {stats.total}
+              </p>
+            </div>
+            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <FiPackage className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Total Revenue</h3>
-          <p className="text-2xl font-bold">{stats.totalRevenue} BDT</p>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Total Revenue
+              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {stats.totalRevenue} BDT
+              </p>
+            </div>
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
+              <FiDollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Pending Orders</h3>
-          <p className="text-2xl font-bold">{stats.pending}</p>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Pending Orders
+              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {stats.pending}
+              </p>
+            </div>
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+              <FiClock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+          </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Processing Orders</h3>
-          <p className="text-2xl font-bold">{stats.processing}</p>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Processing Orders
+              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {stats.processing}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <FiRefreshCw className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Filters Panel */}
-      {showFilters && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow mb-6"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, status: e.target.value }))
-              }
-              className="border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option
-                value="all"
-                className="dark:bg-gray-800 dark:text-gray-100"
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <select
+                value={filters.status}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, status: e.target.value }))
+                }
+                className="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                All Statuses
-              </option>
-              <option
-                value="pending"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Pending
-              </option>
-              <option
-                value="processing"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Processing
-              </option>
-              <option
-                value="delivery"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Delivery
-              </option>
-              <option
-                value="completed"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Completed
-              </option>
-              <option
-                value="failed"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Failed
-              </option>
-              <option
-                value="cancelled"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Cancelled
-              </option>
-            </select>
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="delivery">Delivery</option>
+                <option value="delivered">Delivered</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
 
-            <select
-              value={filters.paymentStatus}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  paymentStatus: e.target.value,
-                }))
-              }
-              className="border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option
-                value="all"
-                className="dark:bg-gray-800 dark:text-gray-100"
+              <select
+                value={filters.paymentStatus}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    paymentStatus: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                All Payment Statuses
-              </option>
-              <option
-                value="Unpaid"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Unpaid
-              </option>
-              <option
-                value="Paid"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Paid
-              </option>
-              <option
-                value="Failed"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Failed
-              </option>
-              <option
-                value="Refunded"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Refunded
-              </option>
-            </select>
+                <option value="all">All Payment Statuses</option>
+                <option value="Unpaid">Unpaid</option>
+                <option value="Paid">Paid</option>
+                <option value="Failed">Failed</option>
+                <option value="Refunded">Refunded</option>
+              </select>
 
-            <select
-              value={filters.dateRange}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, dateRange: e.target.value }))
-              }
-              className="border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option
-                value="all"
-                className="dark:bg-gray-800 dark:text-gray-100"
+              <select
+                value={filters.dateRange}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, dateRange: e.target.value }))
+                }
+                className="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                All Time
-              </option>
-              <option
-                value="today"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Today
-              </option>
-              <option
-                value="week"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Last 7 Days
-              </option>
-              <option
-                value="month"
-                className="dark:bg-gray-800 dark:text-gray-100"
-              >
-                Last 30 Days
-              </option>
-            </select>
-          </div>
-        </motion.div>
-      )}
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+              </select>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search and Sort */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search orders..."
+            placeholder="Search orders by ID, name, email, or book title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-800"
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="border rounded-lg px-4 py-2 dark:bg-gray-800"
+          className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="newest">Newest First</option>
           <option value="oldest">Oldest First</option>
@@ -477,45 +480,51 @@ export default function AdminOrdersPage() {
 
       {/* Bulk Actions */}
       {selectedOrders.length > 0 && (
-        <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
-            <p className="text-blue-800 dark:text-blue-200">
+        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl mb-6 border border-blue-200 dark:border-blue-800">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <p className="text-blue-800 dark:text-blue-200 font-medium">
               {selectedOrders.length} orders selected
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleBulkAction("mark-processing")}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Mark as Processing
               </button>
               <button
                 onClick={() => handleBulkAction("mark-delivery")}
-                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
                 Mark as Delivery
               </button>
               <button
                 onClick={() => handleBulkAction("mark-completed")}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Mark as Completed
               </button>
               <button
+                onClick={() => handleBulkAction("mark-paid")}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Mark as Paid
+              </button>
+              <button
                 onClick={() => handleBulkAction("mark-cancelled")}
-                className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
               >
                 Cancel Orders
               </button>
               <button
                 onClick={() => handleBulkAction("delete")}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete Orders
               </button>
               <button
                 onClick={() => setSelectedOrders([])}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Clear Selection
               </button>
@@ -526,8 +535,10 @@ export default function AdminOrdersPage() {
 
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No orders found</p>
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">
+            No orders found
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -536,10 +547,10 @@ export default function AdminOrdersPage() {
               key={order._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
             >
               <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                   <div className="flex items-center gap-4">
                     <input
                       type="checkbox"
@@ -553,79 +564,92 @@ export default function AdminOrdersPage() {
                           );
                         }
                       }}
-                      className="h-5 w-5 rounded border-gray-300"
+                      className="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                     />
                     <div>
-                      <h2 className="text-xl font-semibold mb-2">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                         Order #{order._id}
                       </h2>
-                      <p className="text-gray-500">
+                      <p className="text-gray-500 dark:text-gray-400">
                         {format(new Date(order.createdAt), "PPP")}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <span
-                      className={`px-3 py-1 rounded-full text-sm ${
+                      className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5 ${
                         STATUS_COLORS[order.status]
                       }`}
                     >
-                      {STATUS_ICONS[order.status]} {order.status}
+                      {STATUS_ICONS[order.status]}
+                      {order.status}
+                    </span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        PAYMENT_STATUS_COLORS[order.paymentStatus]
+                      }`}
+                    >
+                      {order.paymentStatus}
                     </span>
                     <Link
                       href={`/admin/orders/${order._id}`}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       View Details
                     </Link>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Customer Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                      Customer Information
+                    </h3>
                     <div className="space-y-2">
-                      <p>
-                        <span className="text-gray-500">Name:</span>{" "}
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Name:
+                        </span>{" "}
                         {order.buyerName}
                       </p>
-                      <p>
-                        <span className="text-gray-500">Email:</span>{" "}
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Email:
+                        </span>{" "}
                         {order.buyerEmail}
                       </p>
-                      <p>
-                        <span className="text-gray-500">Phone:</span>{" "}
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Phone:
+                        </span>{" "}
                         {order.deliveryPhone}
                       </p>
-                      <p>
-                        <span className="text-gray-500">Address:</span>{" "}
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Address:
+                        </span>{" "}
                         {order.deliveryAddress}
                       </p>
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="font-semibold mb-2">Order Summary</h3>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                      Order Summary
+                    </h3>
                     <div className="space-y-2">
-                      <p>
-                        <span className="text-gray-500">Total Amount:</span>{" "}
-                        {order.amount} BDT
-                      </p>
-                      <p>
-                        <span className="text-gray-500">Payment Status:</span>{" "}
-                        <span
-                          className={`${
-                            order.paymentStatus === "Paid"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {order.paymentStatus}
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Total Amount:
+                        </span>{" "}
+                        <span className="font-semibold">
+                          {order.amount} BDT
                         </span>
                       </p>
-
-                      <p>
-                        <span className="text-gray-500">Items:</span>{" "}
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Items:
+                        </span>{" "}
                         {order.items.length}
                       </p>
                     </div>
@@ -633,25 +657,30 @@ export default function AdminOrdersPage() {
                 </div>
 
                 {order.tracking && order.tracking.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="font-semibold mb-2">Order Timeline</h3>
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                      Order Timeline
+                    </h3>
                     <div className="space-y-2">
                       {order.tracking.map((update, index) => (
                         <div
                           key={index}
-                          className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg"
+                          className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg"
                         >
                           <div className="flex items-center gap-2">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs ${
+                              className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
                                 STATUS_COLORS[update.status]
                               }`}
                             >
                               {STATUS_ICONS[update.status]}
+                              {update.status}
                             </span>
-                            <p className="text-sm">{update.message}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              {update.message}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {format(new Date(update.timestamp), "PPp")}
                           </p>
                         </div>
@@ -661,42 +690,62 @@ export default function AdminOrdersPage() {
                 )}
 
                 {/* Quick Actions */}
-                <div className="mt-6 flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => handleOrderAction(order._id, "processing")}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
-                    Mark as Processing
+                    <FiRefreshCw className="w-4 h-4" />
+                    Processing
+                  </button>
+                  <button
+                    onClick={() => handleOrderAction(order._id, "delivery")}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  >
+                    <FiTruck className="w-4 h-4" />
+                    Delivery
                   </button>
                   <button
                     onClick={() => handleOrderAction(order._id, "delivered")}
-                    className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
                   >
-                    Mark as Delivered
+                    <FiPackage className="w-4 h-4" />
+                    Delivered
                   </button>
                   <button
                     onClick={() => handleOrderAction(order._id, "completed")}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
-                    Mark as Completed
+                    <FiCheckCircle className="w-4 h-4" />
+                    Completed
                   </button>
                   <button
                     onClick={() => handleOrderAction(order._id, "cancelled")}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
                   >
-                    Cancel Order
+                    <FiAlertCircle className="w-4 h-4" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleOrderAction(order._id, "paid")}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                  >
+                    <FiDollarSign className="w-4 h-4" />
+                    Mark Paid
                   </button>
                   <button
                     onClick={() => handleDeleteOrder(order._id)}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                   >
-                    Delete Order
+                    <FiTrash2 className="w-4 h-4" />
+                    Delete
                   </button>
                   <button
                     onClick={() => handleSendEmail(order)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
                   >
-                    Send Email
+                    <FiMail className="w-4 h-4" />
+                    Email
                   </button>
                 </div>
               </div>
@@ -704,42 +753,47 @@ export default function AdminOrdersPage() {
           ))}
         </div>
       )}
-      {showEmailModal && selectedOrderForEmail && (
-        <SendEmailModal
-          recipientEmail={selectedOrderForEmail.buyerEmail}
-          defaultHeader={`Order Update - #${selectedOrderForEmail._id}`}
-          defaultBody={`<p>Dear ${selectedOrderForEmail.buyerName},</p>
-            <p>We hope this email finds you well.</p>
-            <p>
-              This is regarding your order #${selectedOrderForEmail._id}.<br/>
-              We are pleased to inform you that your order has been successfully processed.
-            </p>
-            <p>Your order details are as follows:</p>
-            <p>
-              <strong>Order ID:</strong> #${selectedOrderForEmail._id}<br/>
-              <strong>Order Date:</strong> ${format(
-                new Date(selectedOrderForEmail.createdAt),
-                "PPP"
-              )}<br/>
-              <strong>Total Amount:</strong> ${
-                selectedOrderForEmail.amount
-              } BDT<br/>
-              <strong>Payment Status:</strong> ${
-                selectedOrderForEmail.paymentStatus
-              }<br/>
-              <strong>Delivery Address:</strong> ${
-                selectedOrderForEmail.deliveryAddress
-              }
-            </p>
-            <p>We will notify you once your order is shipped.</p>
-            <p>Thank you for choosing At-Taleem. We look forward to serving you again.</p>`}
-          defaultFooter="© 2025 At-Taleem. All rights reserved."
-          onClose={() => {
-            setShowEmailModal(false);
-            setSelectedOrderForEmail(null);
-          }}
-        />
-      )}
+
+      {/* Modals */}
+      <AnimatePresence>
+        {showEmailModal && selectedOrderForEmail && (
+          <SendEmailModal
+            recipientEmail={selectedOrderForEmail.buyerEmail}
+            defaultHeader={`Order Update - #${selectedOrderForEmail._id}`}
+            defaultBody={`<p>Dear ${selectedOrderForEmail.buyerName},</p>
+              <p>We hope this email finds you well.</p>
+              <p>
+                This is regarding your order #${selectedOrderForEmail._id}.<br/>
+                We are pleased to inform you that your order has been successfully processed.
+              </p>
+              <p>Your order details are as follows:</p>
+              <p>
+                <strong>Order ID:</strong> #${selectedOrderForEmail._id}<br/>
+                <strong>Order Date:</strong> ${format(
+                  new Date(selectedOrderForEmail.createdAt),
+                  "PPP"
+                )}<br/>
+                <strong>Total Amount:</strong> ${
+                  selectedOrderForEmail.amount
+                } BDT<br/>
+                <strong>Payment Status:</strong> ${
+                  selectedOrderForEmail.paymentStatus
+                }<br/>
+                <strong>Delivery Address:</strong> ${
+                  selectedOrderForEmail.deliveryAddress
+                }
+              </p>
+              <p>We will notify you once your order is shipped.</p>
+              <p>Thank you for choosing At-Taleem. We look forward to serving you again.</p>`}
+            defaultFooter="© 2024 At-Taleem. All rights reserved."
+            onClose={() => {
+              setShowEmailModal(false);
+              setSelectedOrderForEmail(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <ResponseModal
         isOpen={modal.isOpen}
         message={modal.message}

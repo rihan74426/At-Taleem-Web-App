@@ -19,12 +19,14 @@ const STATUS_COLORS = {
   completed: "bg-green-100 text-green-800",
   failed: "bg-red-100 text-red-800",
   cancelled: "bg-gray-100 text-gray-800",
+  delivered: "bg-indigo-100 text-indigo-800",
 };
 
 const STATUS_ICONS = {
   pending: "⏳",
   processing: "🔄",
   delivery: "🚚",
+  delivered: "📦",
   completed: "✅",
   failed: "❌",
   cancelled: "🚫",

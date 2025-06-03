@@ -1,119 +1,113 @@
 // src/app/api/emails/route.js
 import path from "path";
 import nodemailer from "nodemailer";
+import fs from "fs/promises";
+
+// Shared configuration
+const EMAIL_CONFIG = {
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: parseInt(process.env.SMTP_PORT || "587", 10),
+  secure: false,
+  auth: {
+    user: process.env.APP_MAIL,
+    pass: process.env.MAIL_PASS,
+  },
+};
+
+// Create reusable transporter
+const createTransporter = () => {
+  return nodemailer.createTransport(EMAIL_CONFIG);
+};
+
+// Shared error response
+const errorResponse = (message, status = 400) => {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
+// Shared success response
+const successResponse = () => {
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
+// Get logo attachment
+const getLogoAttachment = async () => {
+  try {
+    const logoPath = path.join(process.cwd(), "public", "favicon.png");
+    await fs.access(logoPath); // Check if file exists
+    return {
+      filename: "favicon.png",
+      path: logoPath,
+      cid: "logo",
+    };
+  } catch (error) {
+    console.warn("Logo file not found, emails will be sent without logo");
+    return null;
+  }
+};
 
 export async function POST(req) {
-  // Parse JSON body
-  let payload;
   try {
-    payload = await req.json();
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    const payload = await req.json();
+    const { to, subject, html } = payload;
 
-  const { to, subject, html } = payload;
-  if (!to || !subject || !html) {
-    return new Response(JSON.stringify({ error: "Missing email parameters" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    if (!to || !subject || !html) {
+      return errorResponse("Missing email parameters");
+    }
 
-  // Create transporter using Gmail SMTP (or adjust to your service)
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: false,
-    auth: {
-      user: process.env.APP_MAIL,
-      pass: process.env.MAIL_PASS,
-    },
-  });
+    const transporter = createTransporter();
+    const logoAttachment = await getLogoAttachment();
 
-  try {
-    // Send the email
     await transporter.sendMail({
       from: {
         name: "At-Taleem Support",
-        address: `noreply@${process.env.URL}`,
+        address: process.env.APP_MAIL || `noreply@${process.env.URL}`,
       },
       to,
       subject,
       html,
-      attachments: [
-        {
-          filename: "favicon.png",
-          path: path.join(process.cwd(), "public", "favicon.png"),
-          cid: "logo", // same cid value referenced in HTML
-        },
-      ],
+      attachments: logoAttachment ? [logoAttachment] : [],
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return successResponse();
   } catch (err) {
     console.error("Email send error:", err);
-    return new Response(JSON.stringify({ error: "Failed to send email" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse("Failed to send email", 500);
   }
 }
+
 export async function PUT(req) {
-  // Parse JSON body
-  let payload;
   try {
-    payload = await req.json();
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    const payload = await req.json();
+    const { to, subject, userEmail, html } = payload;
 
-  const { to, subject, userEmail, html } = payload;
-  if (!to || !subject || !html) {
-    return new Response(JSON.stringify({ error: "Missing email parameters" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    if (!to || !subject || !html) {
+      return errorResponse("Missing email parameters");
+    }
 
-  // Create transporter using Gmail SMTP (or adjust to your service)
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: false,
-    auth: {
-      user: process.env.APP_MAIL,
-      pass: process.env.MAIL_PASS,
-    },
-  });
+    const transporter = createTransporter();
+    const logoAttachment = await getLogoAttachment();
 
-  try {
-    // Send the email
     await transporter.sendMail({
-      from: `"At-Taleem Contact" <${process.env.SMTP_USER}>`,
-      to, // institution’s email
-      replyTo: userEmail, // so replies go back to your user
+      from: {
+        name: "At-Taleem Contact",
+        address: process.env.APP_MAIL || `noreply@${process.env.URL}`,
+      },
+      to,
+      replyTo: userEmail,
       subject,
       html,
+      attachments: logoAttachment ? [logoAttachment] : [],
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return successResponse();
   } catch (err) {
     console.error("Email send error:", err);
-    return new Response(JSON.stringify({ error: "Failed to send email" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse("Failed to send email", 500);
   }
 }

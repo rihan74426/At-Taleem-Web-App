@@ -127,7 +127,7 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
       year: "numeric",
     });
     const timeStr = new Date(
-      ev.scheduledTime || ev.startDate
+      ev.scheduledTime || "2025-05-20T13:00:00.729+00:00"
     ).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -135,28 +135,71 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
     const detailsLink = `${process.env.URL}/programme/${ev._id}`;
 
     const eventHtml = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><title>Today’s Event Reminder</title></head>
-<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,sans-serif">
-  <table width="100%" style="max-width:600px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden">
-    <tr><td style="background:#004d40;padding:30px;color:#fff;text-align:center">
-      <h1 style="margin:0;font-size:24px">Today’s Event Reminder</h1>
-    </td></tr>
-    <tr><td style="padding:30px;color:#333;line-height:1.5">
-      <p>Hello,</p>
-      <p>Don’t forget <strong>${
-        ev.title
-      }</strong> today, <strong>${dateStr}</strong> at <strong>${timeStr}</strong>.</p>
-      <p style="text-align:center;margin:24px 0">
-        <a href="${detailsLink}" style="background:#00796b;color:#fff;padding:12px 24px;border-radius:4px;text-decoration:none;font-weight:bold">View Details</a>
-      </p>
-      <p>See you there!</p>
-      <p>The At‑Taleem Team</p>
-    </td></tr>
-    <tr><td style="background:#eef2f7;padding:20px;text-align:center;font-size:12px;color:#666">
-      © ${new Date().getFullYear()} At‑Taleem • <a href="https://taleembd.com" style="color:#004d40;text-decoration:none">Visit our site</a>
-    </td></tr>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>আজকের মাহফিলের রিমাইন্ডার</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+      }
+      .email-content {
+        padding: 20px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #eef2f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; font-size: 16px; line-height: 1.4; color: #333333;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <table role="presentation" class="email-container" width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #004d40; padding: 30px; text-align: center;">
+              <img src="cid:logo" alt="At-Taleem Logo" width="120" height="auto" style="max-width: 120px; margin-bottom: 15px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #ffffff;">আজকের মাহফিলের রিমাইন্ডার</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td class="email-content" style="padding: 30px; color: #333333;">
+              <p style="margin: 0 0 20px;">আসসালামু আলাইকুম,</p>
+              <p style="margin: 0 0 20px;">কেমন আছেন?</p>
+              <p style="margin: 0 0 20px;">মনে রাখবেন, <strong style="color: #004d40;">${
+                ev.title
+              }</strong> আজ, <strong style="color: #004d40;">${dateStr}</strong> তারিখ, সময়ঃ <strong style="color: #004d40;">${timeStr}</strong> টায় অনুষ্ঠিত হবে।</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${detailsLink}" style="display: inline-block; background-color: #00796b; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: 600; font-size: 16px;">বিস্তারিত দেখুন</a>
+              </div>
+              
+              <p style="margin: 0 0 20px;">আল্লাহ হাফেজ</p>
+              <p style="margin: 0;">At-Taleem Team</p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #eef2f7; padding: 20px; text-align: center; font-size: 12px; color: #666666;">
+              <p style="margin: 0 0 10px;">© ${new Date().getFullYear()} At-Taleem</p>
+              <p style="margin: 0;">
+                <a href="https://taleembd.com" style="color: #004d40; text-decoration: none;">আমাদের ওয়েবসাইট দেখুন</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
-</body></html>`;
+</body>
+</html>`;
 
     emailPromises.push(
       fetch(`${process.env.URL}/api/emails`, {
