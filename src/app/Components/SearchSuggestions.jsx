@@ -9,7 +9,12 @@ import {
   FiHelpCircle,
   FiMapPin,
 } from "react-icons/fi";
-import { FaQuestionCircle } from "react-icons/fa";
+import {
+  FaProcedures,
+  FaQuestionCircle,
+  FaQuran,
+  FaResearchgate,
+} from "react-icons/fa";
 import { BsQuestionSquare } from "react-icons/bs";
 
 const getIcon = (type) => {
@@ -24,6 +29,8 @@ const getIcon = (type) => {
       return <BsQuestionSquare className="w-4 h-4" />;
     case "institution":
       return <FiMapPin className="w-4 h-4" />;
+    case "masalah":
+      return <FaQuran className="w-4 h-4" />;
     default:
       return null;
   }
@@ -41,6 +48,8 @@ const getTypeLabel = (type) => {
       return "প্রশ্নোত্তর";
     case "institution":
       return "প্রতিষ্ঠান";
+    case "masalah":
+      return "মাসআলা";
     default:
       return type;
   }
@@ -96,14 +105,7 @@ export default function SearchSuggestions({
 
   const handleSelect = (result) => {
     onSelect(result);
-    let route = result.route;
-
-    // Handle video routes based on category
-    if (result.type === "video" && result.category) {
-      const categoryPath = result.category.toLowerCase() + "-videos";
-      route = `/${categoryPath}/${result._id}`;
-    }
-
+    const route = result.route;
     router.push(route);
   };
 

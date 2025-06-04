@@ -42,10 +42,13 @@ export default function MasalahDetailPage() {
   const [isReplySubmitting, setIsReplySubmitting] = useState(false);
   const [likingCommentId, setLikingCommentId] = useState(null);
   const [isEditingComment, setIsEditingComment] = useState(false);
+  const [error, setError] = useState(null);
 
   // Fetch masalah details and comments
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const [masalahRes, commentsRes, usersRes] = await Promise.all([
           fetch(`/api/masalah/${id}`),
@@ -56,23 +59,31 @@ export default function MasalahDetailPage() {
           }),
         ]);
 
-        if (masalahRes.ok) {
-          const data = await masalahRes.json();
-          setMasalah(data);
+        if (!masalahRes.ok) {
+          throw new Error("Failed to fetch masalah details");
         }
-        if (commentsRes.ok) {
-          const data = await commentsRes.json();
-          setComments(data.comments);
+        if (!commentsRes.ok) {
+          throw new Error("Failed to fetch comments");
         }
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          setUsers(data.users.data);
+        if (!usersRes.ok) {
+          throw new Error("Failed to fetch users");
         }
+
+        const [masalahData, commentsData, usersData] = await Promise.all([
+          masalahRes.json(),
+          commentsRes.json(),
+          usersRes.json(),
+        ]);
+
+        setMasalah(masalahData);
+        setComments(commentsData.comments);
+        setUsers(usersData.users.data);
       } catch (err) {
         console.error("Error fetching data:", err);
+        setError(err.message);
         setModal({
           isOpen: true,
-          message: "Error loading data",
+          message: "Error loading data. Please try again later.",
           status: "error",
         });
       } finally {
@@ -540,6 +551,25 @@ export default function MasalahDetailPage() {
       });
     }
   };
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">
+            Error Loading Issue
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
+          <button
+            onClick={() => router.push("/masalah")}
+            className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+          >
+            Back to Issues
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import {
@@ -16,6 +16,19 @@ import {
 } from "react-icons/fa";
 import MasalahForm from "../Components/MasalahForm";
 import ResponseModal from "../Components/ResponseModal";
+
+// Debounce function for search
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 
 export default function MasalahPage() {
   const { user, isLoaded } = useUser();
@@ -43,45 +56,349 @@ export default function MasalahPage() {
   });
   const [bookmarkedMasalah, setBookmarkedMasalah] = useState(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [commentCounts, setCommentCounts] = useState({});
+  const [error, setError] = useState(null);
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (search !== "") {
-        fetchMasalah();
+  // Memoized user map
+  const userMap = useMemo(() => {
+    const map = {};
+    users.forEach((u) => {
+      map[u.id] = `${u.firstName} ${u.lastName}`;
+    });
+    return map;
+  }, [users]);
+
+  // Memoized query parameters
+  const queryParams = useMemo(() => {
+    return new URLSearchParams({
+      page: pagination.page,
+      limit: pagination.limit,
+      search,
+      sortBy,
+      sortOrder,
+      ...(selectedCategory && { category: selectedCategory }),
+    });
+  }, [
+    pagination.page,
+    pagination.limit,
+    search,
+    sortBy,
+    sortOrder,
+    selectedCategory,
+  ]);
+
+  // Memoized fetch functions
+  const fetchMasalah = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/masalah?${queryParams}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch issues");
       }
-    }, 500);
+      const data = await res.json();
+      setMasalah(data.masalah);
+      setPagination(data.pagination);
+    } catch (err) {
+      console.error("Error fetching masalah:", err);
+      setError(err.message);
+      setModal({
+        isOpen: true,
+        message: "Error loading issues. Please try again later.",
+        status: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [queryParams]);
 
-    return () => clearTimeout(timer);
-  }, [search]);
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (!res.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+      const data = await res.json();
+      setCategories(data.categories);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setModal({
+        isOpen: true,
+        message: "Error loading categories",
+        status: "error",
+      });
+    }
+  }, []);
 
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch("/api/categories");
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data.categories);
-        } else {
-          const errorData = await res.json();
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      const data = await res.json();
+      setUsers(data.users.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  const fetchCommentCounts = useCallback(async () => {
+    try {
+      const masalahIds = masalah.map((item) => item._id);
+      if (masalahIds.length === 0) return;
+
+      const promises = masalahIds.map((id) =>
+        fetch(`/api/comments?entityId=${id}&commentType=masalah`)
+          .then((res) => res.json())
+          .then((data) => ({ id, count: data.comments.length }))
+      );
+
+      const results = await Promise.all(promises);
+      const counts = {};
+      results.forEach(({ id, count }) => {
+        counts[id] = count;
+      });
+      setCommentCounts(counts);
+    } catch (err) {
+      console.error("Error fetching comment counts:", err);
+    }
+  }, [masalah]);
+
+  // Memoized handlers
+  const handleLike = useCallback(
+    async (masalahId) => {
+      if (!user || isSubmitting) {
+        if (!user) {
           setModal({
             isOpen: true,
-            message: errorData.error || "Failed to fetch categories",
+            message: "Please sign in to like issues",
             status: "error",
           });
         }
-      } catch (err) {
-        console.error("Error fetching categories:", err);
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const res = await fetch(`/api/masalah/${masalahId}`, {
+          method: "PATCH",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to update like status");
+        }
+
+        const currentItem = masalah.find((item) => item._id === masalahId);
+        const isCurrentlyLiked = currentItem?.likers.includes(user.id);
+
+        setMasalah((prevMasalah) =>
+          prevMasalah.map((item) => {
+            if (item._id === masalahId) {
+              const updatedLikers = isCurrentlyLiked
+                ? item.likers.filter((id) => id !== user.id)
+                : [...item.likers, user.id];
+
+              return {
+                ...item,
+                likers: updatedLikers,
+              };
+            }
+            return item;
+          })
+        );
+
         setModal({
           isOpen: true,
-          message: "Network error while fetching categories",
+          message: `Issue ${
+            isCurrentlyLiked ? "unliked" : "liked"
+          } successfully`,
+          status: "success",
+        });
+      } catch (err) {
+        console.error("Error toggling like:", err);
+        setModal({
+          isOpen: true,
+          message: "Failed to update like status",
           status: "error",
         });
+      } finally {
+        setIsSubmitting(false);
       }
-    };
-    fetchCategories();
+    },
+    [user, isSubmitting, masalah]
+  );
+
+  const handleBookmark = useCallback(
+    (masalahId) => {
+      if (!user) {
+        setModal({
+          isOpen: true,
+          message: "Please sign in to bookmark issues",
+          status: "error",
+        });
+        return;
+      }
+
+      setBookmarkedMasalah((prev) => {
+        const newSet = new Set(prev);
+        const isBookmarked = newSet.has(masalahId);
+        if (isBookmarked) {
+          newSet.delete(masalahId);
+        } else {
+          newSet.add(masalahId);
+        }
+
+        setModal({
+          isOpen: true,
+          message: `Issue ${
+            isBookmarked ? "removed from" : "added to"
+          } bookmarks`,
+          status: "success",
+        });
+
+        return newSet;
+      });
+    },
+    [user]
+  );
+
+  const handleEdit = useCallback((masalah) => {
+    setEditingMasalah(masalah);
+    setShowEditModal(true);
   }, []);
+
+  const handleDelete = useCallback(
+    async (masalahId) => {
+      if (!user?.publicMetadata?.isAdmin || isSubmitting) {
+        if (!user?.publicMetadata?.isAdmin) {
+          setModal({
+            isOpen: true,
+            message: "You don't have permission to delete issues",
+            status: "error",
+          });
+        }
+        return;
+      }
+
+      if (!window.confirm("Are you sure you want to delete this issue?"))
+        return;
+
+      setIsSubmitting(true);
+      try {
+        const res = await fetch(`/api/masalah/${masalahId}`, {
+          method: "DELETE",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to delete issue");
+        }
+
+        setMasalah((prevMasalah) =>
+          prevMasalah.filter((item) => item._id !== masalahId)
+        );
+        setModal({
+          isOpen: true,
+          message: "Issue deleted successfully",
+          status: "success",
+        });
+      } catch (err) {
+        console.error("Error deleting issue:", err);
+        setModal({
+          isOpen: true,
+          message: "Failed to delete issue",
+          status: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [user, isSubmitting]
+  );
+
+  const handleEditSubmit = useCallback(
+    async (data) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+
+      try {
+        const res = await fetch(`/api/masalah/${editingMasalah._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to update issue");
+        }
+
+        const updatedMasalah = await res.json();
+        setMasalah((prevMasalah) =>
+          prevMasalah.map((item) =>
+            item._id === editingMasalah._id ? updatedMasalah : item
+          )
+        );
+        setModal({
+          isOpen: true,
+          message: "Issue updated successfully",
+          status: "success",
+        });
+        setShowEditModal(false);
+      } catch (err) {
+        console.error("Error updating issue:", err);
+        setModal({
+          isOpen: true,
+          message: "Failed to update issue",
+          status: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [editingMasalah, isSubmitting]
+  );
+
+  const handleResetFilters = useCallback(() => {
+    setSearch("");
+    setSelectedCategory("");
+    setSortBy("createdAt");
+    setSortOrder("desc");
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, []);
+
+  // Debounced search handler
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value) => {
+        setSearch(value);
+        setPagination((prev) => ({ ...prev, page: 1 }));
+      }, 500),
+    []
+  );
+
+  // Effects
+  useEffect(() => {
+    if (isLoaded) {
+      fetchMasalah();
+    }
+  }, [isLoaded, fetchMasalah]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (masalah.length > 0) {
+      fetchCommentCounts();
+    }
+  }, [masalah, fetchCommentCounts]);
 
   // Load bookmarked masalah from localStorage
   useEffect(() => {
@@ -108,286 +425,24 @@ export default function MasalahPage() {
     }
   }, [bookmarkedMasalah]);
 
-  // Fetch masalah with current filters
-  const fetchMasalah = async () => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams({
-        page: pagination.page,
-        limit: pagination.limit,
-        search,
-        sortBy,
-        sortOrder,
-        ...(selectedCategory && { category: selectedCategory }),
-      });
-
-      const res = await fetch(`/api/masalah?${queryParams}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMasalah(data.masalah);
-        setPagination(data.pagination);
-      } else {
-        const errorData = await res.json();
-        setModal({
-          isOpen: true,
-          message: errorData.error || "Failed to fetch issues",
-          status: "error",
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching masalah:", err);
-      setModal({
-        isOpen: true,
-        message: "Network error while fetching issues",
-        status: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isLoaded) {
-      fetchMasalah();
-    }
-  }, [isLoaded, pagination.page, selectedCategory, sortBy, sortOrder]);
-
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/user", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-
-        setUsers(data.users.data);
-      }
-    } catch (error) {
-      console.log("error fetching users:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [masalah]);
-
-  const userMap = useMemo(() => {
-    const map = {};
-    users.forEach((u) => {
-      map[u.id] = `${u.firstName} ${u.lastName}`;
-    });
-    return map;
-  }, [users]);
-
-  // Handle like toggle
-  const handleLike = async (masalahId) => {
-    if (!user) {
-      setModal({
-        isOpen: true,
-        message: "মাসআলা পছন্দ করতে লগিন করুন!",
-        status: "error",
-      });
-      return;
-    }
-
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-
-    try {
-      const res = await fetch(`/api/masalah/${masalahId}`, {
-        method: "PATCH",
-      });
-
-      if (res.ok) {
-        // Find the current item to check its like status
-        const currentItem = masalah.find((item) => item._id === masalahId);
-        const isCurrentlyLiked = currentItem?.likers.includes(user.id);
-
-        // Update the state directly based on the current state
-        setMasalah((prevMasalah) =>
-          prevMasalah.map((item) => {
-            if (item._id === masalahId) {
-              const updatedLikers = isCurrentlyLiked
-                ? item.likers.filter((id) => id !== user.id)
-                : [...item.likers, user.id];
-
-              return {
-                ...item,
-                likers: updatedLikers,
-              };
-            }
-            return item;
-          })
-        );
-
-        // Show success message with the correct status
-        setModal({
-          isOpen: true,
-          message: `মাসআলা সফলভাবে ${
-            isCurrentlyLiked ? "পছন্দ তুলে নেওয়া" : "পছন্দ করা"
-          } হয়েছে!`,
-          status: "success",
-        });
-      } else {
-        const errorData = await res.json();
-        setModal({
-          isOpen: true,
-          message: errorData.error || "পছন্দ আপডেট করতে সমস্যা হয়েছে",
-          status: "error",
-        });
-      }
-    } catch (err) {
-      console.error("Error toggling like:", err);
-      setModal({
-        isOpen: true,
-        message: "নেটওয়ার্ক জনিত সমস্যা হয়েছে, দয়া করে আবার চেষ্টা করুন!",
-        status: "error",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle bookmark toggle
-  const handleBookmark = (masalahId) => {
-    if (!user) {
-      setModal({
-        isOpen: true,
-        message: "বুকমার্ক করতে লগিন করুন",
-        status: "error",
-      });
-      return;
-    }
-
-    setBookmarkedMasalah((prev) => {
-      const newSet = new Set(prev);
-      const isBookmarked = newSet.has(masalahId);
-      if (isBookmarked) {
-        newSet.delete(masalahId);
-      } else {
-        newSet.add(masalahId);
-      }
-
-      setModal({
-        isOpen: true,
-        message: `মাসআলা বুকমার্ক ${
-          isBookmarked ? "সরিয়ে নেওয়া হছে" : "যুক্ত করা হয়েছে"
-        }`,
-        status: "success",
-      });
-
-      return newSet;
-    });
-  };
-
-  // Handle edit
-  const handleEdit = (masalah) => {
-    setEditingMasalah(masalah);
-    setShowEditModal(true);
-  };
-
-  // Handle delete
-  const handleDelete = async (masalahId) => {
-    if (!user?.publicMetadata?.isAdmin) {
-      setModal({
-        isOpen: true,
-        message: "মাসআলা ডিলিট করার পারমিশন নাই আপনার",
-        status: "error",
-      });
-      return;
-    }
-
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-
-    if (window.confirm("আপনি কি নিশ্চিতভাবে মাসআলাটি ডিলিট করতে চান?")) {
-      try {
-        const res = await fetch(`/api/masalah/${masalahId}`, {
-          method: "DELETE",
-        });
-        if (res.ok) {
-          setMasalah((prevMasalah) =>
-            prevMasalah.filter((item) => item._id !== masalahId)
-          );
-          setModal({
-            isOpen: true,
-            message: "মাসআলা সফলভাবে ডিলিট হয়েছে!",
-            status: "success",
-          });
-        } else {
-          const errorData = await res.json();
-          setModal({
-            isOpen: true,
-            message: errorData.error || "মাসআলা ডিলিট ব্যর্থ হয়েছে!",
-            status: "error",
-          });
-        }
-      } catch (err) {
-        setModal({
-          isOpen: true,
-          message: "নেটওয়ার্কজনিত সমস্যা হয়েছে!",
-          status: "error",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  // Handle form submission for editing
-  const handleEditSubmit = async (data) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-
-    try {
-      const res = await fetch(`/api/masalah/${editingMasalah._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (res.ok) {
-        const updatedMasalah = await res.json();
-        setMasalah((prevMasalah) =>
-          prevMasalah.map((item) =>
-            item._id === editingMasalah._id ? updatedMasalah : item
-          )
-        );
-        setModal({
-          isOpen: true,
-          message: "মাসআলা সফলভাবে ইডিট হয়েছে",
-          status: "success",
-        });
-        setShowEditModal(false);
-      } else {
-        const errorData = await res.json();
-        setModal({
-          isOpen: true,
-          message: errorData.error || "আপডেট ব্যর্থ হয়েছে",
-          status: "error",
-        });
-      }
-    } catch (err) {
-      setModal({
-        isOpen: true,
-        message: "কোন সমস্যা হয়েছে! আবার চেষ্টা করুন",
-        status: "error",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle filter reset
-  const handleResetFilters = () => {
-    setSearch("");
-    setSelectedCategory("");
-    setSortBy("createdAt");
-    setSortOrder("desc");
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">
+            Error Loading Issues
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen">
@@ -627,7 +682,7 @@ export default function MasalahPage() {
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    {item.comments.length} comments
+                    {commentCounts[item._id] || 0} comments
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>

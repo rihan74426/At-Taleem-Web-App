@@ -5,6 +5,7 @@ import Videos from "@/lib/models/Videos";
 import Question from "@/lib/models/Question";
 import Institution from "@/lib/models/Institution";
 import Category from "@/lib/models/Category";
+import Masalah from "@/lib/models/masalah";
 
 export async function GET(req) {
   try {
@@ -30,68 +31,81 @@ export async function GET(req) {
     const categoryIds = matchingCategories.map((cat) => cat._id);
 
     // Search across multiple models in parallel
-    const [books, events, videos, questions, institutions] = await Promise.all([
-      // Search in books
-      Book.find({
-        $or: [
-          { title: searchRegex },
-          { description: searchRegex },
-          { author: searchRegex },
-        ],
-      })
-        .select("title description author _id")
-        .limit(limit)
-        .lean(),
+    const [books, events, videos, questions, institutions, masalahs] =
+      await Promise.all([
+        // Search in books
+        Book.find({
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { author: searchRegex },
+          ],
+        })
+          .select("title description author _id")
+          .limit(limit)
+          .lean(),
 
-      // Search in events
-      Event.find({
-        $or: [
-          { title: searchRegex },
-          { description: searchRegex },
-          { location: searchRegex },
-        ],
-      })
-        .select("title description location startDate _id")
-        .limit(limit)
-        .lean(),
+        // Search in events
+        Event.find({
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { location: searchRegex },
+          ],
+        })
+          .select("title description location startDate _id")
+          .limit(limit)
+          .lean(),
 
-      // Search in videos
-      Videos.find({
-        $or: [
-          { title: searchRegex },
-          { description: searchRegex },
-          { category: { $in: categoryIds } },
-        ],
-      })
-        .select("title description category thumbnailUrl _id")
-        .limit(limit)
-        .lean(),
+        // Search in videos
+        Videos.find({
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { category: { $in: categoryIds } },
+          ],
+        })
+          .select("title description category thumbnailUrl _id")
+          .limit(limit)
+          .lean(),
 
-      // Search in questions
-      Question.find({
-        $or: [
-          { title: searchRegex },
-          { description: searchRegex },
-          { answer: searchRegex },
-          { category: { $in: categoryIds } },
-        ],
-      })
-        .select("title description answer category _id")
-        .limit(limit)
-        .lean(),
+        // Search in questions
+        Question.find({
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { answer: searchRegex },
+            { category: { $in: categoryIds } },
+          ],
+        })
+          .select("title description answer category _id")
+          .limit(limit)
+          .lean(),
 
-      // Search in institutions
-      Institution.find({
-        $or: [
-          { name: searchRegex },
-          { description: searchRegex },
-          { location: searchRegex },
-        ],
-      })
-        .select("name description location _id")
-        .limit(limit)
-        .lean(),
-    ]);
+        // Search in institutions
+        Institution.find({
+          $or: [
+            { name: searchRegex },
+            { description: searchRegex },
+            { location: searchRegex },
+          ],
+        })
+          .select("name description location _id")
+          .limit(limit)
+          .lean(),
+
+        // Search in masalah
+        Masalah.find({
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { references: searchRegex },
+          ],
+        })
+          .select("title description references _id")
+          .limit(limit)
+          .lean(),
+      ]);
 
     // Format results with type information
     const results = [
@@ -108,7 +122,7 @@ export async function GET(req) {
       ...videos.map((video) => ({
         ...video,
         type: "video",
-        route: `/videos/${video._id}`,
+        route: `${video.category.toLowerCase()}-videos/${video._id}`,
       })),
       ...questions.map((question) => ({
         ...question,
@@ -119,6 +133,11 @@ export async function GET(req) {
         ...institution,
         type: "institution",
         route: `/institutions/${institution._id}`,
+      })),
+      ...masalahs.map((masalah) => ({
+        ...masalah,
+        type: "masalah",
+        route: `/masalah/${masalah._id}`,
       })),
     ];
 
