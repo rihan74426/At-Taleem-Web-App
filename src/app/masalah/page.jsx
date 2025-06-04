@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import {
@@ -20,6 +20,7 @@ import ResponseModal from "../Components/ResponseModal";
 export default function MasalahPage() {
   const { user, isLoaded } = useUser();
   const [masalah, setMasalah] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -151,12 +152,41 @@ export default function MasalahPage() {
     }
   }, [isLoaded, pagination.page, selectedCategory, sortBy, sortOrder]);
 
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+
+        setUsers(data.users.data);
+      }
+    } catch (error) {
+      console.log("error fetching users:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [masalah]);
+
+  const userMap = useMemo(() => {
+    const map = {};
+    users.forEach((u) => {
+      map[u.id] = `${u.firstName} ${u.lastName}`;
+    });
+    return map;
+  }, [users]);
+
   // Handle like toggle
   const handleLike = async (masalahId) => {
     if (!user) {
       setModal({
         isOpen: true,
-        message: "Please sign in to like issues",
+        message: "মাসআলা পছন্দ করতে লগিন করুন!",
         status: "error",
       });
       return;
@@ -166,8 +196,8 @@ export default function MasalahPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`/api/masalah/${masalahId}/like`, {
-        method: "POST",
+      const res = await fetch(`/api/masalah/${masalahId}`, {
+        method: "PATCH",
       });
 
       if (res.ok) {
@@ -195,16 +225,16 @@ export default function MasalahPage() {
         // Show success message with the correct status
         setModal({
           isOpen: true,
-          message: `Issue ${
-            isCurrentlyLiked ? "unliked" : "liked"
-          } successfully`,
+          message: `মাসআলা সফলভাবে ${
+            isCurrentlyLiked ? "পছন্দ তুলে নেওয়া" : "পছন্দ করা"
+          } হয়েছে!`,
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to update like status",
+          message: errorData.error || "পছন্দ আপডেট করতে সমস্যা হয়েছে",
           status: "error",
         });
       }
@@ -212,7 +242,7 @@ export default function MasalahPage() {
       console.error("Error toggling like:", err);
       setModal({
         isOpen: true,
-        message: "Network error while updating like status",
+        message: "নেটওয়ার্ক জনিত সমস্যা হয়েছে, দয়া করে আবার চেষ্টা করুন!",
         status: "error",
       });
     } finally {
@@ -225,7 +255,7 @@ export default function MasalahPage() {
     if (!user) {
       setModal({
         isOpen: true,
-        message: "Please sign in to bookmark issues",
+        message: "বুকমার্ক করতে লগিন করুন",
         status: "error",
       });
       return;
@@ -242,9 +272,9 @@ export default function MasalahPage() {
 
       setModal({
         isOpen: true,
-        message: `Issue ${
-          isBookmarked ? "removed from" : "added to"
-        } bookmarks`,
+        message: `মাসআলা বুকমার্ক ${
+          isBookmarked ? "সরিয়ে নেওয়া হছে" : "যুক্ত করা হয়েছে"
+        }`,
         status: "success",
       });
 
@@ -263,7 +293,7 @@ export default function MasalahPage() {
     if (!user?.publicMetadata?.isAdmin) {
       setModal({
         isOpen: true,
-        message: "You don't have permission to delete issues",
+        message: "মাসআলা ডিলিট করার পারমিশন নাই আপনার",
         status: "error",
       });
       return;
@@ -272,7 +302,7 @@ export default function MasalahPage() {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    if (window.confirm("Are you sure you want to delete this issue?")) {
+    if (window.confirm("আপনি কি নিশ্চিতভাবে মাসআলাটি ডিলিট করতে চান?")) {
       try {
         const res = await fetch(`/api/masalah/${masalahId}`, {
           method: "DELETE",
@@ -283,21 +313,21 @@ export default function MasalahPage() {
           );
           setModal({
             isOpen: true,
-            message: "Issue deleted successfully",
+            message: "মাসআলা সফলভাবে ডিলিট হয়েছে!",
             status: "success",
           });
         } else {
           const errorData = await res.json();
           setModal({
             isOpen: true,
-            message: errorData.error || "Failed to delete issue",
+            message: errorData.error || "মাসআলা ডিলিট ব্যর্থ হয়েছে!",
             status: "error",
           });
         }
       } catch (err) {
         setModal({
           isOpen: true,
-          message: "Network error while deleting issue",
+          message: "নেটওয়ার্কজনিত সমস্যা হয়েছে!",
           status: "error",
         });
       } finally {
@@ -327,7 +357,7 @@ export default function MasalahPage() {
         );
         setModal({
           isOpen: true,
-          message: "Issue updated successfully",
+          message: "মাসআলা সফলভাবে ইডিট হয়েছে",
           status: "success",
         });
         setShowEditModal(false);
@@ -335,14 +365,14 @@ export default function MasalahPage() {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to update issue",
+          message: errorData.error || "আপডেট ব্যর্থ হয়েছে",
           status: "error",
         });
       }
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Network error while updating issue",
+        message: "কোন সমস্যা হয়েছে! আবার চেষ্টা করুন",
         status: "error",
       });
     } finally {
@@ -360,15 +390,16 @@ export default function MasalahPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 min-h-screen">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Islamic Issues (Masalah)
+            আমাদের গবেষণালব্ধ কিছু গুরুত্বপূর্ণ মাসআলা
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Explore and discuss Islamic issues with the community
+            আমাদের দৈনন্দিন জীবনের সাথে জড়িত ও সামাজিক প্রেক্ষাপটে প্রচারিত
+            মাসআলা-মাসায়েল
           </p>
         </div>
         {user?.publicMetadata?.isAdmin && (
@@ -376,7 +407,7 @@ export default function MasalahPage() {
             href="/masalah/input"
             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-2 whitespace-nowrap"
           >
-            <span>Add New Issue</span>
+            <span>নতুন মাসআলা যুক্ত করুন</span>
           </Link>
         )}
       </div>
@@ -389,7 +420,7 @@ export default function MasalahPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search issues..."
+              placeholder="মাসআলা খুঁজুন..."
               className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
             <FaSearch className="absolute left-3 top-3 text-gray-400" />
@@ -432,7 +463,7 @@ export default function MasalahPage() {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="">All Categories</option>
+                <option value="">ক্যাটাগরি</option>
                 {categories.map((cat) => (
                   <option key={cat._id} value={cat._id}>
                     {cat.name}
@@ -448,10 +479,10 @@ export default function MasalahPage() {
                 }}
                 className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="createdAt-desc">Newest First</option>
-                <option value="createdAt-asc">Oldest First</option>
-                <option value="likeCount-desc">Most Liked</option>
-                <option value="commentCount-desc">Most Commented</option>
+                <option value="createdAt-desc">নতুন সবার আগে</option>
+                <option value="createdAt-asc">পুরাতন সবার আগে</option>
+                <option value="likeCount-desc">বেশি পছন্দ করা হয়েছে</option>
+                <option value="commentCount-desc">বেশি কমেন্ট করা হয়েছে</option>
               </select>
             </div>
           </div>
@@ -463,13 +494,13 @@ export default function MasalahPage() {
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Loading issues...
+            মাসআলা লোড হচ্ছে...
           </p>
         </div>
       ) : masalah.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-gray-600 dark:text-gray-400 text-lg">
-            No issues found. Try adjusting your search or filters.
+            কোন মাসআলা পাওয়া যায় নি। ফিল্টার পরিবর্তন করে দেখুন!
           </p>
           {(search || selectedCategory) && (
             <button
@@ -517,19 +548,24 @@ export default function MasalahPage() {
                       </div>
                     )}
                   </div>
-                  <p className="mt-2 text-gray-600 dark:text-gray-300 line-clamp-2">
-                    {item.description}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {item.categories.map((cat) => (
-                      <span
-                        key={cat._id}
-                        className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium"
-                      >
-                        {cat.name}
-                      </span>
-                    ))}
-                  </div>
+                  <Link
+                    href={`/masalah/${item._id}`}
+                    title="দলীল দেখতে ভেতরে আসুন"
+                  >
+                    <p className="mt-2 text-gray-600 dark:text-gray-300 line-clamp-2">
+                      {item.description}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {item.categories.map((cat) => (
+                        <span
+                          key={cat._id}
+                          className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium"
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    </div>
+                  </Link>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <div className="relative group">
@@ -548,18 +584,23 @@ export default function MasalahPage() {
                     </button>
                     {item.likers.length > 0 && (
                       <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg p-2 hidden group-hover:block z-10">
-                        <p className="text-sm font-semibold mb-1">Liked by:</p>
+                        <p className="text-sm font-semibold mb-1">
+                          পছন্দ করেছেন:
+                        </p>
                         <div className="max-h-32 overflow-y-auto">
-                          {item.likers.map((likerId) => (
-                            <div
-                              key={likerId}
-                              className="flex items-center gap-2 py-1"
-                            >
-                              <span className="text-sm text-gray-600 dark:text-gray-300">
-                                {likerId === user?.id ? "You" : likerId}
-                              </span>
-                            </div>
-                          ))}
+                          {item.likers.map((likerId) => {
+                            const likeNames = userMap[likerId] || "Unknown";
+                            return (
+                              <div
+                                key={likerId}
+                                className="flex items-center gap-2 py-1"
+                              >
+                                <span className="text-sm text-gray-600 dark:text-gray-300">
+                                  {likerId === user?.id ? "আপনি" : likeNames}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -578,7 +619,11 @@ export default function MasalahPage() {
                   </button>
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+              <Link
+                href={`/masalah/${item._id}`}
+                title="দলীল দেখতে ভেতরে আসুন"
+                className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400"
+              >
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span>
@@ -589,13 +634,13 @@ export default function MasalahPage() {
                     {new Date(item.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <Link
+                <p
                   href={`/masalah/${item._id}`}
                   className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
                 >
-                  Read more →
-                </Link>
-              </div>
+                  বিস্তারিত দেখুন →
+                </p>
+              </Link>
             </div>
           ))}
         </div>

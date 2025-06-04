@@ -101,7 +101,7 @@ export default function BookComments({ bookId }) {
   // Like/unlike a comment or reply
   const handleLike = async (commentId) => {
     if (!user) {
-      alert("You must be logged in to like a review.");
+      alert("You must be logged in to like a Book.");
       return;
     }
 

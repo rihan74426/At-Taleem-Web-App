@@ -40,6 +40,10 @@ export async function GET(request) {
       .skip(skip)
       .limit(limit)
       .populate("categories", "name")
+      .populate({
+        path: "comments",
+        options: { sort: { createdAt: -1 } },
+      })
       .lean();
 
     // Get total count for pagination

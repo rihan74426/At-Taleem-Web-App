@@ -5,7 +5,7 @@ const CommentSchema = new mongoose.Schema(
     entityId: { type: String, required: true }, // Can be a videoId or questionId
     commentType: {
       type: String,
-      enum: ["video", "question", "book"],
+      enum: ["video", "question", "book", "masalah"],
       required: true,
     }, // Defines type
     userId: { type: String, required: true },

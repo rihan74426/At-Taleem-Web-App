@@ -90,9 +90,12 @@ export async function PUT(request) {
     }
 
     await comment.save();
-    return new Response(JSON.stringify({ likes: comment.likes.length }), {
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({ updatedComment: comment, likes: comment.likes.length }),
+      {
+        status: 200,
+      }
+    );
   } catch (error) {
     return new Response(
       JSON.stringify({ error: "Error liking comment", details: error }),
