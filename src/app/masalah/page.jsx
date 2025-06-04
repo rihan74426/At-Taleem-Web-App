@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   FaHeart,
   FaRegHeart,
@@ -17,7 +18,11 @@ import {
 import MasalahForm from "../Components/MasalahForm";
 import ResponseModal from "../Components/ResponseModal";
 
-// Debounce function for search
+// Constants
+const ITEMS_PER_PAGE = 10;
+const DEBOUNCE_DELAY = 500;
+
+// Debounce utility
 const debounce = (func, wait) => {
   let timeout;
   return function executedFunction(...args) {
@@ -31,33 +36,41 @@ const debounce = (func, wait) => {
 };
 
 export default function MasalahPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoaded } = useUser();
+
+  // State management
   const [masalah, setMasalah] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [categories, setCategories] = useState([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  });
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [editingMasalah, setEditingMasalah] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState(null);
   const [modal, setModal] = useState({
     isOpen: false,
     message: "",
     status: "",
   });
-  const [bookmarkedMasalah, setBookmarkedMasalah] = useState(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [commentCounts, setCommentCounts] = useState({});
-  const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMasalah, setEditingMasalah] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [bookmarkedMasalah, setBookmarkedMasalah] = useState(new Set());
+
+  // Filter states from URL params
+  const [filters, setFilters] = useState({
+    search: searchParams.get("search") || "",
+    category: searchParams.get("category") || "",
+    sortBy: searchParams.get("sortBy") || "createdAt",
+    sortOrder: searchParams.get("sortOrder") || "desc",
+    page: parseInt(searchParams.get("page")) || 1,
+  });
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    total: 0,
+    totalPages: 0,
+  });
 
   // Memoized user map
   const userMap = useMemo(() => {
@@ -70,41 +83,62 @@ export default function MasalahPage() {
 
   // Memoized query parameters
   const queryParams = useMemo(() => {
-    return new URLSearchParams({
-      page: pagination.page,
-      limit: pagination.limit,
-      search,
-      sortBy,
-      sortOrder,
-      ...(selectedCategory && { category: selectedCategory }),
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
     });
-  }, [
-    pagination.page,
-    pagination.limit,
-    search,
-    sortBy,
-    sortOrder,
-    selectedCategory,
-  ]);
+    params.append("limit", ITEMS_PER_PAGE);
+    return params.toString();
+  }, [filters]);
 
-  // Memoized fetch functions
-  const fetchMasalah = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/masalah?${queryParams}`);
-      if (!res.ok) {
-        throw new Error("Failed to fetch issues");
+  // Update URL when filters change
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        url.searchParams.set(key, value);
+      } else {
+        url.searchParams.delete(key);
       }
-      const data = await res.json();
-      setMasalah(data.masalah);
-      setPagination(data.pagination);
-    } catch (err) {
-      console.error("Error fetching masalah:", err);
-      setError(err.message);
+    });
+    router.push(url.pathname + url.search, { scroll: false });
+  }, [filters, router]);
+
+  // Fetch data
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [masalahRes, categoriesRes, usersRes] = await Promise.all([
+        fetch(`/api/masalah?${queryParams}`),
+        fetch("/api/categories"),
+        fetch("/api/user"),
+      ]);
+
+      if (!masalahRes.ok || !categoriesRes.ok || !usersRes.ok) {
+        throw new Error("Failed to fetch data");
+      }
+
+      const [masalahData, categoriesData, usersData] = await Promise.all([
+        masalahRes.json(),
+        categoriesRes.json(),
+        usersRes.json(),
+      ]);
+      // Update states
+      setMasalah(masalahData.masalah);
+      setPagination({
+        total: masalahData.pagination.total,
+        totalPages: masalahData.pagination.totalPages,
+      });
+      setCategories(categoriesData.categories);
+      setUsers(usersData.users.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setError("ডাটা লোড করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
       setModal({
         isOpen: true,
-        message: "Error loading issues. Please try again later.",
+        message: "ডাটা লোড করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।",
         status: "error",
       });
     } finally {
@@ -112,293 +146,12 @@ export default function MasalahPage() {
     }
   }, [queryParams]);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch("/api/categories");
-      if (!res.ok) {
-        throw new Error("Failed to fetch categories");
-      }
-      const data = await res.json();
-      setCategories(data.categories);
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      setModal({
-        isOpen: true,
-        message: "Error loading categories",
-        status: "error",
-      });
-    }
-  }, []);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      const res = await fetch("/api/user", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) {
-        throw new Error("Failed to fetch users");
-      }
-      const data = await res.json();
-      setUsers(data.users.data);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  }, []);
-
-  const fetchCommentCounts = useCallback(async () => {
-    try {
-      const masalahIds = masalah.map((item) => item._id);
-      if (masalahIds.length === 0) return;
-
-      const promises = masalahIds.map((id) =>
-        fetch(`/api/comments?entityId=${id}&commentType=masalah`)
-          .then((res) => res.json())
-          .then((data) => ({ id, count: data.comments.length }))
-      );
-
-      const results = await Promise.all(promises);
-      const counts = {};
-      results.forEach(({ id, count }) => {
-        counts[id] = count;
-      });
-      setCommentCounts(counts);
-    } catch (err) {
-      console.error("Error fetching comment counts:", err);
-    }
-  }, [masalah]);
-
-  // Memoized handlers
-  const handleLike = useCallback(
-    async (masalahId) => {
-      if (!user || isSubmitting) {
-        if (!user) {
-          setModal({
-            isOpen: true,
-            message: "Please sign in to like issues",
-            status: "error",
-          });
-        }
-        return;
-      }
-
-      setIsSubmitting(true);
-      try {
-        const res = await fetch(`/api/masalah/${masalahId}`, {
-          method: "PATCH",
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to update like status");
-        }
-
-        const currentItem = masalah.find((item) => item._id === masalahId);
-        const isCurrentlyLiked = currentItem?.likers.includes(user.id);
-
-        setMasalah((prevMasalah) =>
-          prevMasalah.map((item) => {
-            if (item._id === masalahId) {
-              const updatedLikers = isCurrentlyLiked
-                ? item.likers.filter((id) => id !== user.id)
-                : [...item.likers, user.id];
-
-              return {
-                ...item,
-                likers: updatedLikers,
-              };
-            }
-            return item;
-          })
-        );
-
-        setModal({
-          isOpen: true,
-          message: `Issue ${
-            isCurrentlyLiked ? "unliked" : "liked"
-          } successfully`,
-          status: "success",
-        });
-      } catch (err) {
-        console.error("Error toggling like:", err);
-        setModal({
-          isOpen: true,
-          message: "Failed to update like status",
-          status: "error",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [user, isSubmitting, masalah]
-  );
-
-  const handleBookmark = useCallback(
-    (masalahId) => {
-      if (!user) {
-        setModal({
-          isOpen: true,
-          message: "Please sign in to bookmark issues",
-          status: "error",
-        });
-        return;
-      }
-
-      setBookmarkedMasalah((prev) => {
-        const newSet = new Set(prev);
-        const isBookmarked = newSet.has(masalahId);
-        if (isBookmarked) {
-          newSet.delete(masalahId);
-        } else {
-          newSet.add(masalahId);
-        }
-
-        setModal({
-          isOpen: true,
-          message: `Issue ${
-            isBookmarked ? "removed from" : "added to"
-          } bookmarks`,
-          status: "success",
-        });
-
-        return newSet;
-      });
-    },
-    [user]
-  );
-
-  const handleEdit = useCallback((masalah) => {
-    setEditingMasalah(masalah);
-    setShowEditModal(true);
-  }, []);
-
-  const handleDelete = useCallback(
-    async (masalahId) => {
-      if (!user?.publicMetadata?.isAdmin || isSubmitting) {
-        if (!user?.publicMetadata?.isAdmin) {
-          setModal({
-            isOpen: true,
-            message: "You don't have permission to delete issues",
-            status: "error",
-          });
-        }
-        return;
-      }
-
-      if (!window.confirm("Are you sure you want to delete this issue?"))
-        return;
-
-      setIsSubmitting(true);
-      try {
-        const res = await fetch(`/api/masalah/${masalahId}`, {
-          method: "DELETE",
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to delete issue");
-        }
-
-        setMasalah((prevMasalah) =>
-          prevMasalah.filter((item) => item._id !== masalahId)
-        );
-        setModal({
-          isOpen: true,
-          message: "Issue deleted successfully",
-          status: "success",
-        });
-      } catch (err) {
-        console.error("Error deleting issue:", err);
-        setModal({
-          isOpen: true,
-          message: "Failed to delete issue",
-          status: "error",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [user, isSubmitting]
-  );
-
-  const handleEditSubmit = useCallback(
-    async (data) => {
-      if (isSubmitting) return;
-      setIsSubmitting(true);
-
-      try {
-        const res = await fetch(`/api/masalah/${editingMasalah._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to update issue");
-        }
-
-        const updatedMasalah = await res.json();
-        setMasalah((prevMasalah) =>
-          prevMasalah.map((item) =>
-            item._id === editingMasalah._id ? updatedMasalah : item
-          )
-        );
-        setModal({
-          isOpen: true,
-          message: "Issue updated successfully",
-          status: "success",
-        });
-        setShowEditModal(false);
-      } catch (err) {
-        console.error("Error updating issue:", err);
-        setModal({
-          isOpen: true,
-          message: "Failed to update issue",
-          status: "error",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [editingMasalah, isSubmitting]
-  );
-
-  const handleResetFilters = useCallback(() => {
-    setSearch("");
-    setSelectedCategory("");
-    setSortBy("createdAt");
-    setSortOrder("desc");
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
-
-  // Debounced search handler
-  const debouncedSearch = useMemo(
-    () =>
-      debounce((value) => {
-        setSearch(value);
-        setPagination((prev) => ({ ...prev, page: 1 }));
-      }, 500),
-    []
-  );
-
-  // Effects
+  // Load initial data
   useEffect(() => {
     if (isLoaded) {
-      fetchMasalah();
+      fetchData();
     }
-  }, [isLoaded, fetchMasalah]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  useEffect(() => {
-    if (masalah.length > 0) {
-      fetchCommentCounts();
-    }
-  }, [masalah, fetchCommentCounts]);
+  }, [isLoaded, fetchData]);
 
   // Load bookmarked masalah from localStorage
   useEffect(() => {
@@ -425,19 +178,243 @@ export default function MasalahPage() {
     }
   }, [bookmarkedMasalah]);
 
+  // Handlers
+  const handleFilterChange = useCallback((key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      page: 1, // Reset to first page on filter change
+    }));
+  }, []);
+
+  const handleSearch = useCallback(
+    debounce((value) => {
+      handleFilterChange("search", value);
+    }, DEBOUNCE_DELAY),
+    [handleFilterChange]
+  );
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({
+      search: "",
+      category: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      page: 1,
+    });
+  }, []);
+
+  const handleLike = useCallback(
+    async (masalahId) => {
+      if (!user || isSubmitting) {
+        if (!user) {
+          setModal({
+            isOpen: true,
+            message: "মাসআলা পছন্দ করতে লগইন করুন",
+            status: "error",
+          });
+        }
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const res = await fetch(`/api/masalah/${masalahId}`, {
+          method: "PATCH",
+        });
+
+        if (!res.ok) throw new Error("Failed to update like status");
+
+        const currentItem = masalah.find((item) => item._id === masalahId);
+        const isCurrentlyLiked = currentItem?.likers.includes(user.id);
+
+        setMasalah((prevMasalah) =>
+          prevMasalah.map((item) => {
+            if (item._id === masalahId) {
+              return {
+                ...item,
+                likers: isCurrentlyLiked
+                  ? item.likers.filter((id) => id !== user.id)
+                  : [...item.likers, user.id],
+              };
+            }
+            return item;
+          })
+        );
+
+        setModal({
+          isOpen: true,
+          message: `মাসআলা ${
+            isCurrentlyLiked ? "অপছন্দ করা হয়েছে" : "পছন্দ করা হয়েছে"
+          }`,
+          status: "success",
+        });
+      } catch (err) {
+        console.error("Error toggling like:", err);
+        setModal({
+          isOpen: true,
+          message: "মাসআলা পছন্দ করা ব্যর্থ হয়েছে",
+          status: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [user, isSubmitting, masalah]
+  );
+
+  const handleBookmark = useCallback(
+    (masalahId) => {
+      if (!user) {
+        setModal({
+          isOpen: true,
+          message: "মাসআলা বুকমার্ক করতে লগইন করুন",
+          status: "error",
+        });
+        return;
+      }
+
+      setBookmarkedMasalah((prev) => {
+        const newSet = new Set(prev);
+        const isBookmarked = newSet.has(masalahId);
+
+        if (isBookmarked) {
+          newSet.delete(masalahId);
+        } else {
+          newSet.add(masalahId);
+        }
+
+        setModal({
+          isOpen: true,
+          message: `মাসআলা ${
+            isBookmarked ? "বুকমার্ক থেকে সরানো হয়েছে" : "বুকমার্ক করা হয়েছে"
+          }`,
+          status: "success",
+        });
+
+        return newSet;
+      });
+    },
+    [user]
+  );
+
+  const handleEdit = useCallback((masalah) => {
+    setEditingMasalah(masalah);
+    setShowEditModal(true);
+  }, []);
+
+  const handleDelete = useCallback(
+    async (masalahId) => {
+      if (!user?.publicMetadata?.isAdmin || isSubmitting) {
+        if (!user?.publicMetadata?.isAdmin) {
+          setModal({
+            isOpen: true,
+            message: "আপনার মাসআলা ডিলিট করার পারমিশন নাই",
+            status: "error",
+          });
+        }
+        return;
+      }
+
+      if (!window.confirm("Are you sure you want to delete this issue?"))
+        return;
+
+      setIsSubmitting(true);
+      try {
+        const res = await fetch(`/api/masalah/${masalahId}`, {
+          method: "DELETE",
+        });
+
+        if (!res.ok) throw new Error("Failed to delete issue");
+
+        setMasalah((prevMasalah) =>
+          prevMasalah.filter((item) => item._id !== masalahId)
+        );
+
+        setModal({
+          isOpen: true,
+          message: "মাসআলা ডিলিট সফল হয়েছে!",
+          status: "success",
+        });
+      } catch (err) {
+        console.error("Error deleting issue:", err);
+        setModal({
+          isOpen: true,
+          message: "মাসআলা ডিলিট ব্যর্থ হয়েছে!",
+          status: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [user, isSubmitting]
+  );
+
+  const handleEditSubmit = useCallback(
+    async (data) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+
+      try {
+        const res = await fetch(`/api/masalah/${editingMasalah._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        if (!res.ok) throw new Error("Failed to update issue");
+
+        const updatedMasalah = await res.json();
+        fetchData();
+
+        setModal({
+          isOpen: true,
+          message: "মাসআলা আপডেট সফল হয়েছে",
+          status: "success",
+        });
+        setShowEditModal(false);
+      } catch (err) {
+        console.error("Error updating issue:", err);
+        setModal({
+          isOpen: true,
+          message: "মাসআলা আপডেট ব্যর্থ হয়েছে",
+          status: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [editingMasalah, isSubmitting]
+  );
+
+  // Render loading state
+  if (loading && !masalah.length) {
+    return (
+      <div className="container mx-auto px-4 py-8 min-h-screen">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            মাসআলা লোড হচ্ছে...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render error state
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 min-h-screen">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">
-            Error Loading Issues
+            মাসআলা লোড করতে সমস্যা হয়েছে
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
           >
-            Retry
+            আবার চেষ্টা করুন
           </button>
         </div>
       </div>
@@ -453,8 +430,8 @@ export default function MasalahPage() {
             আমাদের গবেষণালব্ধ কিছু গুরুত্বপূর্ণ মাসআলা
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            আমাদের দৈনন্দিন জীবনের সাথে জড়িত ও সামাজিক প্রেক্ষাপটে প্রচারিত
-            মাসআলা-মাসায়েল
+            আমাদের দৈনন্দিন জীবনের সাথে জড়িত ও সামাজিক প্রেক্ষাপটে প্রচারিত
+            মাসআলা-মাসায়েল
           </p>
         </div>
         {user?.publicMetadata?.isAdmin && (
@@ -473,8 +450,8 @@ export default function MasalahPage() {
           <div className="flex-1 relative w-full">
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={filters.search}
+              onChange={(e) => handleSearch(e.target.value)}
               placeholder="মাসআলা খুঁজুন..."
               className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
@@ -488,10 +465,10 @@ export default function MasalahPage() {
             >
               <FaFilter />
             </button>
-            {(search ||
-              selectedCategory ||
-              sortBy !== "createdAt" ||
-              sortOrder !== "desc") && (
+            {(filters.search ||
+              filters.category ||
+              filters.sortBy !== "createdAt" ||
+              filters.sortOrder !== "desc") && (
               <button
                 onClick={handleResetFilters}
                 className="p-2 border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
@@ -514,8 +491,8 @@ export default function MasalahPage() {
           <div className="overflow-hidden">
             <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={filters.category}
+                onChange={(e) => handleFilterChange("category", e.target.value)}
                 className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="">ক্যাটাগরি</option>
@@ -526,18 +503,17 @@ export default function MasalahPage() {
                 ))}
               </select>
               <select
-                value={`${sortBy}-${sortOrder}`}
+                value={`${filters.sortBy}-${filters.sortOrder}`}
                 onChange={(e) => {
                   const [newSortBy, newSortOrder] = e.target.value.split("-");
-                  setSortBy(newSortBy);
-                  setSortOrder(newSortOrder);
+                  handleFilterChange("sortBy", newSortBy);
+                  handleFilterChange("sortOrder", newSortOrder);
                 }}
                 className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="createdAt-desc">নতুন সবার আগে</option>
                 <option value="createdAt-asc">পুরাতন সবার আগে</option>
-                <option value="likeCount-desc">বেশি পছন্দ করা হয়েছে</option>
-                <option value="commentCount-desc">বেশি কমেন্ট করা হয়েছে</option>
+                <option value="likeCount-desc">বেশি পছন্দ করা হয়েছে</option>
               </select>
             </div>
           </div>
@@ -545,19 +521,12 @@ export default function MasalahPage() {
       </div>
 
       {/* Masalah List */}
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            মাসআলা লোড হচ্ছে...
-          </p>
-        </div>
-      ) : masalah.length === 0 ? (
+      {masalah.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-gray-600 dark:text-gray-400 text-lg">
-            কোন মাসআলা পাওয়া যায় নি। ফিল্টার পরিবর্তন করে দেখুন!
+            কোন মাসআলা পাওয়া যায় নি। ফিল্টার পরিবর্তন করে দেখুন!
           </p>
-          {(search || selectedCategory) && (
+          {(filters.search || filters.category) && (
             <button
               onClick={handleResetFilters}
               className="mt-4 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
@@ -681,18 +650,11 @@ export default function MasalahPage() {
               >
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    {commentCounts[item._id] || 0} comments
-                  </span>
-                  <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     {new Date(item.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <p
-                  href={`/masalah/${item._id}`}
-                  className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
-                >
+                <p className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
                   বিস্তারিত দেখুন →
                 </p>
               </Link>
@@ -705,28 +667,18 @@ export default function MasalahPage() {
       {pagination.totalPages > 1 && (
         <div className="mt-8 flex justify-center gap-2">
           <button
-            onClick={() =>
-              setPagination((prev) => ({
-                ...prev,
-                page: Math.max(1, prev.page - 1),
-              }))
-            }
-            disabled={pagination.page === 1 || loading}
+            onClick={() => handleFilterChange("page", filters.page - 1)}
+            disabled={filters.page === 1 || loading}
             className="px-4 py-2 border rounded-md disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
           >
             Previous
           </button>
           <span className="px-4 py-2 text-gray-600 dark:text-gray-300">
-            Page {pagination.page} of {pagination.totalPages}
+            Page {filters.page} of {pagination.totalPages}
           </span>
           <button
-            onClick={() =>
-              setPagination((prev) => ({
-                ...prev,
-                page: Math.min(pagination.totalPages, prev.page + 1),
-              }))
-            }
-            disabled={pagination.page === pagination.totalPages || loading}
+            onClick={() => handleFilterChange("page", filters.page + 1)}
+            disabled={filters.page === pagination.totalPages || loading}
             className="px-4 py-2 border rounded-md disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
           >
             Next
@@ -753,6 +705,7 @@ export default function MasalahPage() {
               onSubmit={handleEditSubmit}
               isAdmin={user?.publicMetadata?.isAdmin}
               isSubmitting={isSubmitting}
+              onClose={() => setEditingMasalah(false)}
             />
           </div>
         </div>

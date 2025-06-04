@@ -10,43 +10,89 @@ export async function GET(request) {
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 10;
     const search = searchParams.get("search") || "";
-    const category = searchParams.get("category");
+    const category = searchParams.get("category"); // assume Masalah has a `categories` field if used
     const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
 
     await connect();
 
-    const query = {};
-
+    // 1) Build a common "match" object based on search + category
+    const match = {};
     if (search) {
-      query.$or = [
+      match.$or = [
         { title: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
         { references: { $regex: search, $options: "i" } },
       ];
     }
-
-    // Add category filter if provided
     if (category) {
-      query.categories = category;
+      match.categories = category;
     }
 
-    // Calculate skip value for pagination
+    // 2) If the client asked to sort by likeCount, use aggregation:
+    if (sortBy === "likeCount") {
+      const skip = (page - 1) * limit;
+
+      const pipeline = [
+        { $match: match },
+        {
+          $addFields: {
+            likeCount: { $size: { $ifNull: ["$likers", []] } },
+          },
+        },
+        {
+          $sort: { likeCount: sortOrder, createdAt: -1 },
+        },
+        { $skip: skip },
+        { $limit: limit },
+        // If you want to populate “categories” (assuming it’s a ref to another collection):
+        {
+          $lookup: {
+            from: "categories", // adjust collection name if different
+            localField: "categories",
+            foreignField: "_id",
+            as: "categories",
+          },
+        },
+        {
+          $project: {
+            // include all fields except internal __v; you can whitelist fields too
+            __v: 0,
+          },
+        },
+      ];
+
+      // Run the aggregation:
+      const docs = await Masalah.aggregate(pipeline);
+
+      // We also need the total count (for pagination) matching the same filter:
+      const total = await Masalah.countDocuments(match);
+
+      return NextResponse.json({
+        masalah: docs,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    }
+
+    // 3) Otherwise, use a normal find() + sort() by some real field (e.g. createdAt, updatedAt, etc.)
     const skip = (page - 1) * limit;
 
-    // Execute query with pagination and sorting
-    const masalah = await Masalah.find(query)
-      .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
+    const docs = await Masalah.find(match)
+      .sort({ [sortBy]: sortOrder })
       .skip(skip)
       .limit(limit)
-      .populate("categories", "name")
+      .populate("categories", "name") // adjust as needed
       .lean();
 
-    // Get total count for pagination
-    const total = await Masalah.countDocuments(query);
+    const total = await Masalah.countDocuments(match);
 
     return NextResponse.json({
-      masalah,
+      masalah: docs,
       pagination: {
         total,
         page,
@@ -55,7 +101,7 @@ export async function GET(request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching masalah:", error);
+    console.error("Error fetching Masalah:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

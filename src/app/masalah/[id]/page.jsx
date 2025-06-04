@@ -45,52 +45,51 @@ export default function MasalahDetailPage() {
   const [error, setError] = useState(null);
 
   // Fetch masalah details and comments
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [masalahRes, commentsRes, usersRes] = await Promise.all([
-          fetch(`/api/masalah/${id}`),
-          fetch(`/api/comments?entityId=${id}&commentType=masalah`),
-          fetch("/api/user", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          }),
-        ]);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [masalahRes, commentsRes, usersRes] = await Promise.all([
+        fetch(`/api/masalah/${id}`),
+        fetch(`/api/comments?entityId=${id}&commentType=masalah`),
+        fetch("/api/user", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }),
+      ]);
 
-        if (!masalahRes.ok) {
-          throw new Error("Failed to fetch masalah details");
-        }
-        if (!commentsRes.ok) {
-          throw new Error("Failed to fetch comments");
-        }
-        if (!usersRes.ok) {
-          throw new Error("Failed to fetch users");
-        }
-
-        const [masalahData, commentsData, usersData] = await Promise.all([
-          masalahRes.json(),
-          commentsRes.json(),
-          usersRes.json(),
-        ]);
-
-        setMasalah(masalahData);
-        setComments(commentsData.comments);
-        setUsers(usersData.users.data);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError(err.message);
-        setModal({
-          isOpen: true,
-          message: "Error loading data. Please try again later.",
-          status: "error",
-        });
-      } finally {
-        setLoading(false);
+      if (!masalahRes.ok) {
+        throw new Error("Failed to fetch masalah details");
       }
-    };
+      if (!commentsRes.ok) {
+        throw new Error("Failed to fetch comments");
+      }
+      if (!usersRes.ok) {
+        throw new Error("Failed to fetch users");
+      }
 
+      const [masalahData, commentsData, usersData] = await Promise.all([
+        masalahRes.json(),
+        commentsRes.json(),
+        usersRes.json(),
+      ]);
+
+      setMasalah(masalahData);
+      setComments(commentsData.comments);
+      setUsers(usersData.users.data);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError(err.message);
+      setModal({
+        isOpen: true,
+        message: "ডাটা লোড করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+        status: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
     if (isLoaded) {
       fetchData();
     }
@@ -114,7 +113,7 @@ export default function MasalahDetailPage() {
     if (!user) {
       setModal({
         isOpen: true,
-        message: "Please sign in to like issues",
+        message: "মাসআলা পছন্দ করতে লগইন করুন",
         status: "error",
       });
       return;
@@ -147,16 +146,16 @@ export default function MasalahDetailPage() {
         // Show success message with the correct status
         setModal({
           isOpen: true,
-          message: `Issue ${
-            isCurrentlyLiked ? "unliked" : "liked"
-          } successfully`,
+          message: `মাসআলা ${
+            isCurrentlyLiked ? "অপছন্দ করা হয়েছে" : "পছন্দ করা হয়েছে"
+          }`,
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to update like status",
+          message: "মাসআলা পছন্দ করা ব্যর্থ হয়েছে",
           status: "error",
         });
       }
@@ -164,7 +163,7 @@ export default function MasalahDetailPage() {
       console.error("Error toggling like:", err);
       setModal({
         isOpen: true,
-        message: "Network error while updating like status",
+        message: "মাসআলা পছন্দ করা ব্যর্থ হয়েছে",
         status: "error",
       });
     } finally {
@@ -176,7 +175,7 @@ export default function MasalahDetailPage() {
     if (!user) {
       setModal({
         isOpen: true,
-        message: "Please sign in to bookmark issues",
+        message: "মাসআলা বুকমার্ক করতে লগইন করুন",
         status: "error",
       });
       return;
@@ -203,7 +202,9 @@ export default function MasalahDetailPage() {
 
       setModal({
         isOpen: true,
-        message: `Issue ${newValue ? "added to" : "removed from"} bookmarks`,
+        message: `মাসআলা ${
+          newValue ? "বুকমার্ক করা হয়েছে" : "বুকমার্ক থেকে সরানো হয়েছে"
+        }`,
         status: "success",
       });
 
@@ -216,7 +217,7 @@ export default function MasalahDetailPage() {
     if (!user?.publicMetadata?.isAdmin) {
       setModal({
         isOpen: true,
-        message: "You don't have permission to delete issues",
+        message: "আপনার মাসআলা ডিলিট করার পারমিশন নাই",
         status: "error",
       });
       return;
@@ -236,21 +237,21 @@ export default function MasalahDetailPage() {
         router.push("/masalah");
         setModal({
           isOpen: true,
-          message: "Issue deleted successfully",
+          message: "মাসআলা ডিলিট সফল হয়েছে!",
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to delete issue",
+          message: "মাসআলা ডিলিট ব্যর্থ হয়েছে!",
           status: "error",
         });
       }
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Network error while deleting issue",
+        message: "মাসআলা ডিলিট সফল হয়েছে!",
         status: "error",
       });
     } finally {
@@ -272,25 +273,25 @@ export default function MasalahDetailPage() {
 
       if (res.ok) {
         const updatedMasalah = await res.json();
-        setMasalah(updatedMasalah);
+        fetchData();
         setShowEditModal(false);
         setModal({
           isOpen: true,
-          message: "Issue updated successfully",
+          message: "মাসআলা আপডেট সফল হয়েছে",
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to update issue",
+          message: "মাসআলা আপডেট ব্যর্থ হয়েছে",
           status: "error",
         });
       }
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Network error while updating issue",
+        message: "মাসআলা আপডেট সফল হয়েছে",
         status: "error",
       });
     } finally {
@@ -323,14 +324,14 @@ export default function MasalahDetailPage() {
         setComments((prev) => [...prev, data]);
         setModal({
           isOpen: true,
-          message: "Comment added successfully",
+          message: "মন্তব্য সফলভাবে যোগ করা হয়েছে",
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to submit comment",
+          message: "মন্তব্য যোগ করা ব্যর্থ হয়েছে",
           status: "error",
         });
       }
@@ -338,7 +339,7 @@ export default function MasalahDetailPage() {
       console.error("Error submitting comment:", err);
       setModal({
         isOpen: true,
-        message: "Network error while submitting comment",
+        message: "মন্তব্য যোগ করতে লগইন করুন",
         status: "error",
       });
     } finally {
@@ -378,14 +379,14 @@ export default function MasalahDetailPage() {
         );
         setModal({
           isOpen: true,
-          message: "Reply added successfully",
+          message: "মন্তব্য যোগ করা সফল হয়েছে",
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to submit reply",
+          message: "মন্তব্য যোগ করা ব্যর্থ হয়েছে",
           status: "error",
         });
       }
@@ -393,7 +394,7 @@ export default function MasalahDetailPage() {
       console.error("Error submitting reply:", err);
       setModal({
         isOpen: true,
-        message: "Network error while submitting reply",
+        message: "মন্তব্য যোগ করতে লগইন করুন",
         status: "error",
       });
     } finally {
@@ -406,7 +407,7 @@ export default function MasalahDetailPage() {
       if (!user) {
         setModal({
           isOpen: true,
-          message: "Please sign in to like comments",
+          message: "মন্তব্য পছন্দ করতে লগইন করুন",
           status: "error",
         });
       }
@@ -439,7 +440,7 @@ export default function MasalahDetailPage() {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to like comment",
+          message: "মন্তব্য পছন্দ করা ব্যর্থ হয়েছে",
           status: "error",
         });
       }
@@ -447,7 +448,7 @@ export default function MasalahDetailPage() {
       console.error("Error liking comment:", err);
       setModal({
         isOpen: true,
-        message: "Network error while liking comment",
+        message: "মন্তব্য পছন্দ করা ব্যর্থ হয়েছে",
         status: "error",
       });
     } finally {
@@ -485,14 +486,14 @@ export default function MasalahDetailPage() {
         setEditingText("");
         setModal({
           isOpen: true,
-          message: "Comment updated successfully",
+          message: "মন্তব্য আপডেট সফল হয়েছে",
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to update comment",
+          message: "মন্তব্য আপডেট ব্যর্থ হয়েছে",
           status: "error",
         });
       }
@@ -500,7 +501,7 @@ export default function MasalahDetailPage() {
       console.error("Error editing comment:", err);
       setModal({
         isOpen: true,
-        message: "Network error while updating comment",
+        message: "মন্তব্য আপডেট ব্যর্থ হয়েছে",
         status: "error",
       });
     } finally {
@@ -531,14 +532,14 @@ export default function MasalahDetailPage() {
         );
         setModal({
           isOpen: true,
-          message: "Comment deleted successfully",
+          message: "মন্তব্য ডিলিট সফল হয়েছে",
           status: "success",
         });
       } else {
         const errorData = await res.json();
         setModal({
           isOpen: true,
-          message: errorData.error || "Failed to delete comment",
+          message: "মন্তব্য ডিলিট ব্যর্থ হয়েছে",
           status: "error",
         });
       }
@@ -546,7 +547,7 @@ export default function MasalahDetailPage() {
       console.error("Error deleting comment:", err);
       setModal({
         isOpen: true,
-        message: "Network error while deleting comment",
+        message: "মন্তব্য ডিলিট ব্যর্থ হয়েছে",
         status: "error",
       });
     }
@@ -557,14 +558,14 @@ export default function MasalahDetailPage() {
       <div className="container mx-auto px-4 py-8 min-h-screen">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">
-            Error Loading Issue
+            মাসআলা লোড করতে সমস্যা হয়েছে
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
           <button
             onClick={() => router.push("/masalah")}
             className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
           >
-            Back to Issues
+            মাসআলার তালিকায় ফিরে যান
           </button>
         </div>
       </div>
@@ -577,7 +578,7 @@ export default function MasalahDetailPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Loading issue details...
+            মাসআলার বিস্তারিত লোড হচ্ছে...
           </p>
         </div>
       </div>
@@ -589,10 +590,10 @@ export default function MasalahDetailPage() {
       <div className="container mx-auto px-4 py-8 min-h-screen">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Issue not found
+            মাসআলা পাওয়া যায়নি
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            The issue you're looking for doesn't exist or has been removed.
+            আপনি যে মাসআলাটি খুঁজছেন তা পাওয়া যায়নি বা মুছে ফেলা হয়েছে।
           </p>
         </div>
       </div>
@@ -669,21 +670,26 @@ export default function MasalahDetailPage() {
         </div>
 
         <div className="prose dark:prose-invert max-w-none mt-6">
-          <h2 className="text-xl font-semibold mb-4">Description</h2>
+          <h2 className="text-xl font-semibold mb-4">বিবরণ</h2>
           <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {masalah.description}
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">References</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">তথ্যসূত্র</h2>
           <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {masalah.references}
           </p>
         </div>
 
         <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-          <p>Created: {new Date(masalah.createdAt).toLocaleDateString()}</p>
+          <p>
+            তৈরি করা হয়েছে: {new Date(masalah.createdAt).toLocaleDateString()}
+          </p>
           {masalah.updatedAt !== masalah.createdAt && (
-            <p>Updated: {new Date(masalah.updatedAt).toLocaleDateString()}</p>
+            <p>
+              আপডেট করা হয়েছে:{" "}
+              {new Date(masalah.updatedAt).toLocaleDateString()}
+            </p>
           )}
         </div>
       </div>
@@ -691,7 +697,7 @@ export default function MasalahDetailPage() {
       {/* Comments Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          Comments
+          মন্তব্য
         </h2>
 
         {/* Comment Form */}
@@ -699,7 +705,7 @@ export default function MasalahDetailPage() {
           <div className="mb-6">
             <textarea
               className="w-full border rounded p-3 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Write a comment..."
+              placeholder="মন্তব্য লিখুন..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               rows="3"
@@ -711,12 +717,12 @@ export default function MasalahDetailPage() {
               className="mt-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition disabled:opacity-50"
               disabled={isCommentSubmitting}
             >
-              {isCommentSubmitting ? "Submitting..." : "Submit"}
+              {isCommentSubmitting ? "জমা হচ্ছে..." : "জমা দিন"}
             </button>
           </div>
         ) : (
           <p className="text-gray-500 text-center mb-6">
-            Please sign in to comment
+            মন্তব্য করতে লগইন করুন
           </p>
         )}
 
@@ -784,7 +790,7 @@ export default function MasalahDetailPage() {
                       ? setReplyingTo(comment._id)
                       : setModal({
                           isOpen: true,
-                          message: "Please sign in to reply",
+                          message: "মন্তব্য করতে লগইন করুন",
                           status: "error",
                         })
                   }
@@ -818,7 +824,7 @@ export default function MasalahDetailPage() {
                 <div className="mt-4 ml-8 border-l-2 pl-4">
                   <textarea
                     className="w-full border rounded p-3 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Write a reply..."
+                    placeholder="মন্তব্য লিখুন..."
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     rows="2"
@@ -831,7 +837,7 @@ export default function MasalahDetailPage() {
                       className="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 transition disabled:opacity-50"
                       disabled={isReplySubmitting}
                     >
-                      {isReplySubmitting ? "Submitting..." : "Reply"}
+                      {isReplySubmitting ? "জমা হচ্ছে..." : "জমা দিন"}
                     </button>
                     <button
                       onClick={() => setReplyingTo(null)}
@@ -944,6 +950,7 @@ export default function MasalahDetailPage() {
               onSubmit={handleEditSubmit}
               isAdmin={user?.publicMetadata?.isAdmin}
               isSubmitting={isSubmitting}
+              onClose={() => setShowEditModal(false)}
             />
           </div>
         </div>
