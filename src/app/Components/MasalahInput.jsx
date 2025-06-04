@@ -109,7 +109,7 @@ export default function MasalahInput() {
       className="max-w-2xl mx-auto p-6 m-5 bg-white dark:bg-gray-800 rounded shadow space-y-6"
     >
       <h2 className="text-2xl font-bold text-center">
-        {id ? "Edit Masalah" : "New Masalah"}
+        {id ? "মাসআলা ইডিট" : "নতুন মাসআলা"}
       </h2>
 
       <MasalahForm

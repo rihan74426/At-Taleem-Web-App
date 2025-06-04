@@ -115,6 +115,7 @@ export default function MasalahForm({ initialData, onSubmit, isAdmin }) {
       categories: masalahCategories.map((cat) => cat._id),
     };
     onSubmit(formData);
+    reset();
   };
 
   return (
@@ -122,38 +123,38 @@ export default function MasalahForm({ initialData, onSubmit, isAdmin }) {
       <div>
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="block text-md font-medium text-gray-700 dark:text-gray-300"
         >
-          Title
+          মাসআলা
         </label>
         <input
           type="text"
           id="title"
           {...register("title")}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-          placeholder="Enter the title of the Islamic issue"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-md"
+          placeholder="মাসআলাটি লিখুন"
         />
         {errors.title && (
-          <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+          <p className="mt-1 text-md text-red-600">{errors.title.message}</p>
         )}
       </div>
 
       <div>
         <label
           htmlFor="description"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="block text-md font-medium text-gray-700 dark:text-gray-300"
         >
-          Description
+          বর্ণনা
         </label>
         <textarea
           id="description"
           rows={4}
           {...register("description")}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-          placeholder="Provide a detailed description of the Islamic issue"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-md"
+          placeholder="মাসআলাটির একটি সংক্ষিপ্ত বিবরণ প্রদান করুন"
         />
         {errors.description && (
-          <p className="mt-1 text-sm text-red-600">
+          <p className="mt-1 text-md text-red-600">
             {errors.description.message}
           </p>
         )}
@@ -162,19 +163,19 @@ export default function MasalahForm({ initialData, onSubmit, isAdmin }) {
       <div>
         <label
           htmlFor="references"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="block text-md font-medium text-gray-700 dark:text-gray-300"
         >
-          References
+          দলীল
         </label>
         <textarea
           id="references"
           rows={3}
           {...register("references")}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-          placeholder="Enter Quran and Hadith references"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-md"
+          placeholder="যথাযথ দলীল পেশ করুন"
         />
         {errors.references && (
-          <p className="mt-1 text-sm text-red-600">
+          <p className="mt-1 text-md text-red-600">
             {errors.references.message}
           </p>
         )}
@@ -183,7 +184,7 @@ export default function MasalahForm({ initialData, onSubmit, isAdmin }) {
       {/* Category Section */}
       <div className="mb-4 relative">
         <label className="block mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-          Assign Categories:
+          ক্যাটাগরি যুক্ত করুন:
         </label>
         <div className="flex flex-wrap gap-2">
           {masalahCategories.map((cat) => (
@@ -225,7 +226,7 @@ export default function MasalahForm({ initialData, onSubmit, isAdmin }) {
                 onMouseDown={handleAddNewCategory}
                 className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
               >
-                Add "{categoryInput}" as a new category
+                "{categoryInput}"কে নতুন ক্যাটাগরি হিসেবে যুক্ত করুন
               </div>
             )}
           </div>
