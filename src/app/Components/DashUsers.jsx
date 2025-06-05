@@ -1,20 +1,82 @@
 "use client";
 
-import { Table } from "flowbite-react";
+import { Table, Button, Badge, Dropdown, TextInput } from "flowbite-react";
 import { useEffect, useState } from "react";
-import { FaCheck, FaTimes } from "react-icons/fa";
+import { FaCheck, FaTimes, FaSearch, FaFilter, FaSort } from "react-icons/fa";
 import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import Loader from "./Loader";
 import { SendEmailModal } from "./orderModals";
 import SendEmail from "./sendEmail";
+
 export default function DashUsers() {
   const { user, isLoaded } = useUser();
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const [filterStatus, setFilterStatus] = useState("all"); // all, active, inactive
+  const [filterRole, setFilterRole] = useState("all"); // all, admin, user
+
+  // Filter and sort users
+  useEffect(() => {
+    let result = [...users];
+
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter(
+        (user) =>
+          user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.emailAddresses[0]?.emailAddress
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (filterStatus !== "all") {
+      const now = Date.now();
+      result = result.filter((user) => {
+        const lastSeen = new Date(user.lastActiveAt).getTime();
+        return filterStatus === "active"
+          ? now - lastSeen < 60 * 60 * 1000
+          : now - lastSeen >= 60 * 60 * 1000;
+      });
+    }
+
+    // Apply role filter
+    if (filterRole !== "all") {
+      result = result.filter((user) =>
+        filterRole === "admin"
+          ? user.publicMetadata?.isAdmin
+          : !user.publicMetadata?.isAdmin
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      if (sortField === "createdAt") {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      }
+
+      if (sortDirection === "asc") {
+        return aValue > bValue ? 1 : -1;
+      }
+      return aValue < bValue ? 1 : -1;
+    });
+
+    setFilteredUsers(result);
+  }, [users, searchTerm, sortField, sortDirection, filterStatus, filterRole]);
 
   const toggleSelect = (id) => {
     const newSet = new Set(selectedIds);
@@ -24,6 +86,7 @@ export default function DashUsers() {
     if (newSet.size !== users.length) setSelectAll(false);
     else setSelectAll(true);
   };
+
   const selectedEmails = users
     .filter((u) => selectedIds.has(u.id))
     .map((u) => u.emailAddresses[0]?.emailAddress)
@@ -59,9 +122,11 @@ export default function DashUsers() {
       console.log(error.message);
     }
   };
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
   const makeAdmin = async (id) => {
     try {
       const user = await fetch(`/api/user/${id}`, {
@@ -78,6 +143,7 @@ export default function DashUsers() {
       console.log("Error making user an admin:", error.message);
     }
   };
+
   const dismissAdmin = async (id) => {
     try {
       const user = await fetch(`/api/user/${id}`, {
@@ -94,6 +160,16 @@ export default function DashUsers() {
       console.log("Error making user an admin:", error.message);
     }
   };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
   if (!user?.publicMetadata?.isAdmin && isLoaded) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full py-7">
@@ -101,26 +177,58 @@ export default function DashUsers() {
       </div>
     );
   }
+
   return (
     <div className="table-auto md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500">
       {users.length > 0 ? (
         <div className="overflow-x-auto">
-          <h1 className=" font-bold text-3xl text-center p-6">
-            Users Management
-          </h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="font-bold text-3xl">Users Management</h1>
+            <div className="flex gap-2">
+              <TextInput
+                icon={FaSearch}
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Dropdown label="Filter" icon={FaFilter}>
+                <Dropdown.Item onClick={() => setFilterStatus("all")}>
+                  All Status
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setFilterStatus("active")}>
+                  Active
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setFilterStatus("inactive")}>
+                  Inactive
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={() => setFilterRole("all")}>
+                  All Roles
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setFilterRole("admin")}>
+                  Admins
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setFilterRole("user")}>
+                  Users
+                </Dropdown.Item>
+              </Dropdown>
+            </div>
+          </div>
+
           {selectedIds.size > 0 && (
-            <div className="fixed top-20 right-4 shadow p-3  z-50">
-              <button
+            <div className="fixed top-20 right-4 shadow p-3 z-50">
+              <Button
                 onClick={emailAll}
                 disabled={selectedIds.size === 0}
-                className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+                gradientDuoTone="purpleToPink"
               >
                 Email Selected ({selectedIds.size})
-              </button>
+              </Button>
             </div>
           )}
+
           <Table hoverable className="shadow-md w-full table-auto">
-            <Table.Head className="bg-gray-100 text-gray-600 text-sm uppercase leading-normal text-center ">
+            <Table.Head className="bg-gray-100 text-gray-600 text-sm uppercase leading-normal text-center">
               {selectedIds.size > 0 && (
                 <Table.HeadCell>
                   <input
@@ -130,20 +238,40 @@ export default function DashUsers() {
                   />
                 </Table.HeadCell>
               )}
-              <Table.HeadCell>Date Created</Table.HeadCell>
+              <Table.HeadCell
+                className="cursor-pointer"
+                onClick={() => handleSort("createdAt")}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  Date Created
+                  <FaSort
+                    className={sortField === "createdAt" ? "text-blue-500" : ""}
+                  />
+                </div>
+              </Table.HeadCell>
               <Table.HeadCell>User Image</Table.HeadCell>
-              <Table.HeadCell>Username</Table.HeadCell>
+              <Table.HeadCell
+                className="cursor-pointer"
+                onClick={() => handleSort("firstName")}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  Username
+                  <FaSort
+                    className={sortField === "firstName" ? "text-blue-500" : ""}
+                  />
+                </div>
+              </Table.HeadCell>
               <Table.HeadCell>Email</Table.HeadCell>
-              <Table.HeadCell>Admin</Table.HeadCell>
+              <Table.HeadCell>Status</Table.HeadCell>
+              <Table.HeadCell>Role</Table.HeadCell>
               <Table.HeadCell>Actions</Table.HeadCell>
             </Table.Head>
 
             <Table.Body className="divide-y text-center">
-              {users.map((user) => {
-                // Consider a user "active" if they signed in within the last 5 minutes
+              {filteredUsers.map((user) => {
                 const lastSeen = user.lastActiveAt;
                 const isActive =
-                  Date.now() - new Date(lastSeen).getTime() < 60 * 60 * 1000; // 1 hour
+                  Date.now() - new Date(lastSeen).getTime() < 60 * 60 * 1000;
                 const email = user.emailAddresses[0]?.emailAddress || "";
 
                 return (
@@ -160,16 +288,10 @@ export default function DashUsers() {
                         />
                       </Table.Cell>
                     )}
-                    {/* Date created */}
                     <Table.Cell onClick={() => toggleSelect(user.id)}>
                       {format(new Date(parseInt(user.createdAt, 10)), "PP p")}
                     </Table.Cell>
-
-                    {/* Profile image with active status indicator */}
-                    <Table.Cell
-                      className="justify-items-center"
-                      onClick={() => toggleSelect(user.id)}
-                    >
+                    <Table.Cell className="justify-items-center">
                       <div className="relative w-10 h-10">
                         <img
                           src={user.imageUrl}
@@ -177,63 +299,63 @@ export default function DashUsers() {
                           className="w-10 h-10 object-cover bg-gray-500 rounded-full"
                         />
                         <span
-                          className={
-                            `absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ` +
-                            (isActive ? "bg-green-400" : "bg-gray-400")
-                          }
+                          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                            isActive ? "bg-green-400" : "bg-gray-400"
+                          }`}
                         />
                       </div>
                     </Table.Cell>
-
-                    {/* Username (first & last name) */}
                     <Table.Cell onClick={() => toggleSelect(user.id)}>
                       {`${user.firstName ?? ""} ${
                         user.lastName ?? ""
                       }`.trim() || "—"}
                     </Table.Cell>
-
-                    {/* Primary email */}
                     <Table.Cell onClick={() => toggleSelect(user.id)}>
                       {email || "—"}
                     </Table.Cell>
-
-                    {/* Admin status */}
-                    <Table.Cell className="justify-items-center p-1">
-                      {user.publicMetadata?.isAdmin ? (
-                        <>
-                          <FaCheck className="text-green-500 m-1" />
-                          <button
+                    <Table.Cell>
+                      <Badge color={isActive ? "success" : "gray"}>
+                        {isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge
+                        color={user.publicMetadata?.isAdmin ? "purple" : "blue"}
+                      >
+                        {user.publicMetadata?.isAdmin ? "Admin" : "User"}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <div className="flex gap-2 justify-center">
+                        {user.publicMetadata?.isAdmin ? (
+                          <Button
+                            size="xs"
+                            color="failure"
                             onClick={() => dismissAdmin(user.id)}
-                            className="p-1 bg-blue-500 text-white rounded"
                           >
                             Dismiss Admin
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <FaTimes className="text-red-500 m-1" />
-                          <button
+                          </Button>
+                        ) : (
+                          <Button
+                            size="xs"
+                            color="success"
                             onClick={() => makeAdmin(user.id)}
-                            className="p-1 bg-green-500 text-white rounded"
                           >
                             Make Admin
-                          </button>
-                        </>
-                      )}
-                    </Table.Cell>
-
-                    {/* Email button */}
-                    <Table.Cell>
-                      <button
-                        onClick={() => {
-                          setShowEmailModal(true);
-                          setRecipientEmail(email);
-                        }}
-                        className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        disabled={!email}
-                      >
-                        Email
-                      </button>
+                          </Button>
+                        )}
+                        <Button
+                          size="xs"
+                          color="info"
+                          onClick={() => {
+                            setShowEmailModal(true);
+                            setRecipientEmail(email);
+                          }}
+                          disabled={!email}
+                        >
+                          Email
+                        </Button>
+                      </div>
                     </Table.Cell>
                   </Table.Row>
                 );

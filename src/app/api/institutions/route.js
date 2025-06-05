@@ -41,7 +41,8 @@ export async function GET(req) {
     const list = await Institution.find({})
       .sort({ createdAt: -1 })
       .limit(limit);
-    return new Response(JSON.stringify({ institutions: list }), {
+    const total = await Institution.countDocuments();
+    return new Response(JSON.stringify({ institutions: list, total }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

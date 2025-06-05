@@ -1,178 +1,261 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   HiArrowNarrowUp,
-  HiDocumentText,
   HiOutlineUserGroup,
+  HiBookOpen,
+  HiVideoCamera,
+  HiCalendar,
+  HiAcademicCap,
+  HiQuestionMarkCircle,
+  HiChatAlt2,
+  HiStar,
 } from "react-icons/hi";
 import { Button, Table } from "flowbite-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import Loader from "./Loader";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { useDashboardData } from "../hooks/useDashboardData";
+
+// Loading skeleton component
+const TableSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+    {[...Array(5)].map((_, i) => (
+      <div
+        key={i}
+        className="h-16 bg-gray-200 dark:bg-gray-700 rounded mb-2"
+      ></div>
+    ))}
+  </div>
+);
+
+// Stat Card Component
+const StatCard = ({
+  title,
+  value,
+  lastMonthValue,
+  icon: Icon,
+  iconBgColor,
+}) => (
+  <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
+    <div className="flex justify-between">
+      <div>
+        <h3 className="text-gray-500 text-md uppercase">{title}</h3>
+        <p className="text-2xl">{value}</p>
+      </div>
+      <Icon
+        className={`${iconBgColor} text-white rounded-full text-5xl p-3 shadow-lg`}
+      />
+    </div>
+    <div className="flex gap-2 text-sm">
+      <span className="text-green-500 flex items-center">
+        <HiArrowNarrowUp />
+        {lastMonthValue}
+      </span>
+      <div className="text-gray-500">গত মাসে</div>
+    </div>
+  </div>
+);
+
+// Recent Data Table Component
+const RecentDataTable = ({ title, data, columns, linkTo, loading }) => (
+  <div className="flex flex-col w-full md:w-auto shadow-md p-2 rounded-md dark:bg-gray-800">
+    <div className="flex justify-between p-3 text-sm font-semibold">
+      <h1 className="text-center p-2">{title}</h1>
+      <Button outline gradientDuoTone="purpleToPink">
+        <Link href={linkTo}>সব দেখুন</Link>
+      </Button>
+    </div>
+    {loading ? (
+      <TableSkeleton />
+    ) : (
+      <Table hoverable>
+        <Table.Head>
+          {columns.map((column) => (
+            <Table.HeadCell key={column.key}>{column.label}</Table.HeadCell>
+          ))}
+        </Table.Head>
+        {data.slice(0, 5).map((item) => (
+          <Table.Body key={item._id || item.id} className="divide-y">
+            <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
+              {columns.map((column) => (
+                <Table.Cell key={column.key}>
+                  {column.render ? column.render(item) : item[column.key]}
+                </Table.Cell>
+              ))}
+            </Table.Row>
+          </Table.Body>
+        ))}
+      </Table>
+    )}
+  </div>
+);
+
 export default function DashboardComp() {
-  const [users, setUsers] = useState([]);
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [totalPosts, setTotalPosts] = useState(0);
-  const [lastMonthUsers, setLastMonthUsers] = useState(0);
-  const [lastMonthPosts, setLastMonthPosts] = useState(0);
+  const { data, stats, loading, error } = useDashboardData();
   const { user } = useUser();
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/user", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
 
-        const data = await res.json();
-        if (res.ok) {
-          setUsers(data.users.data);
-          setTotalUsers(data.users.totalCount);
-          setLastMonthUsers(data.lastMonthUsers);
-        }
-      } catch (error) {
-        console.log(error.message);
-      }
-    };
-    const fetchPosts = async () => {
-      try {
-        const res = await fetch("/api/post/get", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            limit: 5,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setPosts(data.posts);
-          setTotalPosts(data.totalPosts);
-          setLastMonthPosts(data.lastMonthPosts);
-        }
-      } catch (error) {
-        console.log(error.message);
-      }
-    };
-    fetchUsers();
-    fetchPosts();
-    if ((posts, users)) setLoading(false);
-  }, []);
-
-  if (loading)
+  if (error) {
     return (
-      <div className=" p-3 md:mx-auto items-center flex min-h-screen">
-        <Loader />
+      <div className="text-center p-4">
+        <h2 className="text-red-600 text-xl font-semibold mb-2">
+          ডাটা লোড করতে সমস্যা হয়েছে
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          দয়া করে পেজটি রিফ্রেশ করে আবার চেষ্টা করুন
+        </p>
       </div>
     );
+  }
+
   return (
-    <div className="p-3 md:mx-auto">
-      <div className="flex-wrap flex gap-4 justify-center">
-        <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-          <div className="flex justify-between">
-            <div className="">
-              <h3 className="text-gray-500 text-md uppercase">Total Users</h3>
-              <p className="text-2xl">{totalUsers}</p>
-            </div>
-            <HiOutlineUserGroup className="bg-teal-600  text-white rounded-full text-5xl p-3 shadow-lg" />
-          </div>
-          <div className="flex  gap-2 text-sm">
-            <span className="text-green-500 flex items-center">
-              <HiArrowNarrowUp />
-              {lastMonthUsers}
-            </span>
-            <div className="text-gray-500">Last month</div>
-          </div>
+    <ErrorBoundary>
+      <div className="p-3 md:mx-auto">
+        <div className="flex-wrap flex gap-4 justify-center">
+          <StatCard
+            title="মোট ব্যবহারকারী"
+            value={stats.totalUsers}
+            lastMonthValue={stats.lastMonthUsers}
+            icon={HiOutlineUserGroup}
+            iconBgColor="bg-teal-600"
+          />
+          <StatCard
+            title="মোট ভিডিও"
+            value={stats.totalVideos}
+            lastMonthValue={stats.lastMonthVideos}
+            icon={HiVideoCamera}
+            iconBgColor="bg-blue-600"
+          />
+          <StatCard
+            title="মোট বই"
+            value={stats.totalBooks}
+            lastMonthValue={stats.lastMonthBooks}
+            icon={HiBookOpen}
+            iconBgColor="bg-purple-600"
+          />
+          <StatCard
+            title="মোট ইভেন্ট"
+            value={stats.totalEvents}
+            lastMonthValue={stats.lastMonthEvents}
+            icon={HiCalendar}
+            iconBgColor="bg-red-600"
+          />
+          <StatCard
+            title="মোট প্রতিষ্ঠান"
+            value={stats.totalInstitutions}
+            lastMonthValue={stats.lastMonthInstitutions}
+            icon={HiAcademicCap}
+            iconBgColor="bg-yellow-600"
+          />
+          <StatCard
+            title="মোট প্রশ্ন"
+            value={stats.totalQuestions}
+            lastMonthValue={stats.lastMonthQuestions}
+            icon={HiQuestionMarkCircle}
+            iconBgColor="bg-indigo-600"
+          />
+          <StatCard
+            title="মোট মন্তব্য"
+            value={stats.totalComments}
+            lastMonthValue={stats.lastMonthComments}
+            icon={HiChatAlt2}
+            iconBgColor="bg-green-600"
+          />
+          <StatCard
+            title="মোট রিভিউ"
+            value={stats.totalReviews}
+            lastMonthValue={stats.lastMonthReviews}
+            icon={HiStar}
+            iconBgColor="bg-orange-600"
+          />
         </div>
 
-        <div className="flex flex-col p-3 dark:bg-slate-800 gap-4 md:w-72 w-full rounded-md shadow-md">
-          <div className="flex justify-between">
-            <div className="">
-              <h3 className="text-gray-500 text-md uppercase">Total Posts</h3>
-              <p className="text-2xl">{totalPosts}</p>
-            </div>
-            <HiDocumentText className="bg-lime-600  text-white rounded-full text-5xl p-3 shadow-lg" />
-          </div>
-          <div className="flex  gap-2 text-sm">
-            <span className="text-green-500 flex items-center">
-              <HiArrowNarrowUp />
-              {lastMonthPosts}
-            </span>
-            <div className="text-gray-500">Last month</div>
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-4 py-3 mx-auto justify-center">
-        <div className="flex flex-col w-full md:w-auto shadow-md p-2 rounded-md dark:bg-gray-800">
-          <div className="flex justify-between  p-3 text-sm font-semibold">
-            <h1 className="text-center p-2">Recent users</h1>
-            <Button outline gradientDuoTone="purpleToPink">
-              <Link href={"/dashboard?tab=users"}>See all</Link>
-            </Button>
-          </div>
-          <Table hoverable>
-            <Table.Head>
-              <Table.HeadCell>User Image</Table.HeadCell>
-              <Table.HeadCell>User Name</Table.HeadCell>
-            </Table.Head>
-            {users &&
-              users.map((user) => (
-                <Table.Body key={user.id} className="divide-y">
-                  <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <Table.Cell>
-                      <img
-                        src={user.imageUrl}
-                        alt="user"
-                        className="w-10 h-10 rounded-full bg-gray-500"
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      {user.firstName + " " + user.lastName}
-                    </Table.Cell>
-                  </Table.Row>
-                </Table.Body>
-              ))}
-          </Table>
-        </div>
+        <div className="flex flex-wrap gap-4 py-3 mx-auto justify-center">
+          <RecentDataTable
+            title="সাম্প্রতিক ব্যবহারকারী"
+            data={data.users}
+            columns={[
+              {
+                key: "imageUrl",
+                label: "ছবি",
+                render: (user) => (
+                  <img
+                    src={user.imageUrl}
+                    alt="user"
+                    className="w-10 h-10 rounded-full bg-gray-500"
+                  />
+                ),
+              },
+              {
+                key: "name",
+                label: "নাম",
+                render: (user) => `${user.firstName} ${user.lastName}`,
+              },
+            ]}
+            linkTo="/dashboard?tab=users"
+            loading={loading}
+          />
 
-        <div className="flex flex-col w-full md:w-auto shadow-md p-2 rounded-md dark:bg-gray-800">
-          <div className="flex justify-between  p-3 text-sm font-semibold">
-            <h1 className="text-center p-2">Recent posts</h1>
-            <Button outline gradientDuoTone="purpleToPink">
-              <Link href={"/dashboard?tab=posts"}>See all</Link>
-            </Button>
-          </div>
-          <Table hoverable>
-            <Table.Head>
-              <Table.HeadCell>Post image</Table.HeadCell>
-              <Table.HeadCell>Post Title</Table.HeadCell>
-              <Table.HeadCell>Category</Table.HeadCell>
-            </Table.Head>
-            {posts &&
-              posts.map((post) => (
-                <Table.Body key={post._id} className="divide-y">
-                  <Table.Row className="bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <Table.Cell>
-                      <img
-                        src={post.image}
-                        alt="user"
-                        className="w-14 h-10 rounded-md bg-gray-500"
-                      />
-                    </Table.Cell>
-                    <Table.Cell className="w-96">{post.title}</Table.Cell>
-                    <Table.Cell className="w-5">{post.category}</Table.Cell>
-                  </Table.Row>
-                </Table.Body>
-              ))}
-          </Table>
+          <RecentDataTable
+            title="সাম্প্রতিক ভিডিও"
+            data={data.videos}
+            columns={[
+              { key: "title", label: "শিরোনাম" },
+              { key: "category", label: "ক্যাটাগরি" },
+            ]}
+            linkTo="/taleem-videos"
+            loading={loading}
+          />
+
+          <RecentDataTable
+            title="সাম্প্রতিক প্রশ্ন"
+            data={data.questions}
+            columns={[
+              { key: "title", label: "প্রশ্ন" },
+              { key: "status", label: "স্ট্যাটাস" },
+            ]}
+            linkTo="/questions"
+            loading={loading}
+          />
+
+          <RecentDataTable
+            title="সাম্প্রতিক মন্তব্য"
+            data={data.comments}
+            columns={[
+              { key: "content", label: "মন্তব্য" },
+              {
+                key: "createdAt",
+                label: "তারিখ",
+                render: (comment) =>
+                  new Date(comment.createdAt).toLocaleDateString(),
+              },
+            ]}
+            linkTo="/dashboard"
+            loading={loading}
+          />
+
+          <RecentDataTable
+            title="সাম্প্রতিক রিভিউ"
+            data={data.reviews}
+            columns={[
+              {
+                key: "userName",
+                label: "নাম",
+                render: (review) => `${review.userName}`,
+              },
+              {
+                key: "reviewText",
+                label: "রিভিউ",
+                render: (review) => `${review.reviewText.substring(0, 50)}...`,
+              },
+            ]}
+            linkTo="/dashboard?tab=reviews"
+            loading={loading}
+          />
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

@@ -34,7 +34,9 @@ const useDataFetching = (endpoint, limit) => {
 
     const fetchData = async () => {
       try {
-        const response = await fetch(`${endpoint}?limit=${limit}&page=1`);
+        const response = await fetch(
+          `${endpoint}?limit=${limit}&page=1&search=&category=`
+        );
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const result = await response.json();
