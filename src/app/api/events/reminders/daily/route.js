@@ -126,12 +126,15 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
       month: "short",
       year: "numeric",
     });
-    const timeStr = new Date(
-      ev.scheduledTime || "2025-05-20T13:00:00.729+00:00"
-    ).toLocaleTimeString([], {
+
+    const scheduledTime = ev.scheduledTime || "2025-05-20T13:00:00.729+00:00";
+    const timeStr = new Date(scheduledTime).toLocaleTimeString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Dhaka",
     });
+
     const detailsLink = `${process.env.URL}/programme/${ev._id}`;
 
     const eventHtml = `<!DOCTYPE html>
