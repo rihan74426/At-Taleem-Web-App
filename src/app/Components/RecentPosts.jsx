@@ -25,6 +25,7 @@ const useDataFetching = (endpoint, limit) => {
   const [data, setData] = useState(null);
   const [state, setState] = useState(DataState.LOADING);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,38 +36,55 @@ const useDataFetching = (endpoint, limit) => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          `${endpoint}?limit=${limit}&page=1&search=&category=`
+          `${endpoint}?limit=${limit}&page=1&search=&category=`,
+          {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+            },
+          }
         );
-        if (!response.ok)
+
+        if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const result = await response.json();
 
         if (!cancelled) {
           // Handle different response structures
           if (endpoint === "/api/books") {
-            setData(result.books);
+            setData(result.books || []);
           } else if (endpoint === "/api/videos") {
-            setData(result.videos);
+            setData(result.videos || []);
           } else if (endpoint === "/api/questions") {
-            setData(result.questions);
+            setData(result.questions || []);
           } else if (endpoint === "/api/reviews") {
-            setData(result.reviews);
+            setData(result.reviews || []);
           } else {
-            setData(result[endpoint.split("/").pop()]);
+            setData(result[endpoint.split("/").pop()] || []);
           }
           setState(DataState.SUCCESS);
         }
       } catch (err) {
         if (!cancelled) {
+          console.error(`Error fetching ${endpoint}:`, err);
           setError(err.message);
           setState(DataState.ERROR);
+
+          // Retry logic for failed requests
+          if (retryCount < 2) {
+            setTimeout(() => {
+              setRetryCount((prev) => prev + 1);
+            }, 1000 * (retryCount + 1)); // Exponential backoff
+          }
         }
       }
     };
 
     fetchData();
     return () => (cancelled = true);
-  }, [endpoint, limit]);
+  }, [endpoint, limit, retryCount]);
 
   return { data, state, error };
 };

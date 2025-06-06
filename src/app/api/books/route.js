@@ -1,19 +1,20 @@
 import Book from "@/lib/models/Book";
+import Category from "@/lib/models/Category";
 import { connect } from "@/lib/mongodb/mongoose";
 
 export async function GET(request) {
-  await connect();
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "12", 10);
-  const search = searchParams.get("search") || "";
-  const category = searchParams.get("category") || "";
-  const skip = (page - 1) * limit;
+  try {
+    await connect();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "12", 10);
+    const search = searchParams.get("search") || "";
+    const category = searchParams.get("category") || "";
+    const skip = (page - 1) * limit;
 
-  // If an id is provided, fetch that single book
-  if (id) {
-    try {
+    // If an id is provided, fetch that single book
+    if (id) {
       const book = await Book.findById(id).populate("categories");
       if (!book) {
         return new Response(JSON.stringify({ error: "book not found" }), {
@@ -25,16 +26,8 @@ export async function GET(request) {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    } catch (error) {
-      console.error("Error fetching book:", error);
-      return new Response(JSON.stringify({ error: "Error fetching books" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
     }
-  }
 
-  try {
     // Build search query
     const searchQuery = {
       $or: [
@@ -54,7 +47,11 @@ export async function GET(request) {
 
     // Fetch books with pagination and search
     const books = await Book.find(searchQuery)
-      .populate("categories")
+      .populate({
+        path: "categories",
+        model: Category,
+        select: "name _id",
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -73,11 +70,11 @@ export async function GET(request) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=59",
         },
       }
     );
   } catch (error) {
+    console.error("Error in books API:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
