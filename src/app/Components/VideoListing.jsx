@@ -53,7 +53,7 @@ export default function VideoListing({ category, title }) {
       setCurrentPage(data.pagination.page);
     } catch (error) {
       console.error("Error fetching videos:", error);
-      toast.error("Failed to load videos");
+      showModal("Failed to load videos", "error");
     } finally {
       setLoading(false);
     }
@@ -85,10 +85,10 @@ export default function VideoListing({ category, title }) {
       if (!res.ok) throw new Error("Failed to delete video");
 
       setVideos((prev) => prev.filter((v) => v._id !== videoId));
-      toast.success("Video deleted successfully");
+      showModal("Video deleted successfully", "success");
     } catch (error) {
       console.error("Error deleting video:", error);
-      toast.error("Failed to delete video");
+      showModal("Failed to delete video", "error");
     }
   };
 
@@ -97,12 +97,54 @@ export default function VideoListing({ category, title }) {
       prev.map((v) => (v._id === updatedVideo._id ? updatedVideo : v))
     );
     setVideoModal(false);
-    toast.success("Video updated successfully");
+    showModal("Video updated successfully", "success");
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1); // Reset to first page on new search
+  };
+  const handleLike = async (videoId) => {
+    if (!user) {
+      showModal("Please login to like", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/videos/${videoId}/like`, {
+        method: "POST",
+      });
+
+      if (!res.ok) throw new Error("Failed to like video");
+
+      const data = await res.json(); // { isLiked: true/false }
+
+      // Find and clone the video
+      const videoToUpdate = videos.find((vid) => vid._id === videoId);
+      if (!videoToUpdate) return;
+
+      // Handle like/unlike logic locally
+      const updatedLikes = data.isLiked
+        ? [...videoToUpdate.likes, user.id] // Liked
+        : videoToUpdate.likes.filter((id) => id !== user.id); // Unliked
+
+      const updatedVideo = { ...videoToUpdate, likes: updatedLikes };
+
+      // Update state
+      setVideos((prevVideos) =>
+        prevVideos.map((video) =>
+          video._id === videoId ? updatedVideo : video
+        )
+      );
+
+      showModal(
+        data.isLiked ? "ভিডিওটি পছন্দ হয়েছে" : "পছন্দ তুলে নেওয়া হয়েছে",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error liking video:", error);
+      showModal("Failed to like video", "error");
+    }
   };
 
   const renderSkeletons = () => {
@@ -255,6 +297,7 @@ export default function VideoListing({ category, title }) {
                   video={video}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  handleLike={handleLike}
                 />
               ))}
             </div>
@@ -266,6 +309,7 @@ export default function VideoListing({ category, title }) {
                   video={video}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  handleLike={handleLike}
                 />
               ))}
             </div>

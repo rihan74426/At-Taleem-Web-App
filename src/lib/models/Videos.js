@@ -18,12 +18,6 @@ const VideoSchema = new mongoose.Schema(
       type: String,
       required: [true, "Video URL is required"],
       trim: true,
-      validate: {
-        validator: function (v) {
-          return v.startsWith("https://") || v.startsWith("http://");
-        },
-        message: "Video URL must start with http:// or https://",
-      },
     },
     platform: {
       type: String,
