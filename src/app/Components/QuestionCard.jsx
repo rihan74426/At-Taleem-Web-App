@@ -95,19 +95,17 @@ export default function QuestionCard({
           {/* Category Tags */}
           <div className="flex flex-wrap gap-2 mb-4 min-h-[2rem]">
             <AnimatePresence>
-              {categories
-                .filter((cat) => question.category.includes(cat._id))
-                .map((cat) => (
-                  <motion.span
-                    key={cat._id}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    className="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full text-sm font-medium shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    {cat.name}
-                  </motion.span>
-                ))}
+              {question.category?.map((cat) => (
+                <motion.span
+                  key={cat._id}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full text-sm font-medium shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {cat.name}
+                </motion.span>
+              ))}
             </AnimatePresence>
           </div>
 

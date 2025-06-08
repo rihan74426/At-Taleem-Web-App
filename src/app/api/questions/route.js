@@ -130,7 +130,27 @@ export async function GET(request) {
           from: "categories",
           localField: "category",
           foreignField: "_id",
-          as: "category",
+          as: "populatedCategories",
+        },
+      },
+      {
+        $addFields: {
+          category: {
+            $map: {
+              input: "$populatedCategories",
+              as: "cat",
+              in: {
+                _id: "$$cat._id",
+                name: "$$cat.name",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          __v: 0,
+          populatedCategories: 0,
         },
       },
       {
@@ -149,11 +169,6 @@ export async function GET(request) {
       },
       { $skip: skip },
       { $limit: limit },
-      {
-        $project: {
-          __v: 0,
-        },
-      },
     ];
 
     // Run the aggregation
