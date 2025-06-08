@@ -101,43 +101,66 @@ export async function GET(request) {
   const limit = parseInt(searchParams.get("limit") || "10", 10);
   const skip = (page - 1) * limit;
 
-  let query = {};
-
-  if (status && status !== "all") query.status = status;
+  // Build match object for filtering
+  const match = {};
+  if (status && status !== "all") match.status = status;
   if (category && category !== "all") {
     const cats = category.split(",");
-    query.category = { $in: cats };
+    match.category = { $in: cats };
   }
   if (search) {
-    query.$or = [
+    match.$or = [
       { title: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
     ];
   }
 
-  // Build sort object based on sort parameter
-  let sortObj = {};
-  switch (sort) {
-    case "oldest":
-      sortObj = { createdAt: 1 };
-      break;
-    case "most_helpful":
-      sortObj = { "helpfulVotes.length": -1, createdAt: -1 };
-      break;
-    case "most_bookmarked":
-      sortObj = { "bookmarks.length": -1, createdAt: -1 };
-      break;
-    default: // newest
-      sortObj = { createdAt: -1 };
-  }
-
   try {
-    const questions = await Question.find(query)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limit);
+    // Use aggregation pipeline for complex sorting
+    const pipeline = [
+      { $match: match },
+      {
+        $addFields: {
+          helpfulCount: { $size: { $ifNull: ["$helpfulVotes", []] } },
+          bookmarkCount: { $size: { $ifNull: ["$bookmarks", []] } },
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      {
+        $sort: (() => {
+          switch (sort) {
+            case "oldest":
+              return { createdAt: 1 };
+            case "most_helpful":
+              return { helpfulCount: -1, createdAt: -1 };
+            case "most_bookmarked":
+              return { bookmarkCount: -1, createdAt: -1 };
+            default: // newest
+              return { createdAt: -1 };
+          }
+        })(),
+      },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $project: {
+          __v: 0,
+        },
+      },
+    ];
 
-    const total = await Question.countDocuments(query);
+    // Run the aggregation
+    const questions = await Question.aggregate(pipeline);
+
+    // Get total count for pagination
+    const total = await Question.countDocuments(match);
 
     return new Response(
       JSON.stringify({

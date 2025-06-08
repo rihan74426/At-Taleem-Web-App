@@ -4,7 +4,7 @@ import { connect } from "@/lib/mongodb/mongoose";
 export async function POST(request, { params }) {
   await connect();
   try {
-    const { id } = params;
+    const { id } = await params;
     const { userId } = await request.json();
 
     if (!userId) {

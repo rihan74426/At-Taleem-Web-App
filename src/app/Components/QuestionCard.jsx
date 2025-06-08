@@ -176,7 +176,7 @@ export default function QuestionCard({
               whileTap={{ scale: 0.95 }}
               onClick={handleBookmark}
               disabled={isLoading}
-              className={`p-1.5 rounded-full transition-colors ${
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-full transition-colors ${
                 isBookmarked
                   ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20"
                   : "text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
@@ -189,6 +189,7 @@ export default function QuestionCard({
               ) : (
                 <FaRegBookmark className="w-4 h-4" />
               )}
+              <span>{question.bookmarks?.length || 0}</span>
             </motion.button>
 
             <motion.button
