@@ -2,18 +2,26 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { HiOutlinePencil, HiOutlineTrash } from "react-icons/hi";
+import { BsHandThumbsUp, BsHandThumbsUpFill } from "react-icons/bs";
+import { FaBookmark, FaRegBookmark } from "react-icons/fa";
+import { FiShare2 } from "react-icons/fi";
+import { formatDistanceToNow } from "date-fns";
+import { bn } from "date-fns/locale";
 import AskQuestionForm from "@/app/Components/AskQuestions";
 import { BsFillPencilFill } from "react-icons/bs";
 import { AiOutlineDelete } from "react-icons/ai";
+import QuestionForm from "@/app/Components/QuestionForm";
+import ResponseModal from "@/app/Components/ResponseModal";
+import QuestionComments from "@/app/Components/QuestionComment";
+import Loader from "@/app/Components/Loader";
+import { QuestionDetailSkeleton } from "@/app/Components/Skeleton";
 
 // Dynamically import ReactQuill to avoid SSR issues
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
-import { HiOutlinePencil } from "react-icons/hi";
-import ResponseModal from "@/app/Components/ResponseModal";
-import QuestionComments from "@/app/Components/QuestionComment";
-import Loader from "@/app/Components/Loader";
 
 export default function QuestionDetailPage() {
   const { id } = useParams();
@@ -29,19 +37,26 @@ export default function QuestionDetailPage() {
   const [showInputModal, setShowInputModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showAnswerEditor, setShowAnswerEditor] = useState(false);
+  const [actionLoading, setActionLoading] = useState({
+    vote: false,
+    bookmark: false,
+    share: false,
+  });
 
   // Category management state (admin only)
-  const [categories, setCategories] = useState([]); // All available categories from the store
+  const [categories, setCategories] = useState([]);
   const [categoryInput, setCategoryInput] = useState("");
   const [questionCategories, setQuestionCategories] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef(null);
+
   const [modal, setModal] = useState({
     isOpen: false,
     message: "",
     status: "",
   });
+
   const showModal = (message, status) => {
     setModal({ isOpen: true, message, status });
   };
@@ -55,17 +70,19 @@ export default function QuestionDetailPage() {
       const data = await res.json();
       if (!data.question) throw new Error("Question not found");
       setQuestion(data.question);
-      if (data.question.category) {
+      // Initialize categories from the populated data
+      if (data.question.category && Array.isArray(data.question.category)) {
         setQuestionCategories(data.question.category);
       }
     } catch (err) {
       setError(err.message);
+      showModal(err.message, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch available categories from centralized store
+  // Fetch available categories
   const fetchCategories = async () => {
     try {
       const res = await fetch("/api/categories");
@@ -75,6 +92,7 @@ export default function QuestionDetailPage() {
       }
     } catch (err) {
       console.error("Error fetching categories:", err);
+      showModal("Failed to fetch categories", "error");
     }
   };
 
@@ -83,7 +101,7 @@ export default function QuestionDetailPage() {
     fetchCategories();
   }, [id]);
 
-  // Update suggestions when categoryInput, categories, or questionCategories change
+  // Update suggestions when categoryInput changes
   useEffect(() => {
     const input = categoryInput.trim().toLowerCase();
     const filtered = categories.filter(
@@ -94,7 +112,7 @@ export default function QuestionDetailPage() {
     setSuggestions(filtered);
   }, [categoryInput, categories, questionCategories]);
 
-  // Handlers for input focus and blur
+  // Handlers for category management
   const handleFocus = () => {
     setShowSuggestions(true);
   };
@@ -103,12 +121,10 @@ export default function QuestionDetailPage() {
     setTimeout(() => setShowSuggestions(false), 100);
   };
 
-  // Handle input change
   const handleChange = (e) => {
     setCategoryInput(e.target.value);
   };
 
-  // Handle selecting an existing category
   const handleSelect = (cat) => {
     if (!questionCategories.some((c) => c._id === cat._id)) {
       const updated = [...questionCategories, cat];
@@ -118,105 +134,91 @@ export default function QuestionDetailPage() {
     setShowSuggestions(false);
   };
 
-  // Create a new category if none match the input and select it
   const handleAddNewCategory = async () => {
     if (!user?.publicMetadata?.isAdmin) {
-      modal.isOpen = true;
-      showModal(
-        "You have to be an Admin to change anything restricted",
-        "error"
-      );
-    } else {
-      if (!categoryInput.trim()) return;
-      try {
-        const res = await fetch("/api/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: categoryInput.trim() }),
-        });
-        if (res.ok) {
-          const newCat = await res.json();
-          setCategories((prev) => [...prev, newCat]);
-          setQuestionCategories((prev) => [...prev, newCat]);
-          setCategoryInput("");
-          setShowSuggestions(false);
-        }
-      } catch (err) {
-        console.error("Error adding new category:", err);
+      showModal("Only admins can add new categories", "error");
+      return;
+    }
+    if (!categoryInput.trim()) return;
+
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: categoryInput.trim() }),
+      });
+      if (res.ok) {
+        const newCat = await res.json();
+        setCategories((prev) => [...prev, newCat]);
+        setQuestionCategories((prev) => [...prev, newCat]);
+        setCategoryInput("");
+        setShowSuggestions(false);
+        showModal("New category added successfully", "success");
+      } else {
+        throw new Error("Failed to add new category");
       }
+    } catch (err) {
+      showModal(err.message, "error");
     }
   };
 
-  // Remove a category from the question
   const removeCategory = (catId) => {
     setQuestionCategories((prev) => prev.filter((cat) => cat._id !== catId));
   };
 
-  // Handle answer submission (admin)
+  // Handle answer submission
   const handleSubmitAnswer = async () => {
-    if (!answer.trim()) return alert("Answer cannot be empty");
+    if (!answer.trim()) {
+      showModal("Answer cannot be empty", "error");
+      return;
+    }
     if (!user?.publicMetadata?.isAdmin) {
-      modal.isOpen = true;
-      showModal(
-        "You have to be an Admin to change anything restricted",
-        "error"
-      );
-    } else {
-      setSubmitting(true);
-      try {
-        const res = await fetch(`/api/questions/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            answer,
-            userId: user.id,
-            category: questionCategories.map((c) => c._id),
-          }),
-        });
-        if (res.ok) {
-          const updatedQuestion = await res.json();
-          setQuestion(updatedQuestion);
-          setAnswer("");
-          setShowAnswerEditor(false);
-          fetchQuestion();
-        } else {
-          alert("Failed to submit answer.");
-        }
-      } catch (err) {
-        console.error("Error submitting answer:", err);
-      } finally {
-        setSubmitting(false);
-      }
+      showModal("Only admins can answer questions", "error");
+      return;
     }
-  };
 
-  // Handle question deletion (only for owner)
-  const handleDeleteQuestion = async () => {
-    if (!confirm("Are you sure you want to delete this question?")) return;
-    if (!user?.user.publicMetadata?.isAdmin) {
-      modal.isOpen = true;
-      showModal(
-        "You have to be an Admin to change anything restricted",
-        "error"
-      );
-    } else {
-      try {
-        const res = await fetch(`/api/questions/${id}`, { method: "DELETE" });
-        if (res.ok) {
-          router.push("/questionnaires");
-        }
-      } catch (err) {
-        console.error("Error deleting question:", err);
-      }
-    }
-  };
-  const hasVoted = isSignedIn && question?.helpfulVotes.includes(user.id);
-
-  const handleToggle = async () => {
-    if (!isSignedIn) return alert("Please sign in to vote.");
-    setLoading(true);
+    setSubmitting(true);
     try {
-      const res = await fetch(`/api/questions/${question._id}`, {
+      const res = await fetch(`/api/questions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answer,
+          userId: user.id,
+          category: questionCategories.map((c) => c._id),
+        }),
+      });
+      if (res.ok) {
+        const updatedQuestion = await res.json();
+        setQuestion(updatedQuestion);
+        setAnswer("");
+        setShowAnswerEditor(false);
+        showModal("Answer submitted successfully", "success");
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to submit answer");
+      }
+    } catch (err) {
+      showModal(err.message, "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle helpful vote
+  const handleHelpful = async () => {
+    if (!isSignedIn) {
+      showModal("Please sign in to vote", "error");
+      return;
+    }
+    if (question.status !== "answered") {
+      showModal("You can only vote after the question is answered", "error");
+      return;
+    }
+
+    setActionLoading((prev) => ({ ...prev, vote: true }));
+    try {
+      const res = await fetch(`/api/questions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id }),
@@ -224,267 +226,474 @@ export default function QuestionDetailPage() {
       if (res.ok) {
         const updatedQuestion = await res.json();
         setQuestion(updatedQuestion);
+        showModal("জাযাকাল্লাহ! আল্লাহ আপনার উপকারে বরকত দিন", "success");
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Failed to update vote");
+        showModal("উপকৃত মার্ক করতে সমস্যা হয়েছে", "error");
+        throw new Error("Failed to update vote");
       }
     } catch (err) {
-      console.error("Error toggling helpful vote:", err);
+      showModal(err.message, "error");
     } finally {
-      setLoading(false);
+      setActionLoading((prev) => ({ ...prev, vote: false }));
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex items-center place-content-center min-h-screen">
-        <Loader />
-      </div>
-    );
-  if (error)
-    return <p className="text-center text-red-500 min-h-screen">{error}</p>;
+  // Handle bookmark
+  const handleBookmark = async () => {
+    if (!isSignedIn) {
+      showModal("Please sign in to bookmark", "error");
+      return;
+    }
+
+    setActionLoading((prev) => ({ ...prev, bookmark: true }));
+    try {
+      const res = await fetch(`/api/questions/${id}/bookmark`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        const updatedQuestion = await res.json();
+        setQuestion(updatedQuestion);
+        showModal("বুকমার্ক সফল হয়েছে", "success");
+      } else {
+        showModal("বুকমার্ক করতে সমস্যা হয়েছে", "error");
+        throw new Error("Failed to bookmark question");
+      }
+    } catch (err) {
+      showModal(err.message, "error");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, bookmark: false }));
+    }
+  };
+
+  // Handle share
+  const handleShare = async () => {
+    setActionLoading((prev) => ({ ...prev, share: true }));
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: question.title,
+          text: question.description,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        showModal("Link copied to clipboard!", "success");
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+      showModal("Failed to share question", "error");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, share: false }));
+    }
+  };
+
+  if (loading) return <QuestionDetailSkeleton />;
+  if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
   if (!question)
     return (
-      <p className="text-center text-gray-500 min-h-screen">
-        No question found
-      </p>
+      <div className="text-center text-gray-500 p-8">Question not found</div>
     );
 
-  return (
-    <div className="max-w-3xl mx-auto p-4 min-h-screen space-y-6 relative">
-      {/* Question Header */}
-      <h2 className="text-xl font-semibold mb-2 border-b inline">প্রশ্নঃ</h2>
-      <h1 className="text-2xl font-bold mb-2">{question.title}</h1>
-      <p className="text-gray-600">
-        বিস্তারিতঃ {question.description || "No description provided."}
-      </p>
+  const hasVoted = isSignedIn && question.helpfulVotes.includes(user?.id);
+  const isBookmarked = isSignedIn && question.bookmarks?.includes(user?.id);
 
-      {/* Status & Meta Info */}
-      <div className="flex justify-between items-center mt-2 text-sm text-gray-500">
-        <span
-          className={`px-2 py-1 rounded ${
-            question.status === "answered"
-              ? "bg-green-200 text-green-800"
-              : "bg-yellow-200 text-yellow-800"
-          }`}
-        >
-          {question.status.charAt(0).toUpperCase() + question.status.slice(1)}
-        </span>
-        <span>
-          জমাদানের তারিখঃ {new Date(question.createdAt).toLocaleDateString()}
-        </span>
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="max-w-4xl mx-auto p-4 min-h-screen space-y-8"
+    >
+      {/* Question Section */}
+      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
+        {/* Edit & Delete Options - Top Right */}
+        <div className="absolute top-4 right-4 flex gap-2">
+          {isSignedIn && (
+            <>
+              {(user?.id === question.userId &&
+                question.status === "pending") ||
+              user?.publicMetadata?.isAdmin ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setEditingQuestion(question);
+                    setShowInputModal(true);
+                  }}
+                  className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"
+                  title="Edit Question"
+                >
+                  <HiOutlinePencil className="w-5 h-5" />
+                </motion.button>
+              ) : null}
+              {user?.id === question.userId &&
+                question.status === "pending" && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleDeleteQuestion}
+                    className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                    title="Delete Question"
+                  >
+                    <HiOutlineTrash className="w-5 h-5" />
+                  </motion.button>
+                )}
+            </>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white pr-16">
+            {question.title}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+            {question.description || "No description provided"}
+          </p>
+        </div>
+
+        {/* Categories Section */}
+        {questionCategories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {questionCategories.map((cat) => (
+              <span
+                key={cat._id}
+                className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full text-sm flex items-center gap-2"
+              >
+                {cat.name}
+                {user?.publicMetadata?.isAdmin && showAnswerEditor && (
+                  <button
+                    onClick={() => removeCategory(cat._id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                  >
+                    ✕
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <span
+            className={`px-3 py-1 rounded-full ${
+              question.status === "answered"
+                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+            }`}
+          >
+            {question.status === "answered" ? "উত্তর হয়েছে" : "উত্তর হয়নি"}
+          </span>
+          <span>
+            প্রশ্নকারী:{" "}
+            {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
+          </span>
+          <span>
+            {formatDistanceToNow(new Date(question.createdAt), {
+              addSuffix: true,
+              locale: bn,
+            })}
+          </span>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end space-x-2 pt-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleShare}
+            disabled={actionLoading.share}
+            className={`p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors ${
+              actionLoading.share ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            title="Share Question"
+          >
+            <FiShare2 className="w-5 h-5" />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleBookmark}
+            disabled={actionLoading.bookmark}
+            className={`p-2 rounded-full transition-colors ${
+              isBookmarked
+                ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20"
+                : "text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+            } ${actionLoading.bookmark ? "opacity-50 cursor-not-allowed" : ""}`}
+            title={isBookmarked ? "Remove Bookmark" : "Bookmark Question"}
+          >
+            {isBookmarked ? (
+              <FaBookmark className="w-5 h-5" />
+            ) : (
+              <FaRegBookmark className="w-5 h-5" />
+            )}
+          </motion.button>
+        </div>
       </div>
 
-      {/* Author Info */}
-      <p className="mt-1 text-sm text-gray-500">
-        প্রশ্নটি করেছেনঃ{" "}
-        {user?.publicMetadata?.isAdmin && question.isAnonymous
-          ? question.username + " as "
-          : ""}
-        {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
-      </p>
-      <p className=" italic text-sm text-pretty text-center">
-        --উত্তর দেওয়ার আগ পর্যন্ত প্রশ্নকারী ও এডমিন প্রশ্নটি ইডিট ও ডিলিট করতে
-        পারবেন।--{" "}
-      </p>
-      {/* Edit & Delete Options */}
-      {isSignedIn &&
-        user?.id === question.userId &&
-        question.status === "pending" && (
-          <div className="mt-3 flex gap-3">
-            <button
-              onClick={() => {
-                setEditingQuestion(question);
-                setShowInputModal(true);
-              }}
-              className="bg-blue-500 text-white rounded p-2"
-              title="Edit Question"
-            >
-              <HiOutlinePencil size={20} />
-            </button>
-            <button
-              onClick={handleDeleteQuestion}
-              className=" p-2 bg-red-500 text-white rounded"
-              title="Delete Question"
-            >
-              <AiOutlineDelete size={20} />
-            </button>
-          </div>
+      {/* Answer Section */}
+      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
+        {/* Edit Answer Button - Top Right */}
+        {user?.publicMetadata?.isAdmin && question.answer && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setAnswer(question.answer);
+              setShowAnswerEditor(true);
+            }}
+            className="absolute top-4 right-4 p-2 text-green-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-colors"
+            title="Edit Answer"
+          >
+            <HiOutlinePencil className="w-5 h-5" />
+          </motion.button>
         )}
 
-      {/* Answer Section */}
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2 border-b inline">উত্তরঃ</h2>
-        {question.answer ? (
-          <div className="p-3 my-3 border rounded">
-            <button
-              title="Edit Answer"
-              onClick={() => {
-                setShowAnswerEditor(true);
-                setAnswer(question.answer);
-              }}
-              className="mt-2 p-2  float-end bg-blue-500 text-white rounded hover:bg-blue-700"
-            >
-              <HiOutlinePencil />
-            </button>
-            <div
-              className="p-5"
-              dangerouslySetInnerHTML={{ __html: question.answer }}
-            />
-            <div className="flex justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">
-                  উত্তর প্রদানের তারিখঃ{" "}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              উত্তর
+            </h2>
+            {question.answer && (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                <p>
+                  উত্তর প্রদানের তারিখ:{" "}
                   {new Date(question.answeredAt).toLocaleDateString()}
                 </p>
-                <span className="text-sm text-gray-500">
-                  উত্তর প্রদানেঃ মাওলানা মুহাম্মদ নিজাম উদ্দীন রশিদী
-                </span>
+                <p>উত্তর প্রদানেঃ মাওলানা মুহাম্মদ নিজাম উদ্দীন রশিদী</p>
               </div>
-              <button
-                onClick={handleToggle}
-                disabled={loading}
-                className={`flex place-self-end items-center p-2 rounded gap-1 ${
-                  hasVoted
-                    ? "bg-green-600 hover:bg-green-800"
-                    : "bg-yellow-600 hover:bg-yellow-800"
-                }`}
-                title="Helpful?"
-              >
-                উপকৃত হলাম ({question.helpfulVotes?.length})
-              </button>
-            </div>
+            )}
           </div>
-        ) : (
-          <div className="p-3 my-3 border rounded">
-            <p className="text-gray-500 text-sm">উত্তর দেওয়া হয় নি</p>
-            <button
-              onClick={() => setShowAnswerEditor(true)}
-              className="mt-2 px-3 py-1 bg-green-500 text-white rounded"
-            >
-              Answer
-            </button>
-          </div>
-        )}
 
-        {showAnswerEditor && (
-          <div className="mt-4">
-            {/* Category selection for the question */}
-            <div className="mb-4 relative">
-              <label className="block mb-1 text-sm font-semibold">
-                Assign Categories:
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {questionCategories.map((cat) => (
-                  <div
-                    key={cat._id}
-                    className="flex items-center gap-1 bg-slate-700 text-blue-200 px-2 py-1 rounded hover:bg-red-500 hover:cursor-pointer"
-                    onClick={() => removeCategory(cat._id)}
-                    title="Click to remove"
-                  >
-                    <span>{cat.name}</span>
-                    <span className="text-red-600">&times;</span>
-                  </div>
-                ))}
-              </div>
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Add a category..."
-                value={categoryInput}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                className="w-full border p-2 rounded mt-2 dark:bg-black"
+          {question.answer ? (
+            <div className="space-y-6">
+              <div
+                className="prose dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: question.answer }}
               />
-              {showSuggestions && (
-                <div className="absolute top-full left-0 right-0 border rounded bg-white dark:bg-gray-800 mt-1 z-10 max-h-48 overflow-auto">
-                  {suggestions.length > 0 ? (
-                    suggestions.map((cat) => (
-                      <div
-                        key={cat._id}
-                        onMouseDown={() => handleSelect(cat)}
-                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                      >
-                        {cat.name}
-                      </div>
-                    ))
+              <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleHelpful}
+                  disabled={
+                    !isSignedIn ||
+                    question.status !== "answered" ||
+                    actionLoading.vote
+                  }
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    question.status !== "answered"
+                      ? "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed"
+                      : hasVoted
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  } ${
+                    actionLoading.vote ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  title={
+                    question.status !== "answered"
+                      ? "Wait for the answer to vote"
+                      : "Mark as helpful"
+                  }
+                >
+                  {hasVoted ? (
+                    <BsHandThumbsUpFill className="w-5 h-5" />
                   ) : (
-                    <div
-                      onMouseDown={handleAddNewCategory}
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                    >
-                      Add "{categoryInput}" as a new category
-                    </div>
+                    <BsHandThumbsUp className="w-5 h-5" />
                   )}
-                </div>
+                  <span>উপকৃত হলাম ({question.helpfulVotes?.length || 0})</span>
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                {user?.publicMetadata?.isAdmin
+                  ? "No answer provided yet. You can provide an answer below."
+                  : "No answer provided yet. Please wait for an admin to answer."}
+              </p>
+              {user?.publicMetadata?.isAdmin && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAnswerEditor(true)}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  Provide Answer
+                </motion.button>
               )}
             </div>
+          )}
+        </div>
+
+        {/* Answer Editor */}
+        {showAnswerEditor && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 space-y-6"
+          >
+            {/* Category Management Section */}
+            {user?.publicMetadata?.isAdmin && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  প্রশ্নের বিষয়বস্তু
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {questionCategories.map((cat) => (
+                    <motion.span
+                      key={cat._id}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="group relative px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full text-sm flex items-center gap-2"
+                    >
+                      {cat.name}
+                      <button
+                        onClick={() => removeCategory(cat._id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                      >
+                        ✕
+                      </button>
+                    </motion.span>
+                  ))}
+                </div>
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={categoryInput}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    placeholder="বিষয়বস্তু যোগ করুন..."
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+                    >
+                      {suggestions.map((cat) => (
+                        <button
+                          key={cat._id}
+                          onClick={() => handleSelect(cat)}
+                          className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                  {categoryInput.trim() &&
+                    !suggestions.some(
+                      (cat) =>
+                        cat.name.toLowerCase() ===
+                        categoryInput.trim().toLowerCase()
+                    ) && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleAddNewCategory}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"
+                      >
+                        নতুন যোগ করুন
+                      </motion.button>
+                    )}
+                </div>
+              </div>
+            )}
 
             <ReactQuill
               theme="snow"
-              placeholder="Write your answer here..."
-              className="h-72 mb-3"
               value={answer}
               onChange={setAnswer}
+              className="h-64 mb-12"
             />
-            <button
-              onClick={handleSubmitAnswer}
-              disabled={submitting}
-              className="mt-10 px-4 py-2 bg-green-500 text-white rounded"
-            >
-              {submitting ? "Submitting..." : "Submit Answer"}
-            </button>
-            <button
-              onClick={() => {
-                setShowAnswerEditor(false);
-                setAnswer("");
-              }}
-              className="ml-3 mt-4 px-4 py-2 bg-gray-300 text-black rounded"
-            >
-              Cancel
-            </button>
-          </div>
+            <div className="flex justify-end space-x-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setShowAnswerEditor(false);
+                  setAnswer("");
+                }}
+                className="px-6 py-2 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleSubmitAnswer}
+                disabled={submitting || !answer.trim()}
+                className={`px-6 py-2 rounded-lg transition-colors ${
+                  submitting || !answer.trim()
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-500 hover:bg-green-600"
+                } text-white`}
+              >
+                {submitting ? "Submitting..." : "Submit Answer"}
+              </motion.button>
+            </div>
+          </motion.div>
         )}
       </div>
+
+      {/* Comments Section */}
+      {question.answer && <QuestionComments questionId={question._id} />}
 
       {/* Edit Question Modal */}
       {showInputModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
-            className="bg-black/80 absolute inset-0"
+            className="absolute inset-0 bg-black/50"
             onClick={() => setShowInputModal(false)}
-          ></div>
-          <div className="relative p-5 sm:w-2/3 w-full lg:w-1/3 border rounded bg-white dark:bg-gray-900 dark:text-white shadow-sm">
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white dark:bg-gray-900 rounded-xl shadow-lg w-full max-w-2xl p-6 mx-4"
+          >
             <button
-              className="absolute right-5 top-2 text-gray-400 hover:text-white"
               onClick={() => setShowInputModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
             >
-              ✖
+              ✕
             </button>
             <AskQuestionForm
               initialQuestion={editingQuestion}
-              onQuestionSubmitted={() => {
-                setShowInputModal(false);
-                fetchQuestion();
+              onQuestionSubmitted={async (data) => {
+                try {
+                  const res = await fetch(`/api/questions/${question._id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                  });
+                  if (res.ok) {
+                    const updatedQuestion = await res.json();
+                    setQuestion(updatedQuestion);
+                    setShowInputModal(false);
+                    showModal("Question updated successfully", "success");
+                  } else {
+                    throw new Error("Failed to update question");
+                  }
+                } catch (err) {
+                  showModal(err.message, "error");
+                }
               }}
             />
-          </div>
+          </motion.div>
         </div>
       )}
 
-      {/* (Optional) Comments Section for follow-up discussion */}
-      {/* <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2">Discussion</h2>
-        <VideoComments entityId={id} entityType="question" />
-      </div> */}
-      {question.answer && <QuestionComments questionId={question._id} />}
+      {/* Response Modal */}
       <ResponseModal
         isOpen={modal.isOpen}
         message={modal.message}
         status={modal.status}
         onClose={() => setModal({ ...modal, isOpen: false })}
       />
-    </div>
+    </motion.div>
   );
 }

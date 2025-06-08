@@ -33,6 +33,9 @@ export async function POST(request) {
       username: username,
       isAnonymous: isAnonymous,
       email: email || null,
+      helpfulVotes: [],
+      bookmarks: [],
+      status: "pending",
     });
 
     // Optionally, send a notification email that a new question was posted
@@ -61,12 +64,12 @@ export async function POST(request) {
 export async function GET(request) {
   await connect();
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id"); // Use "id" here
+  const id = searchParams.get("id");
 
-  // If an id is provided, fetch that single question.
+  // If an id is provided, fetch that single question
   if (id) {
     try {
-      const question = await Question.findById(id);
+      const question = await Question.findById(id).populate("category");
       if (!question) {
         return new Response(JSON.stringify({ error: "Question not found" }), {
           status: 404,
@@ -89,32 +92,48 @@ export async function GET(request) {
     }
   }
 
-  // For multiple questions, build a query.
+  // For multiple questions, build a query
   const status = searchParams.get("status");
   const category = searchParams.get("category");
   const search = searchParams.get("search");
+  const sort = searchParams.get("sort") || "newest";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = parseInt(searchParams.get("limit") || "10", 10);
   const skip = (page - 1) * limit;
 
   let query = {};
 
-  if (status) query.status = status;
-  if (category) {
+  if (status && status !== "all") query.status = status;
+  if (category && category !== "all") {
     const cats = category.split(",");
     query.category = { $in: cats };
   }
   if (search) {
-    // Search by title or description (case-insensitive)
     query.$or = [
       { title: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
     ];
   }
 
+  // Build sort object based on sort parameter
+  let sortObj = {};
+  switch (sort) {
+    case "oldest":
+      sortObj = { createdAt: 1 };
+      break;
+    case "most_helpful":
+      sortObj = { "helpfulVotes.length": -1, createdAt: -1 };
+      break;
+    case "most_bookmarked":
+      sortObj = { "bookmarks.length": -1, createdAt: -1 };
+      break;
+    default: // newest
+      sortObj = { createdAt: -1 };
+  }
+
   try {
     const questions = await Question.find(query)
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
       .limit(limit);
 
@@ -152,11 +171,10 @@ export async function PUT(request) {
       });
     }
 
-    // Build an object with fields to update
     const updateFields = {};
     if (title !== undefined) updateFields.title = title;
     if (description !== undefined) updateFields.description = description;
-    if (category !== undefined) updateFields.category = category; // Expecting an array of category IDs
+    if (category !== undefined) updateFields.category = category;
     if (isAnonymous !== undefined) updateFields.isAnonymous = isAnonymous;
     if (email !== undefined) updateFields.email = email;
 

@@ -46,7 +46,10 @@ const getLogoAttachment = async () => {
       cid: "logo",
     };
   } catch (error) {
-    console.warn("Logo file not found, emails will be sent without logo");
+    console.warn(
+      "Logo file not found, emails will be sent without logo",
+      error
+    );
     return null;
   }
 };
