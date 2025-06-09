@@ -1,6 +1,7 @@
 // src/app/api/orders/ssl-success/route.js
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
+import { buildOrderEmailTemplate } from "@/app/utils/emailTemplates";
 
 export async function POST(req) {
   try {
@@ -16,7 +17,12 @@ export async function POST(req) {
     await connect();
 
     // Find and update order
-    const order = await Order.findOne({ _id: value_a });
+    const order = await Order.findById(value_a).populate({
+      path: "items.bookId",
+      model: "Book",
+      select: "title coverImage price",
+    });
+
     if (!order) {
       return new Response(JSON.stringify({ error: "Order not found" }), {
         status: 404,
@@ -41,6 +47,37 @@ export async function POST(req) {
     });
 
     await order.save();
+
+    // Send payment failure email
+    try {
+      const emailTemplate = buildOrderEmailTemplate({
+        orderId: order._id,
+        buyerName: order.buyerName,
+        orderDate: order.createdAt,
+        totalAmount: order.amount,
+        paymentStatus: order.paymentStatus,
+        deliveryAddress: order.deliveryAddress,
+        items: order.items.map((item) => ({
+          title: item.bookId.title,
+          coverImage: item.bookId.coverImage,
+          qty: item.qty,
+          price: item.price,
+        })),
+        type: "update",
+      });
+
+      await fetch(`${process.env.URL}/api/emails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: order.buyerEmail,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to send payment failure email:", error);
+    }
 
     // Return error response
     return new Response(

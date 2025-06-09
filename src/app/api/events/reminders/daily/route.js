@@ -6,7 +6,7 @@ import webpush from "web-push";
 
 // Configure web-push with VAPID keys
 webpush.setVapidDetails(
-  "mailto:your-email@example.com",
+  "mailto:attaleemofficial@gmail.com",
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );
@@ -204,7 +204,9 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
             <td style="background-color: #eef2f7; padding: 20px; text-align: center; font-size: 12px; color: #666666;">
               <p style="margin: 0 0 10px;">© ${new Date().getFullYear()} At-Taleem</p>
               <p style="margin: 0;">
-                <a href="https://taleembd.com" style="color: #004d40; text-decoration: none;">আমাদের ওয়েবসাইট দেখুন</a>
+                <a href=${
+                  process.env.URL
+                } style="color: #004d40; text-decoration: none;">আমাদের ওয়েবসাইট দেখুন</a>
               </p>
             </td>
           </tr>
