@@ -217,11 +217,14 @@ const CalendarView = ({
     const totalDaysInMonth = lastDayOfMonth.getDate();
     const days = [];
 
+    // Adjust firstDayWeekday to start from Saturday (6)
+    const adjustedFirstDayWeekday = (firstDayWeekday + 1) % 7;
+
     // Previous month padding
-    if (firstDayWeekday > 0) {
+    if (adjustedFirstDayWeekday > 0) {
       const prevMonthLastDay = new Date(year, month, 0);
       const prevMonthDays = prevMonthLastDay.getDate();
-      for (let i = firstDayWeekday - 1; i >= 0; i--) {
+      for (let i = adjustedFirstDayWeekday - 1; i >= 0; i--) {
         const date = new Date(year, month - 1, prevMonthDays - i);
         days.push({ date, isCurrentMonth: false, isToday: isToday(date) });
       }
@@ -234,7 +237,8 @@ const CalendarView = ({
     }
 
     // Next month padding
-    const totalCells = Math.ceil((firstDayWeekday + totalDaysInMonth) / 7) * 7;
+    const totalCells =
+      Math.ceil((adjustedFirstDayWeekday + totalDaysInMonth) / 7) * 7;
     const nextMonthDays = totalCells - days.length;
     if (nextMonthDays > 0) {
       const nextMonthYear = month === 11 ? year + 1 : year;
@@ -326,7 +330,7 @@ const CalendarView = ({
       <div className="overflow-x-auto">
         <div className="min-w-full">
           <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            {["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => (
               <div
                 key={day}
                 className="text-center p-3 font-medium text-sm bg-gray-50 dark:bg-gray-900"

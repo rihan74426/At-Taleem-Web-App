@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,10 +20,15 @@ import Loader from "@/app/Components/Loader";
 import { QuestionDetailSkeleton } from "@/app/Components/Skeleton";
 
 // Dynamically import ReactQuill to avoid SSR issues
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+const ReactQuill = dynamic(() => import("react-quill-new"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
+  ),
+});
 import "react-quill-new/dist/quill.snow.css";
 
-// Add this CSS at the top of your file, after the imports
+// Memoized scrollbar styles
 const customScrollbarStyles = `
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
@@ -61,12 +66,13 @@ export default function QuestionDetailPage() {
     share: false,
   });
 
-  // Category management state (admin only)
+  // Category management state
   const [categories, setCategories] = useState([]);
   const [categoryInput, setCategoryInput] = useState("");
   const [questionCategories, setQuestionCategories] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
   const inputRef = useRef(null);
   const [users, setUsers] = useState([]);
 
@@ -76,12 +82,13 @@ export default function QuestionDetailPage() {
     status: "",
   });
 
-  const showModal = (message, status) => {
+  // Memoized handlers
+  const showModal = useCallback((message, status) => {
     setModal({ isOpen: true, message, status });
-  };
+  }, []);
 
-  // Fetch question details
-  const fetchQuestion = async () => {
+  // Fetch question details with error handling
+  const fetchQuestion = useCallback(async () => {
     if (!id) return;
     try {
       const res = await fetch(`/api/questions?id=${id}`);
@@ -89,7 +96,7 @@ export default function QuestionDetailPage() {
       const data = await res.json();
       if (!data.question) throw new Error("Question not found");
       setQuestion(data.question);
-      // Initialize categories from the populated data
+      // Initialize categories from the question data
       if (data.question.category && Array.isArray(data.question.category)) {
         setQuestionCategories(data.question.category);
       }
@@ -99,10 +106,10 @@ export default function QuestionDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, showModal]);
 
-  // Fetch available categories
-  const fetchCategories = async () => {
+  // Fetch categories with error handling
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch("/api/categories");
       if (res.ok) {
@@ -113,12 +120,33 @@ export default function QuestionDetailPage() {
       console.error("Error fetching categories:", err);
       showModal("Failed to fetch categories", "error");
     }
-  };
+  }, [showModal]);
 
+  // Fetch users with error handling
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        next: { revalidate: 3600 }, // Cache for 1 hour
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users.data);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  // Initialize data
   useEffect(() => {
     fetchQuestion();
     fetchCategories();
-  }, [id]);
+    fetchUsers();
+  }, [fetchQuestion, fetchCategories, fetchUsers]);
 
   // Update suggestions when categoryInput changes
   useEffect(() => {
@@ -131,62 +159,69 @@ export default function QuestionDetailPage() {
     setSuggestions(filtered);
   }, [categoryInput, categories, questionCategories]);
 
-  // Handlers for category management
-  const handleFocus = () => {
+  // Category management handlers
+  const handleCategoryFocus = useCallback(() => {
     setShowSuggestions(true);
-  };
+  }, []);
 
-  const handleBlur = () => {
-    setTimeout(() => setShowSuggestions(false), 100);
-  };
+  const handleCategoryBlur = useCallback(() => {
+    setTimeout(() => setShowSuggestions(false), 200);
+  }, []);
 
-  const handleChange = (e) => {
+  const handleCategoryChange = useCallback((e) => {
     setCategoryInput(e.target.value);
-  };
+    setShowSuggestions(true);
+  }, []);
 
-  const handleSelect = (cat) => {
-    if (!questionCategories.some((c) => c._id === cat._id)) {
-      const updated = [...questionCategories, cat];
-      setQuestionCategories(updated);
-    }
-    setCategoryInput("");
-    setShowSuggestions(false);
-  };
+  const handleCategorySelect = useCallback(
+    (cat) => {
+      if (!questionCategories.some((c) => c._id === cat._id)) {
+        setQuestionCategories((prev) => [...prev, cat]);
+      }
+      setCategoryInput("");
+      setShowSuggestions(false);
+    },
+    [questionCategories]
+  );
 
-  const handleAddNewCategory = async () => {
+  const handleAddNewCategory = useCallback(async () => {
     if (!user?.publicMetadata?.isAdmin) {
       showModal("Only admins can add new categories", "error");
       return;
     }
     if (!categoryInput.trim()) return;
 
+    setIsAddingCategory(true);
     try {
       const res = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: categoryInput.trim() }),
       });
-      if (res.ok) {
-        const newCat = await res.json();
-        setCategories((prev) => [...prev, newCat]);
-        setQuestionCategories((prev) => [...prev, newCat]);
-        setCategoryInput("");
-        setShowSuggestions(false);
-        showModal("New category added successfully", "success");
-      } else {
+
+      if (!res.ok) {
         throw new Error("Failed to add new category");
       }
+
+      const newCat = await res.json();
+      setCategories((prev) => [...prev, newCat]);
+      setQuestionCategories((prev) => [...prev, newCat]);
+      setCategoryInput("");
+      setShowSuggestions(false);
+      showModal("New category added successfully", "success");
     } catch (err) {
       showModal(err.message, "error");
+    } finally {
+      setIsAddingCategory(false);
     }
-  };
+  }, [categoryInput, showModal, user?.publicMetadata?.isAdmin]);
 
-  const removeCategory = (catId) => {
+  const removeCategory = useCallback((catId) => {
     setQuestionCategories((prev) => prev.filter((cat) => cat._id !== catId));
-  };
+  }, []);
 
-  // Handle answer submission
-  const handleSubmitAnswer = async () => {
+  // Answer submission handler
+  const handleSubmitAnswer = useCallback(async () => {
     if (!answer.trim()) {
       showModal("Answer cannot be empty", "error");
       return;
@@ -207,25 +242,32 @@ export default function QuestionDetailPage() {
           category: questionCategories.map((c) => c._id),
         }),
       });
-      if (res.ok) {
-        const updatedQuestion = await res.json();
-        setQuestion(updatedQuestion);
-        setAnswer("");
-        setShowAnswerEditor(false);
-        showModal("Answer submitted successfully", "success");
-      } else {
+
+      if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to submit answer");
       }
+
+      const updatedQuestion = await res.json();
+      setQuestion(updatedQuestion);
+      setAnswer("");
+      setShowAnswerEditor(false);
+      showModal("Answer submitted successfully", "success");
     } catch (err) {
       showModal(err.message, "error");
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [
+    answer,
+    id,
+    questionCategories,
+    showModal,
+    user?.id,
+    user?.publicMetadata?.isAdmin,
+  ]);
 
-  // Handle helpful vote
-  const handleHelpful = async () => {
+  const handleHelpful = useCallback(async () => {
     if (!isSignedIn) {
       showModal("Please sign in to vote", "error");
       return;
@@ -244,16 +286,16 @@ export default function QuestionDetailPage() {
       });
       if (res.ok) {
         const updatedQuestion = await res.json();
-        setQuestion(updatedQuestion);
+        setQuestion({ ...question, ...updatedQuestion });
         const hasLiked = updatedQuestion.helpfulVotes.includes(user.id);
         showModal(
           hasLiked
             ? "জাযাকাল্লাহ! আল্লাহ আপনার উপকারে বরকত দিন"
-            : "উপকৃত তুলে নেওয়া হয়েছে",
+            : "উপকৃত তুলে নেওয়া হয়েছে",
           "success"
         );
       } else {
-        showModal("উপকৃত মার্ক করতে সমস্যা হয়েছে", "error");
+        showModal("উপকৃত মার্ক করতে সমস্যা হয়েছে", "error");
         throw new Error("Failed to update vote");
       }
     } catch (err) {
@@ -261,10 +303,43 @@ export default function QuestionDetailPage() {
     } finally {
       setActionLoading((prev) => ({ ...prev, vote: false }));
     }
-  };
+  }, [id, isSignedIn, question?.status, showModal, user?.id]);
 
-  // Handle bookmark
-  const handleBookmark = async () => {
+  const handleDeleteQuestion = useCallback(async () => {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+
+    if (!user?.publicMetadata?.isAdmin && user?.id !== question?.userId) {
+      showModal(
+        "You must be an admin or the question author to delete this question",
+        "error"
+      );
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/questions/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete question");
+      }
+
+      showModal("Question deleted successfully", "success");
+      router.push("/questionnaires");
+    } catch (err) {
+      showModal(err.message || "Failed to delete question", "error");
+    }
+  }, [
+    id,
+    question?.userId,
+    router,
+    showModal,
+    user?.id,
+    user?.publicMetadata?.isAdmin,
+  ]);
+
+  const handleBookmark = useCallback(async () => {
     if (!isSignedIn) {
       showModal("Please sign in to bookmark", "error");
       return;
@@ -280,9 +355,9 @@ export default function QuestionDetailPage() {
       if (res.ok) {
         const updatedQuestion = await res.json();
         setQuestion(updatedQuestion);
-        showModal("বুকমার্ক সফল হয়েছে", "success");
+        showModal("বুকমার্ক সফল হয়েছে", "success");
       } else {
-        showModal("বুকমার্ক করতে সমস্যা হয়েছে", "error");
+        showModal("বুকমার্ক করতে সমস্যা হয়েছে", "error");
         throw new Error("Failed to bookmark question");
       }
     } catch (err) {
@@ -290,10 +365,9 @@ export default function QuestionDetailPage() {
     } finally {
       setActionLoading((prev) => ({ ...prev, bookmark: false }));
     }
-  };
+  }, [id, isSignedIn, showModal, user?.id]);
 
-  // Handle share
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     setActionLoading((prev) => ({ ...prev, share: true }));
     try {
       if (navigator.share) {
@@ -312,35 +386,22 @@ export default function QuestionDetailPage() {
     } finally {
       setActionLoading((prev) => ({ ...prev, share: false }));
     }
-  };
+  }, [question?.title, question?.description, showModal]);
 
-  const fetchUsers = async () => {
-    try {
-      const res = await fetch("/api/user", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        next: { revalidate: 3600 }, // Cache for 1 hour
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUsers(data.users.data);
-      }
-    } catch (error) {
-      console.log(error.message);
-    }
-  };
+  // Memoized user name getter
+  const getUserName = useCallback(
+    (id) => {
+      const u = users.find((u) => u.id === id);
+      return u ? `${u.firstName} ${u.lastName}` : "Unknown";
+    },
+    [users]
+  );
 
-  useEffect(() => {
-    fetchUsers();
-  }, [question, user]);
-
-  const getUserName = (id) => {
-    const u = users.find((u) => u.id === id);
-    return u ? `${u.firstName} ${u.lastName}` : "Unknown";
-  };
-  const names = question?.helpfulVotes?.map(getUserName).filter(Boolean);
+  // Memoized voters list
+  const names = useMemo(
+    () => question?.helpfulVotes?.map(getUserName).filter(Boolean) || [],
+    [question?.helpfulVotes, getUserName]
+  );
 
   if (loading) return <QuestionDetailSkeleton />;
   if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
@@ -449,10 +510,11 @@ export default function QuestionDetailPage() {
               " as " + getUserName(question.userId)}
           </span>
           <span>
-            {formatDistanceToNow(new Date(question.createdAt), {
-              addSuffix: true,
-              locale: bn,
-            })}
+            {question.createdAt &&
+              formatDistanceToNow(new Date(question.createdAt), {
+                addSuffix: true,
+                locale: bn,
+              })}
           </span>
         </div>
 
@@ -601,7 +663,7 @@ export default function QuestionDetailPage() {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : !showAnswerEditor ? (
             <div className="text-center py-8">
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {user?.publicMetadata?.isAdmin
@@ -619,121 +681,123 @@ export default function QuestionDetailPage() {
                 </motion.button>
               )}
             </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 space-y-6"
+            >
+              {/* Category Management Section */}
+              {user?.publicMetadata?.isAdmin && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    প্রশ্নের বিষয়বস্তু
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {questionCategories.map((cat) => (
+                      <motion.span
+                        key={cat._id}
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="group relative px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full text-sm flex items-center gap-2"
+                      >
+                        {cat.name}
+                        <button
+                          onClick={() => removeCategory(cat._id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                        >
+                          ✕
+                        </button>
+                      </motion.span>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={categoryInput}
+                      onChange={handleCategoryChange}
+                      onFocus={handleCategoryFocus}
+                      onBlur={handleCategoryBlur}
+                      placeholder="বিষয়বস্তু যোগ করুন..."
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    />
+                    {showSuggestions && suggestions.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-48 overflow-y-auto"
+                      >
+                        {suggestions.map((cat) => (
+                          <button
+                            key={cat._id}
+                            onClick={() => handleCategorySelect(cat)}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                    {categoryInput.trim() &&
+                      !suggestions.some(
+                        (cat) =>
+                          cat.name.toLowerCase() ===
+                          categoryInput.trim().toLowerCase()
+                      ) && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleAddNewCategory}
+                          disabled={isAddingCategory}
+                          className={`absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors ${
+                            isAddingCategory
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                        >
+                          {isAddingCategory ? "যোগ হচ্ছে..." : "নতুন যোগ করুন"}
+                        </motion.button>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              <ReactQuill
+                theme="snow"
+                value={answer}
+                onChange={setAnswer}
+                className="h-64 mb-12"
+              />
+              <div className="flex justify-end space-x-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setShowAnswerEditor(false);
+                    setAnswer("");
+                  }}
+                  className="px-6 py-2 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSubmitAnswer}
+                  disabled={submitting || !answer.trim()}
+                  className={`px-6 py-2 rounded-lg transition-colors ${
+                    submitting || !answer.trim()
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-green-500 hover:bg-green-600"
+                  } text-white`}
+                >
+                  {submitting ? "Submitting..." : "Submit Answer"}
+                </motion.button>
+              </div>
+            </motion.div>
           )}
         </div>
-
-        {/* Answer Editor */}
-        {showAnswerEditor && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 space-y-6"
-          >
-            {/* Category Management Section */}
-            {user?.publicMetadata?.isAdmin && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  প্রশ্নের বিষয়বস্তু
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {questionCategories.map((cat) => (
-                    <motion.span
-                      key={cat._id}
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="group relative px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full text-sm flex items-center gap-2"
-                    >
-                      {cat.name}
-                      <button
-                        onClick={() => removeCategory(cat._id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
-                      >
-                        ✕
-                      </button>
-                    </motion.span>
-                  ))}
-                </div>
-                <div className="relative">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={categoryInput}
-                    onChange={handleChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="বিষয়বস্তু যোগ করুন..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  />
-                  {showSuggestions && suggestions.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
-                    >
-                      {suggestions.map((cat) => (
-                        <button
-                          key={cat._id}
-                          onClick={() => handleSelect(cat)}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          {cat.name}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                  {categoryInput.trim() &&
-                    !suggestions.some(
-                      (cat) =>
-                        cat.name.toLowerCase() ===
-                        categoryInput.trim().toLowerCase()
-                    ) && (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleAddNewCategory}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"
-                      >
-                        নতুন যোগ করুন
-                      </motion.button>
-                    )}
-                </div>
-              </div>
-            )}
-
-            <ReactQuill
-              theme="snow"
-              value={answer}
-              onChange={setAnswer}
-              className="h-64 mb-12"
-            />
-            <div className="flex justify-end space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  setShowAnswerEditor(false);
-                  setAnswer("");
-                }}
-                className="px-6 py-2 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleSubmitAnswer}
-                disabled={submitting || !answer.trim()}
-                className={`px-6 py-2 rounded-lg transition-colors ${
-                  submitting || !answer.trim()
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-500 hover:bg-green-600"
-                } text-white`}
-              >
-                {submitting ? "Submitting..." : "Submit Answer"}
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
       </div>
 
       {/* Comments Section */}

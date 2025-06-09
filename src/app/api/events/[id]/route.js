@@ -9,8 +9,8 @@ import { revalidatePath } from "next/cache";
 export async function GET(req, { params }) {
   try {
     await connect();
-    const eventId = await params.id;
-    const event = await Event.findById(eventId).lean();
+    const { id } = await params;
+    const event = await Event.findById(id).lean();
     if (!event) {
       return Response.json({ error: "Event not found" }, { status: 404 });
     }
@@ -40,7 +40,7 @@ export async function PUT(req, { params }) {
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const eventId = await params.id;
+    const { id } = await params;
     const updateData = await req.json();
 
     const allowedFields = [
@@ -62,7 +62,7 @@ export async function PUT(req, { params }) {
       }
     }
 
-    const event = await Event.findByIdAndUpdate(eventId, updates, {
+    const event = await Event.findByIdAndUpdate(id, updates, {
       new: true,
       runValidators: true,
     });
@@ -72,7 +72,7 @@ export async function PUT(req, { params }) {
     }
 
     revalidatePath("/programme");
-    revalidatePath(`/programme/${eventId}`);
+    revalidatePath(`/programme/${id}`);
 
     return Response.json({ event });
   } catch (error) {
@@ -89,10 +89,10 @@ export async function PATCH(req, { params }) {
     await connect();
     const auth = getAuth(req);
 
-    const eventId = await params.id;
+    const { id } = await params;
     const { action } = await req.json();
 
-    const event = await Event.findById(eventId);
+    const event = await Event.findById(id);
     if (!event) {
       return Response.json({ error: "Event not found" }, { status: 404 });
     }
@@ -120,7 +120,7 @@ export async function PATCH(req, { params }) {
 
     await event.save();
     revalidatePath("/programme");
-    revalidatePath(`/programme/${eventId}`);
+    revalidatePath(`/programme/${id}`);
 
     return Response.json({
       event,
@@ -153,8 +153,8 @@ export async function DELETE(req, { params }) {
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const eventId = await params.id;
-    const deletedEvent = await Event.findByIdAndDelete(eventId);
+    const { id } = await params;
+    const deletedEvent = await Event.findByIdAndDelete(id);
 
     if (!deletedEvent) {
       return Response.json({ error: "Event not found" }, { status: 404 });

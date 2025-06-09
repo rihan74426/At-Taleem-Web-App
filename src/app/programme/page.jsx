@@ -25,6 +25,7 @@ import { Menu } from "@headlessui/react";
 import ResponseModal from "@/app/Components/ResponseModal";
 import EventInputModal from "../Components/EventInputModal";
 import CalendarView from "../Components/CalendarViewComp";
+import EventSkeleton from "../Components/EventSkeleton";
 
 const SCOPES = [
   { value: "weekly", label: "Weekly" },
@@ -290,10 +291,28 @@ export default function ProgrammePage() {
     if (!isLoaded || !user)
       return setModal({
         isOpen: true,
-        message: "Please login first!",
+        message: "দয়া করে আগে লগইন করুন!",
         status: "error",
       });
+
     try {
+      // Request notification permission if any preference is being enabled
+      const hasNewEnabledPrefs = Object.entries(prefs).some(
+        ([key, value]) => value && !user.publicMetadata?.eventPrefs?.[key]
+      );
+
+      if (hasNewEnabledPrefs) {
+        const permissionGranted = await requestNotificationPermission();
+        if (!permissionGranted) {
+          setModal({
+            isOpen: true,
+            message: "রিমাইন্ডার পেতে ব্রাউজার নোটিফিকেশন অনুমতি দিন।",
+            status: "error",
+          });
+          return;
+        }
+      }
+
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -302,13 +321,13 @@ export default function ProgrammePage() {
       if (!res.ok) throw new Error("Failed to save preferences");
       setModal({
         isOpen: true,
-        message: "Preferences saved!",
+        message: "পছন্দসমূহ সফলভাবে সংরক্ষণ করা হয়েছে!",
         status: "success",
       });
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Error saving preferences!",
+        message: "পছন্দসমূহ সংরক্ষণ করতে সমস্যা হয়েছে!",
         status: "error",
       });
     }
@@ -349,14 +368,59 @@ export default function ProgrammePage() {
     }
   };
 
+  const requestNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        // Register service worker for push notifications
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        });
+
+        // Send subscription to server
+        await fetch("/api/notifications/subscribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            subscription,
+            userId: user.id,
+          }),
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error requesting notification permission:", error);
+      return false;
+    }
+  };
+
   const handleToggleNotification = async (eventId) => {
     if (!user)
       return setModal({
         isOpen: true,
-        message: "Please login!",
+        message: "দয়া করে আগে লগইন করুন!",
         status: "error",
       });
     try {
+      // If enabling notifications, request permission first
+      if (!userStatus[eventId]?.notified) {
+        const permissionGranted = await requestNotificationPermission();
+        if (!permissionGranted) {
+          setModal({
+            isOpen: true,
+            message: "রিমাইন্ডার পেতে ব্রাউজার নোটিফিকেশন অনুমতি দিন।",
+            status: "error",
+          });
+          return;
+        }
+      }
+
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -371,14 +435,14 @@ export default function ProgrammePage() {
       setModal({
         isOpen: true,
         message: data.userStatus.notified
-          ? "Notification on!"
-          : "Notification off!",
+          ? "আপনাকে এই মাহফিলের ব্যাপারে ১ ঘন্টা আগে জানানো হবে!"
+          : "আপনাকে এই মাহফিলের ব্যাপারে জানানো হবে না!",
         status: "success",
       });
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Error toggling notification",
+        message: "নোটিফিকেশন সিস্টেম আপডেট করতে একটু সমস্যা হয়েছে!",
         status: "error",
       });
     }
@@ -490,6 +554,14 @@ export default function ProgrammePage() {
       year: "numeric",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+        <EventSkeleton />
+      </div>
+    );
+  }
 
   // Render
   return (

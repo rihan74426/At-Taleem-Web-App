@@ -27,6 +27,7 @@ import {
 import ResponseModal from "@/app/Components/ResponseModal";
 import EventInputModal from "@/app/Components/EventInputModal";
 import { FaUserEdit } from "react-icons/fa";
+import { EventDetailSkeleton } from "@/app/Components/EventSkeleton";
 
 export default function EventDetailsPage() {
   const { user, isLoaded } = useUser();
@@ -450,13 +451,8 @@ export default function EventDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            মাহফিলের বিস্তারিত লোড হচ্ছে...
-          </p>
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <EventDetailSkeleton />
       </div>
     );
   }
