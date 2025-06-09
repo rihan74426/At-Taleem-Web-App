@@ -23,6 +23,24 @@ import { QuestionDetailSkeleton } from "@/app/Components/Skeleton";
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 
+// Add this CSS at the top of your file, after the imports
+const customScrollbarStyles = `
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+`;
+
 export default function QuestionDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -50,6 +68,7 @@ export default function QuestionDetailPage() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef(null);
+  const [users, setUsers] = useState([]);
 
   const [modal, setModal] = useState({
     isOpen: false,
@@ -226,7 +245,13 @@ export default function QuestionDetailPage() {
       if (res.ok) {
         const updatedQuestion = await res.json();
         setQuestion(updatedQuestion);
-        showModal("জাযাকাল্লাহ! আল্লাহ আপনার উপকারে বরকত দিন", "success");
+        const hasLiked = updatedQuestion.helpfulVotes.includes(user.id);
+        showModal(
+          hasLiked
+            ? "জাযাকাল্লাহ! আল্লাহ আপনার উপকারে বরকত দিন"
+            : "উপকৃত তুলে নেওয়া হয়েছে",
+          "success"
+        );
       } else {
         showModal("উপকৃত মার্ক করতে সমস্যা হয়েছে", "error");
         throw new Error("Failed to update vote");
@@ -289,6 +314,34 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        next: { revalidate: 3600 }, // Cache for 1 hour
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users.data);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [question, user]);
+
+  const getUserName = (id) => {
+    const u = users.find((u) => u.id === id);
+    return u ? `${u.firstName} ${u.lastName}` : "Unknown";
+  };
+  const names = question?.helpfulVotes?.map(getUserName).filter(Boolean);
+
   if (loading) return <QuestionDetailSkeleton />;
   if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
   if (!question)
@@ -305,6 +358,10 @@ export default function QuestionDetailPage() {
       animate={{ opacity: 1 }}
       className="max-w-4xl mx-auto p-4 min-h-screen space-y-8"
     >
+      <style jsx global>
+        {customScrollbarStyles}
+      </style>
+
       {/* Question Section */}
       <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
         {/* Edit & Delete Options - Top Right */}
@@ -387,6 +444,9 @@ export default function QuestionDetailPage() {
           <span>
             প্রশ্নকারী:{" "}
             {question.isAnonymous ? "অজ্ঞাতনামা" : question.username}
+            {question.isAnonymous &&
+              user.publicMetadata.isAdmin &&
+              " as " + getUserName(question.userId)}
           </span>
           <span>
             {formatDistanceToNow(new Date(question.createdAt), {
@@ -472,37 +532,73 @@ export default function QuestionDetailPage() {
                 dangerouslySetInnerHTML={{ __html: question.answer }}
               />
               <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleHelpful}
-                  disabled={
-                    !isSignedIn ||
-                    question.status !== "answered" ||
-                    actionLoading.vote
-                  }
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    question.status !== "answered"
-                      ? "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed"
-                      : hasVoted
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  } ${
-                    actionLoading.vote ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                  title={
-                    question.status !== "answered"
-                      ? "Wait for the answer to vote"
-                      : "Mark as helpful"
-                  }
-                >
-                  {hasVoted ? (
-                    <BsHandThumbsUpFill className="w-5 h-5" />
-                  ) : (
-                    <BsHandThumbsUp className="w-5 h-5" />
-                  )}
-                  <span>উপকৃত হলাম ({question.helpfulVotes?.length || 0})</span>
-                </motion.button>
+                <div className="relative group">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleHelpful}
+                    disabled={
+                      !isSignedIn ||
+                      question.status !== "answered" ||
+                      actionLoading.vote
+                    }
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      question.status !== "answered"
+                        ? "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed"
+                        : hasVoted
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    } ${
+                      actionLoading.vote ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    title={
+                      question.status !== "answered"
+                        ? "Wait for the answer to vote"
+                        : "Mark as helpful"
+                    }
+                  >
+                    {hasVoted ? (
+                      <BsHandThumbsUpFill className="w-5 h-5" />
+                    ) : (
+                      <BsHandThumbsUp className="w-5 h-5" />
+                    )}
+                    <span>
+                      উপকৃত হলাম ({question.helpfulVotes?.length || 0})
+                    </span>
+                  </motion.button>
+
+                  {/* Voters List Tooltip */}
+                  <AnimatePresence>
+                    {names.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-50"
+                      >
+                        <div className="bg-gray-900 text-white text-sm rounded-lg shadow-lg p-3 min-w-[200px] max-w-[300px]">
+                          <div className="absolute bottom-0 right-4 transform translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900"></div>
+                          <div className="font-medium mb-2 text-green-400">
+                            উপকৃত ব্যক্তিবর্গ:
+                          </div>
+                          <div className="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                            {names.map((name, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center space-x-2 py-1 px-2 rounded hover:bg-gray-800 transition-colors"
+                              >
+                                <span className="w-5 h-5 flex items-center justify-center bg-green-500/20 text-green-400 rounded-full text-xs">
+                                  {index + 1}
+                                </span>
+                                <span className="truncate">{name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           ) : (

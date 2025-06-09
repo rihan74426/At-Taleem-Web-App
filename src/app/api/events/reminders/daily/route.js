@@ -1,6 +1,15 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
+import Subscription from "@/lib/models/Subscription";
 import { clerkClient } from "@clerk/nextjs/server";
+import webpush from "web-push";
+
+// Configure web-push with VAPID keys
+webpush.setVapidDetails(
+  "mailto:your-email@example.com",
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 function getMatchingDates(start, end, weekdays) {
   const dates = [];
@@ -110,6 +119,8 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
   }).lean();
 
   const emailPromises = [];
+  const pushPromises = [];
+
   for (const ev of events) {
     const allIds = new Set([
       ...(Array.isArray(ev.notificationWants) ? ev.notificationWants : []),
@@ -215,8 +226,35 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
         }),
       })
     );
+
+    // Send push notifications
+    for (const userId of allIds) {
+      const subscription = await Subscription.findOne({ userId });
+      if (subscription) {
+        try {
+          pushPromises.push(
+            webpush.sendNotification(
+              subscription.subscription,
+              JSON.stringify({
+                title: `Reminder: ${ev.title}`,
+                body: `Today at ${timeStr}`,
+                url: detailsLink,
+              })
+            )
+          );
+        } catch (error) {
+          console.error(`Error sending push notification to ${userId}:`, error);
+          if (error.statusCode === 410) {
+            // Remove invalid subscription
+            await Subscription.deleteOne({ userId });
+          }
+        }
+      }
+    }
   }
-  await Promise.all(emailPromises);
+
+  // Wait for all notifications to be sent
+  await Promise.all([...emailPromises, ...pushPromises]);
 }
 
 export async function GET(req) {

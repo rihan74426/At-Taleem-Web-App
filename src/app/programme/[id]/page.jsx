@@ -110,6 +110,37 @@ export default function EventDetailsPage() {
     }
   };
 
+  const requestNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        // Register service worker for push notifications
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        });
+
+        // Send subscription to server
+        await fetch("/api/notifications/subscribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            subscription,
+            userId: user.id,
+          }),
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error requesting notification permission:", error);
+      return false;
+    }
+  };
   // Handle user interest toggle
   const handleToggleInterest = async () => {
     if (!isLoaded || !user) {
@@ -162,6 +193,16 @@ export default function EventDetailsPage() {
     }
 
     try {
+      // If enabling notifications, request permission first
+      if (!userStatus.notified) {
+        const permissionGranted = await requestNotificationPermission();
+        if (!permissionGranted) {
+          showModal("রিমাইন্ডার পেতে ব্রাউজার নোটিফিকেশন অনুমতি দিন।", "error");
+          await requestNotificationPermission();
+          return;
+        }
+      }
+
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

@@ -1,7 +1,16 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Event from "@/lib/models/Event";
+import Subscription from "@/lib/models/Subscription";
 import { clerkClient } from "@clerk/nextjs/server";
 import Institution from "@/lib/models/Institution";
+import webpush from "web-push";
+
+// Configure web-push with VAPID keys
+webpush.setVapidDetails(
+  "mailto:your-email@example.com",
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 async function runOpenAdmissions() {
   const today = new Date();
@@ -245,7 +254,7 @@ export async function GET(req) {
 </body>
 </html>`;
 
-      // Send email and update event
+      // Send email
       await fetch(`${process.env.URL}/api/emails`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -255,6 +264,37 @@ export async function GET(req) {
           html,
         }),
       });
+
+      // Send push notifications
+      const pushPromises = allIds.map(async (userId) => {
+        const subscription = await Subscription.findOne({ userId });
+        if (subscription) {
+          try {
+            await webpush.sendNotification(
+              subscription.subscription,
+              JSON.stringify({
+                title: `Reminder: ${ev.title}`,
+                body: `Starts in 1 hour at ${eventTime}`,
+                url: detailsUrl,
+              })
+            );
+          } catch (error) {
+            console.error(
+              `Error sending push notification to ${userId}:`,
+              error
+            );
+            if (error.statusCode === 410) {
+              // Remove invalid subscription
+              await Subscription.deleteOne({ userId });
+            }
+          }
+        }
+      });
+
+      // Wait for all push notifications to be sent
+      await Promise.all(pushPromises);
+
+      // Update event reminder status
       await Event.updateOne(
         { _id: ev._id },
         { $push: { reminderSent: "hour" } }
