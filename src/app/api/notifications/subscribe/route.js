@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { connect } from "@/lib/mongodb/mongoose";
 import Subscription from "@/lib/models/Subscription";
-import { auth } from "@clerk/nextjs";
 import { getAuth } from "@clerk/nextjs/server";
 
 export async function POST(req) {
   try {
-    const { userId } = auth();
+    const { userId } = getAuth(req);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
