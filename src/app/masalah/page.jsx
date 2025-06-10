@@ -645,7 +645,7 @@ export default function MasalahPage() {
               </div>
               <Link
                 href={`/masalah/${item._id}`}
-                title="দলীল দেখতে ভেতরে আসুন"
+                title="বিস্তারিত দলীল দেখতে ভেতরে আসুন"
                 className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400"
               >
                 <div className="flex items-center gap-4">

@@ -216,15 +216,15 @@ export default function DashboardComp() {
               { key: "title", label: "প্রশ্ন" },
               { key: "status", label: "স্ট্যাটাস" },
             ]}
-            linkTo="/questions"
+            linkTo="/questionnaires"
             loading={loading}
           />
 
           <RecentDataTable
-            title="সাম্প্রতিক মন্তব্য"
+            title="সাম্প্রতিক কমেন্ট"
             data={data.comments}
             columns={[
-              { key: "content", label: "মন্তব্য" },
+              { key: "content", label: "কমেন্ট" },
               {
                 key: "createdAt",
                 label: "তারিখ",

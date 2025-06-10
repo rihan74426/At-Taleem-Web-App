@@ -9,7 +9,13 @@ import Loader from "./Loader";
 import ReviewCarousel from "./ReviewCarousel";
 import { formatDistanceToNow } from "date-fns";
 
-import { BsEye, BsHeart, BsPlayFill } from "react-icons/bs";
+import {
+  BsEye,
+  BsHeart,
+  BsPlayFill,
+  BsBook,
+  BsPatchQuestion,
+} from "react-icons/bs";
 
 // Types
 const DataState = {
@@ -184,11 +190,29 @@ const ReviewSkeleton = () => (
   </div>
 );
 
+// Add MasalahSkeleton component
+const MasalahSkeleton = () => (
+  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 animate-pulse">
+    <div className="space-y-4">
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-xl w-3/4"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+      </div>
+      <div className="flex gap-2 mt-4">
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-24"></div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function RecentPosts({
   videoLimit = 6,
   questionLimit = 5,
   bookLimit = 4,
   reviewLimit = 5,
+  masalahLimit = 4,
 }) {
   const { user } = useUser();
 
@@ -215,6 +239,12 @@ export default function RecentPosts({
     state: reviewsState,
     error: reviewsError,
   } = useDataFetching("/api/reviews", reviewLimit);
+
+  const {
+    data: masalah,
+    state: masalahState,
+    error: masalahError,
+  } = useDataFetching("/api/masalah", masalahLimit);
 
   const renderError = (error) => (
     <div className="text-red-500 text-center p-4">
@@ -418,6 +448,62 @@ export default function RecentPosts({
     </motion.div>
   );
 
+  const renderMasalah = () => (
+    <motion.div
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      initial="hidden"
+      animate="visible"
+    >
+      {masalah?.map((m, i) => (
+        <Card key={m._id} index={i} className="flex flex-col justify-between">
+          <Link href={`/masalah/${m._id}`} className="block p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center">
+                <BsPatchQuestion
+                  className="text-teal-600 dark:text-teal-400"
+                  size={20}
+                />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-2">
+                  {m.title}
+                </h3>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {m.categories.map((cat) => (
+                    <span
+                      key={cat._id}
+                      className="text-xs bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full"
+                    >
+                      {cat.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-gray-600 dark:text-gray-300 line-clamp-3">
+                {m.description}
+              </p>
+
+              <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {formatDistanceToNow(new Date(m.createdAt), {
+                    addSuffix: true,
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <BsHeart className="text-red-500" />
+                  <span>{m.likers.length}</span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </Card>
+      ))}
+    </motion.div>
+  );
+
   return (
     <div className="space-y-12 p-4">
       {renderSection(
@@ -448,6 +534,15 @@ export default function RecentPosts({
         booksState,
         booksError,
         <BookSkeleton />
+      )}
+      {renderSection(
+        "সাম্প্রতিক মাসআলা",
+        "সকল মাসআলা দেখুন",
+        "/masalah",
+        renderMasalah(),
+        masalahState,
+        masalahError,
+        <MasalahSkeleton />
       )}
 
       {renderSection(
