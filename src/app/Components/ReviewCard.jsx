@@ -9,6 +9,7 @@ import ResponseModal from "../Components/ResponseModal";
 import { useRouter } from "next/navigation";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { motion, useAnimation } from "framer-motion";
+import { UserButton } from "@clerk/nextjs";
 
 // Review Component
 export function ReviewCard({
@@ -22,6 +23,8 @@ export function ReviewCard({
   const animation = useAnimation();
   const [users, setUsers] = useState([]);
   const [imageError, setImageError] = useState(false);
+  const [showLikers, setShowLikers] = useState(false);
+  const { user: clerkUser } = useUser();
 
   const fetchUsers = async () => {
     try {
@@ -30,7 +33,7 @@ export function ReviewCard({
         headers: {
           "Content-Type": "application/json",
         },
-        next: { revalidate: 3600 }, // Cache for 1 hour
+        next: { revalidate: 3600 },
       });
       const data = await res.json();
       if (res.ok) {
@@ -43,120 +46,169 @@ export function ReviewCard({
 
   useEffect(() => {
     fetchUsers();
-  }, [review, user]);
+  }, [review]);
 
   const getUserName = (id) => {
     const u = users.find((u) => u.id === id);
     return u ? `${u.firstName} ${u.lastName}` : "Unknown";
   };
+
   const names = review.likes.map(getUserName).filter(Boolean);
 
   return (
-    <div
-      key={review._id}
-      className="relative bg-amber-100 dark:bg-[#0B192C] border rounded-lg overflow-hidden"
-      style={{ borderBottomRightRadius: "50%", minHeight: 200 }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative bg-white dark:bg-gray-800 rounded-[2rem] shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+      style={{
+        clipPath: "polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%)",
+      }}
     >
-      {/* Love animation */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
-        initial={{ opacity: 0, scale: 0 }}
-        animate={animation}
-      >
-        <AiFillHeart className="text-red-500 text-5xl" />
-      </motion.div>
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 dark:bg-teal-500/20 rounded-bl-full" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/10 dark:bg-amber-500/20 rounded-tr-full" />
 
-      {/* Responsive grid: 1 col on sm, 5 cols on md+ */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4">
-        {/* Main content spans all on sm, first 4 cols on md */}
-        <div className="col-span-1 md:col-span-4 space-y-3">
-          <div className="sm:flex sm:justify-between sm:items-center sm:space-x-2">
-            <h3 className="text-2xl m-2 font-bold">{review.userName}</h3>
-            <span className="text-sm m-2 text-gray-700 dark:text-gray-300">
-              (পেশাঃ {review.profession})
-            </span>
+      <div className="p-6 relative">
+        {/* Header Section */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            {review.userProfilePic && !imageError ? (
+              <div className="relative w-16 h-16">
+                <Image
+                  src={review.userProfilePic}
+                  alt={review.userName}
+                  fill
+                  sizes="64px"
+                  className="rounded-full object-cover border-2 border-teal-500"
+                  onError={() => setImageError(true)}
+                  priority={false}
+                  loading="lazy"
+                  quality={75}
+                />
+              </div>
+            ) : (
+              <div className="relative w-16 h-16 dark:bg-gray-800">
+                <Image
+                  src="/default-user.png"
+                  alt={review.userName}
+                  fill
+                  sizes="64px"
+                  className="rounded-full object-cover border-2 border-teal-500"
+                  onError={() => setImageError(true)}
+                  priority={false}
+                  loading="lazy"
+                  quality={75}
+                />{" "}
+              </div>
+            )}
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {review.userName}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                পেশাঃ {review.profession}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
             <span
-              className={`mt-2 sm:mt-0 m-2 px-2 text-sm rounded ${
+              className={`px-3 py-1 text-sm rounded-full ${
                 review.status === "approved"
-                  ? "bg-green-200 text-green-800"
-                  : "bg-yellow-200 text-yellow-800"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
               }`}
             >
               {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
             </span>
+            {(user.user?.publicMetadata?.isAdmin ||
+              user.user?.id === review.userId) && (
+              <button
+                onClick={() => deleteReview(review._id)}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+                title="Delete review"
+              >
+                <FiTrash2 size={20} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Review Content */}
+        <div className="relative bg-gradient-to-br from-amber-50 to-amber-100 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-6 mb-4">
+          <div className="absolute -top-3 left-6 text-4xl text-amber-200 dark:text-gray-600">
+            "
+          </div>
+          <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed relative z-10">
+            {review.reviewText}
+          </p>
+          <div className="absolute -bottom-3 right-6 text-4xl text-amber-200 dark:text-gray-600">
+            "
+          </div>
+        </div>
+
+        {/* Footer Section */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {new Date(review.createdAt).toLocaleDateString("bn-BD", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
             {review.status === "approved" && (
-              <div className="relative inline-block group">
+              <div className="relative">
                 <motion.button
                   onClick={() => toggleLove(review)}
-                  whileTap={{ scale: 0.8 }}
-                  whileHover={{ scale: 1.5 }}
-                  className=" flex items-center space-x-1 ml-auto mt-2 sm:mt-0"
-                  aria-label={loved ? "Unlove" : "Love"}
+                  whileTap={{ scale: 0.9 }}
+                  className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  onMouseEnter={() => setShowLikers(true)}
+                  onMouseLeave={() => setShowLikers(false)}
                 >
                   {loved ? (
-                    <AiFillHeart className="text-red-500" size={30} />
+                    <AiFillHeart className="text-red-500" size={24} />
                   ) : (
-                    <AiOutlineHeart className="text-gray-500" size={30} />
+                    <AiOutlineHeart size={24} />
                   )}
-                  <span className="">{review.likes.length}</span>
+                  <span className="font-medium">{review.likes.length}</span>
                 </motion.button>
-                {names.length > 0 && (
-                  <div
-                    className="absolute left-1/2 transform -translate-x-1/2 mt-2 
-                     hidden group-hover:block
-                     bg-black bg-opacity-80 text-white text-sm rounded px-2 py-1
-                     whitespace-nowrap z-10"
+
+                {/* Likers Tooltip */}
+                {showLikers && names.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-20"
                   >
-                    {names.map((name, index) => (
-                      <div key={index}>{name}</div>
-                    ))}
-                  </div>
+                    <div className="relative">
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-8 border-transparent border-t-gray-900"></div>
+                      <p className="font-medium mb-1">পছন্দ করেছেন:</p>
+                      <div className="max-h-32 overflow-y-auto">
+                        {names.map((name, index) => (
+                          <p key={index} className="text-gray-300">
+                            {name}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
               </div>
             )}
           </div>
-          <p className="italic text-justify whitespace-pre-wrap">
-            "{review.reviewText}"
-          </p>
-        </div>
 
-        {/* Sidebar spans full width on sm, 1 col on md */}
-        <div className="col-span-1 flex flex-col items-center sm:mt-20 space-y-3">
-          {review.userProfilePic && !imageError ? (
-            <div className="relative w-24 h-24">
-              <Image
-                src={review.userProfilePic}
-                alt={review.userName}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="rounded-full object-cover"
-                onError={() => setImageError(true)}
-                priority={false}
-                loading="lazy"
-                quality={75}
-              />
-            </div>
-          ) : (
-            <div className="w-24 h-24 border rounded-full flex items-center justify-center">
-              ছবি নেই
-            </div>
-          )}
-
-          <p className="text-xs text-gray-500">
-            Date: {new Date(review.createdAt).toLocaleDateString()}
-          </p>
-
+          {/* Admin Actions */}
           {review.status === "pending" && (
             <div className="flex space-x-2">
               <button
                 onClick={() => toggleStatus(review, "approved")}
-                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
               >
                 Approve
               </button>
               <button
                 onClick={() => toggleStatus(review, "rejected")}
-                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
               >
                 Reject
               </button>
@@ -166,26 +218,14 @@ export function ReviewCard({
           {review.status === "rejected" && (
             <button
               onClick={() => toggleStatus(review, "approved")}
-              className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
             >
               Approve
             </button>
           )}
         </div>
       </div>
-
-      {/* Delete */}
-      {(user.user?.publicMetadata?.isAdmin ||
-        user.user?.id === review.userId) && (
-        <button
-          onClick={() => deleteReview(review._id)}
-          className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-          title="Delete review"
-        >
-          <FiTrash2 />
-        </button>
-      )}
-    </div>
+    </motion.div>
   );
 }
 

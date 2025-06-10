@@ -188,7 +188,7 @@ async function runDailyReminders(allUsers, userIdToUser, scopeToUserIds) {
               <p style="margin: 0 0 20px;">কেমন আছেন?</p>
               <p style="margin: 0 0 20px;">মনে রাখবেন, <strong style="color: #004d40;">${
                 ev.title
-              }</strong> আজ, <strong style="color: #004d40;">${dateStr}</strong> তারিখ, সময়ঃ <strong style="color: #004d40;">${timeStr}</strong> টায় অনুষ্ঠিত হবে।</p>
+              }</strong> আজ, <strong style="color: #004d40;">${dateStr}</strong> তারিখ, সন্ধ্যা <strong style="color: #004d40;">${timeStr}</strong> টায় অনুষ্ঠিত হবে।</p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${detailsLink}" style="display: inline-block; background-color: #00796b; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: 600; font-size: 16px;">বিস্তারিত দেখুন</a>

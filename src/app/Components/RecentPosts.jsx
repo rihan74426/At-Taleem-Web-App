@@ -7,6 +7,9 @@ import { motion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
 import Loader from "./Loader";
 import ReviewCarousel from "./ReviewCarousel";
+import { formatDistanceToNow } from "date-fns";
+
+import { BsEye, BsHeart, BsPlayFill } from "react-icons/bs";
 
 // Types
 const DataState = {
@@ -15,9 +18,18 @@ const DataState = {
   ERROR: "error",
 };
 
+// Updated card variant for smoother animations
 const cardVariant = {
   hidden: { opacity: 0, y: 20 },
-  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1 } }),
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.5,
+      ease: "easeOut",
+    },
+  }),
 };
 
 // Custom hook for data fetching
@@ -89,48 +101,70 @@ const useDataFetching = (endpoint, limit) => {
   return { data, state, error };
 };
 
-// Card component for reusability
+const formatViews = (views) => {
+  if (!views) return "0";
+  if (views >= 1000000) {
+    return `${(views / 1000000).toFixed(1)}M`;
+  } else if (views >= 1000) {
+    return `${(views / 1000).toFixed(1)}K`;
+  }
+  return views.toString();
+};
+// Updated Card component with better styling
 const Card = ({ children, index, className = "" }) => (
   <motion.div
     custom={index}
     initial="hidden"
     whileInView="visible"
-    viewport={{ once: true }}
+    viewport={{ once: true, margin: "-50px" }}
     variants={cardVariant}
-    className={`bg-white dark:bg-gray-900 border rounded-lg shadow hover:shadow-lg transition p-6 ${className}`}
+    className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden ${className}`}
   >
     {children}
   </motion.div>
 );
 
-// Skeleton loader components
+// Updated VideoSkeleton with better design
 const VideoSkeleton = () => (
-  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
-    <div className="relative h-40 w-full bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-    <div className="mt-2 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 animate-pulse">
+    <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 rounded-xl overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900/50"></div>
+    </div>
+    <div className="mt-4 space-y-2">
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+    </div>
   </div>
 );
 
+// Updated QuestionSkeleton with better design
 const QuestionSkeleton = () => (
-  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
-    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-    <div className="space-y-2">
-      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-    </div>
-    <div className="mt-4 flex gap-2">
-      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 animate-pulse">
+    <div className="space-y-4">
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-xl w-3/4"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+      </div>
+      <div className="flex gap-2 mt-4">
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-24"></div>
+      </div>
     </div>
   </div>
 );
 
+// Updated BookSkeleton with better design
 const BookSkeleton = () => (
-  <div className="bg-white dark:bg-gray-900 border rounded-lg shadow p-6 animate-pulse">
-    <div className="relative h-56 w-full bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-    <div className="mt-2 h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-    <div className="mt-1 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-    <div className="mt-1 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 animate-pulse">
+    <div className="relative h-64 w-full bg-gray-200 dark:bg-gray-700 rounded-xl overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900/50"></div>
+    </div>
+    <div className="mt-4 space-y-2">
+      <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+    </div>
   </div>
 );
 
@@ -220,30 +254,77 @@ export default function RecentPosts({
 
   const renderVideos = () => (
     <motion.div
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       initial="hidden"
       animate="visible"
     >
-      {videos?.map((v, i) => (
-        <Card key={v._id} index={i}>
-          <Link href={`/${v.category.toLowerCase()}-videos/${v._id}`}>
-            <div className="relative h-40 w-full overflow-hidden rounded-lg">
-              <Image
-                src="/thumbnail.png"
-                alt={v.title}
-                fill
-                className="rounded object-cover blur-sm"
-                priority={i < 2}
-              />
-              <div className="absolute inset-0 flex items-center justify-center p-2">
-                <div className="bg-green-800 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
-                  {v.title}
+      {videos?.map((video, i) => (
+        <Card key={video._id} index={i}>
+          <Link
+            href={`/${video.category.toLowerCase()}-videos/${video._id}`}
+            className=" cursor-pointer"
+          >
+            <div className="relative aspect-video overflow-hidden">
+              <div className="relative w-full h-36">
+                <Image
+                  src={video.thumbnailUrl || "/thumbnail.png"}
+                  alt={video.title}
+                  fill
+                  className="rounded object-cover blur-sm transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => {
+                    e.target.src = "/thumbnail.png";
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center p-2">
+                  <div className="bg-green-800 bg-opacity-80 text-white text-center px-2 py-1 rounded-lg">
+                    {video.title}
+                  </div>
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Platform Badge */}
+              <div className="absolute top-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded-full">
+                {video.platform}
+              </div>
+
+              {/* Play Button Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
+                  <BsPlayFill className="text-blue-600" size={24} />
                 </div>
               </div>
             </div>
-            <p className="mt-2 text-sm text-gray-500">
-              {new Date(v.recordingDate || v.createdAt).toLocaleDateString()}
-            </p>
+          </Link>
+
+          {/* Content */}
+          <Link
+            href={`/${video.category.toLowerCase()}-videos/${video._id}`}
+            className="cursor-pointer"
+          >
+            <div className="p-4">
+              <h3 className="font-semibold text-lg mb-2 line-clamp-2 text-gray-900 dark:text-white">
+                {video.title}
+              </h3>
+
+              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex items-center gap-2">
+                  <BsEye className="text-blue-500" />
+                  <span>{formatViews(video.views)} views</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BsHeart className="text-red-500" />
+                  <span>{video.likes?.length || 0}</span>
+                </div>
+              </div>
+
+              <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                {video.recordingDate &&
+                  formatDistanceToNow(new Date(video.recordingDate), {
+                    addSuffix: true,
+                  })}
+              </div>
+            </div>
           </Link>
         </Card>
       ))}
@@ -252,31 +333,35 @@ export default function RecentPosts({
 
   const renderQuestions = () => (
     <motion.div
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       initial="hidden"
       animate="visible"
     >
       {questions?.map((q, i) => (
         <Card key={q._id} index={i} className="flex flex-col justify-between">
-          <Link href={`/questionnaires/${q._id}`}>
-            <h3 className="text-xl font-semibold mb-2">{q.title}</h3>
-            <p className="text-gray-600 dark:text-gray-300 line-clamp-3">
+          <Link href={`/questionnaires/${q._id}`} className="block p-6">
+            <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white line-clamp-2">
+              {q.title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 line-clamp-3 mb-4">
               {q.description || "বিস্তারিত নেই"}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <span
-                className={`px-2 py-1 rounded ${
-                  q.status === "answered"
-                    ? "bg-green-200 text-green-800"
-                    : "bg-yellow-200 text-yellow-800"
-                }`}
-              >
-                {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
-              </span>
-              <span>
-                প্রশ্নকারী: {q.isAnonymous ? "অজ্ঞাতনামা" : q.username}
-              </span>
-              <span>তারিখ: {new Date(q.createdAt).toLocaleDateString()}</span>
+            <div className="mt-auto space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    q.status === "answered"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                  }`}
+                >
+                  {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <span>{q.isAnonymous ? "অজ্ঞাতনামা" : q.username}</span>
+                <span>{new Date(q.createdAt).toLocaleDateString("bn-BD")}</span>
+              </div>
             </div>
           </Link>
         </Card>
@@ -286,37 +371,47 @@ export default function RecentPosts({
 
   const renderBooks = () => (
     <motion.div
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       initial="hidden"
       animate="visible"
     >
       {books?.map((b, i) => (
         <Card key={b._id} index={i}>
-          <Link href={`/published-books/${b._id}`}>
-            <div className="relative h-56 w-full overflow-hidden rounded-lg">
+          <Link href={`/published-books/${b._id}`} className="block">
+            <div className="relative h-64 w-full overflow-hidden group">
               <Image
                 src={b.coverImage || "/book-placeholder.png"}
                 alt={b.title}
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
                 priority={i < 2}
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900/70"></div>
             </div>
-            <h3 className="mt-2 font-bold truncate">{b.title}</h3>
-            <p className="text-sm text-gray-500">{b.author}</p>
-            <p className="text-green-600 font-bold mt-1">{b.price} BDT</p>
-            {b.categories && b.categories.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {b.categories.map((cat) => (
-                  <span
-                    key={cat._id}
-                    className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded"
-                  >
-                    {cat.name}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="p-4">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
+                {b.title}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {b.author}
+              </p>
+              <p className="text-teal-600 dark:text-teal-400 font-bold mt-2">
+                {b.price} BDT
+              </p>
+              {b.categories && b.categories.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {b.categories.map((cat) => (
+                    <span
+                      key={cat._id}
+                      className="text-xs bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full"
+                    >
+                      {cat.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </Link>
         </Card>
       ))}
@@ -326,8 +421,8 @@ export default function RecentPosts({
   return (
     <div className="space-y-12 p-4">
       {renderSection(
-        "Latest Videos",
-        "View all videos",
+        "সাম্প্রতিক ভিডিও",
+        "সকল ভিডিও দেখুন",
         "/taleem-videos",
         renderVideos(),
         videosState,
@@ -336,8 +431,8 @@ export default function RecentPosts({
       )}
 
       {renderSection(
-        "Recent Questions",
-        "Answer more",
+        "সাম্প্রতিক প্রশ্ন",
+        "সকল প্রশ্ন দেখুন",
         "/questionnaires",
         renderQuestions(),
         questionsState,
@@ -346,8 +441,8 @@ export default function RecentPosts({
       )}
 
       {renderSection(
-        "New Books",
-        "Browse all books",
+        "সাম্প্রতিক বই",
+        "সকল বই দেখুন",
         "/published-books",
         renderBooks(),
         booksState,
@@ -356,8 +451,8 @@ export default function RecentPosts({
       )}
 
       {renderSection(
-        "New Reviews",
-        "Browse all Reviews",
+        "সাম্প্রতিক রিভিউ",
+        "সব রিভিউ দেখুন",
         "/about-us",
         reviews?.length === 0 ? (
           <p className="text-center text-gray-500">No reviews yet.</p>

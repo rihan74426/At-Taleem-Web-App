@@ -72,7 +72,7 @@ export default function SendEmailModal({
           <IoMdMail className="text-blue-500" /> Send Custom Email
         </h2>
         {success ? (
-          <p className="text-green-600">Email sent successfully!</p>
+          <p className="text-green-300">Email sent successfully!</p>
         ) : (
           <>
             {/* Headline input */}
@@ -93,13 +93,15 @@ export default function SendEmailModal({
             {/* Message body input */}
             <label className="block mb-2">
               <span className="text-gray-700 dark:text-gray-300">Message</span>
-              <ReactQuill
-                theme="snow"
-                placeholder="Your custom message here"
-                value={body}
-                className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 resize-none"
-                onChange={setBody}
-              />
+              <div className="mt-1 block w-full border rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                <ReactQuill
+                  theme="snow"
+                  placeholder="Your custom message here"
+                  value={body}
+                  className="h-[200px] mb-12"
+                  onChange={setBody}
+                />
+              </div>
             </label>
             {/* Footer text input */}
             {user.user.publicMetadata.isAdmin && (

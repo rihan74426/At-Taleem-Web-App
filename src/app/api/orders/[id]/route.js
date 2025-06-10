@@ -13,7 +13,8 @@ const limiter = rateLimit({
 
 export async function GET(req, { params }) {
   await connect();
-  const order = await Order.findById(params.id).populate({
+  const { id } = await params.id;
+  const order = await Order.findById(id).populate({
     path: "items.bookId",
     model: "Book",
     select: "title coverImage price",
@@ -37,7 +38,8 @@ export async function PUT(req, { params }) {
   for (const key of allowed) {
     if (updates[key] !== undefined) data[key] = updates[key];
   }
-  const order = await Order.findByIdAndUpdate(params.id, data, { new: true });
+  const { id } = await params;
+  const order = await Order.findByIdAndUpdate(id, data, { new: true });
   if (!order) {
     return new Response(JSON.stringify({ error: "Order not found" }), {
       status: 404,
@@ -64,7 +66,7 @@ export async function DELETE(req, { params }) {
     // Connect to database
     await connect();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Find and delete the order
     const order = await Order.findByIdAndDelete(id);
