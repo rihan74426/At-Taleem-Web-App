@@ -67,59 +67,22 @@ export async function POST(req) {
         return sum + b.price * qty;
       }, 0);
 
-  // create order
-  const order = await Order.create({
-    items,
-    userId,
-    buyerName,
-    buyerEmail,
-    deliveryAddress,
-    deliveryPhone,
-    amount: totalAmount,
-  });
-
-  // Send order confirmation email
-  const emailTemplate = buildOrderEmailTemplate({
-    orderId: order._id,
-    buyerName,
-    orderDate: new Date(order.createdAt).toLocaleDateString(),
-    totalAmount,
-    paymentStatus: order.paymentStatus,
-    deliveryAddress,
-    items: books.map((book) => ({
-      title: book.title,
-      coverImage: book.coverImage,
-      qty: items.find((item) => item.bookId === book._id.toString()).qty,
-      price: book.price,
-    })),
-    type: "confirmation",
-  });
-
-  // Send email
-  await fetch(`${process.env.URL}/api/emails`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      to: buyerEmail,
-      subject: emailTemplate.subject,
-      html: emailTemplate.html,
-    }),
-  });
-
   // Prepare SSLCommerz payload
   const storeId = process.env.SSLCZ_STORE_ID;
   const storePasswd = process.env.SSLCZ_STORE_PASSWORD;
   const successUrl = `${process.env.URL}/api/orders/ssl-success`;
   const failUrl = `${process.env.URL}/api/orders/ssl-fail`;
+  const cancelUrl = `${process.env.URL}/api/orders/ssl-cancel`;
 
   const formBody = new URLSearchParams({
     store_id: storeId,
     store_passwd: storePasswd,
     total_amount: totalAmount.toString(),
     currency: "BDT",
-    tran_id: order._id.toString(),
+    tran_id: `ORDER_${Date.now()}`, // Temporary transaction ID
     success_url: successUrl,
     fail_url: failUrl,
+    cancel_url: cancelUrl,
     cus_name: buyerName,
     cus_email: buyerEmail,
     cus_phone: deliveryPhone,
@@ -132,7 +95,15 @@ export async function POST(req) {
     product_category: "Books",
     product_profile: "Physical-goods",
     emi_option: "0",
-    value_a: order._id.toString(),
+    value_a: JSON.stringify({
+      items,
+      userId,
+      buyerName,
+      buyerEmail,
+      deliveryAddress,
+      deliveryPhone,
+      bundlePrice,
+    }), // Store order data
   });
 
   // Call SSLCommerz init API
@@ -145,14 +116,18 @@ export async function POST(req) {
     }
   );
   const data = await resp.json();
+
   if (data.GatewayPageURL) {
-    order.sessionKey = data.sessionkey;
-    order.gatewayPageURL = data.GatewayPageURL;
-    await order.save();
-    return new Response(JSON.stringify({ paymentUrl: data.GatewayPageURL }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        paymentUrl: data.GatewayPageURL,
+        sessionKey: data.sessionkey,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } else {
     return new Response(
       JSON.stringify({ error: "SSL init failed", detail: data }),

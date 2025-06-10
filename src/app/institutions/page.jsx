@@ -1,7 +1,7 @@
 // src/app/institutions/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Loader from "@/app/Components/Loader";
 import { FiMapPin, FiUsers, FiBookOpen, FiMail, FiBell } from "react-icons/fi";
@@ -10,6 +10,7 @@ import { useUser } from "@clerk/nextjs";
 import ResponseModal from "../Components/ResponseModal";
 import { format } from "date-fns";
 import { FaGraduationCap } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Add InstitutionSkeleton component
 const InstitutionSkeleton = () => (
@@ -101,6 +102,8 @@ export default function InstitutionsPage() {
   const [notifyEmail, setNotifyEmail] = useState({});
   const [notifyStatus, setNotifyStatus] = useState({});
   const [emailModal, setEmailModal] = useState(false);
+  const [admissionModal, setAdmissionModal] = useState(false);
+  const institutionsRef = useRef(null);
   const user = useUser();
   const [modal, setModal] = useState({
     isOpen: false,
@@ -144,23 +147,33 @@ export default function InstitutionsPage() {
     }
   };
 
+  const scrollToInstitutions = () => {
+    institutionsRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <main className="space-y-20 px-4 py-12 md:px-8 lg:px-16">
       {/* Hero */}
       <section className="relative bg-gradient-to-r from-teal-500 to-blue-600 rounded-2xl overflow-hidden text-white p-12 flex flex-col md:flex-row items-center gap-8 shadow-xl">
         <div className="md:flex-1 space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-            সন্তানের দ্বীনি জ্ঞানের স্বপ্নযাত্রায় স্বাগতম!
+            সন্তানের দ্বীনি জ্ঞানের স্বপ্নযাত্রায় স্বাগতম!
           </h1>
           <p className="text-lg md:text-xl text-gray-100">
             আমাদের প্রতিষ্ঠানগুলোর মান যাচাই করুন, এবং ঘুরে দেখুন কোনটি আপনার
-            সন্তানের জন্য উপযুক্ত হয়!
+            সন্তানের জন্য উপযুক্ত হয়!
           </p>
           <div className="flex gap-4 mt-6">
-            <button className="px-6 py-3 bg-white text-teal-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <button
+              onClick={scrollToInstitutions}
+              className="px-6 py-3 bg-white text-teal-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+            >
               প্রতিষ্ঠান খুঁজুন
             </button>
-            <button className="px-6 py-3 bg-teal-700 text-white rounded-lg font-semibold hover:bg-teal-800 transition-colors">
+            <button
+              onClick={() => setAdmissionModal(true)}
+              className="px-6 py-3 bg-teal-700 text-white rounded-lg font-semibold hover:bg-teal-800 transition-colors"
+            >
               ভর্তি প্রক্রিয়া
             </button>
           </div>
@@ -209,7 +222,7 @@ export default function InstitutionsPage() {
       </section>
 
       {/* Institutions Grid */}
-      <section>
+      <section ref={institutionsRef}>
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-center">
             আমাদের প্রতিষ্ঠানসমূহ
@@ -469,6 +482,120 @@ export default function InstitutionsPage() {
         status={modal.status}
         onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
       />
+
+      {/* Admission Instructions Modal */}
+      <AnimatePresence>
+        {admissionModal && (
+          <div className="fixed inset-0 z-50">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setAdmissionModal(false)}
+            />
+
+            {/* Modal Content */}
+            <div className="fixed inset-0">
+              <div className="flex min-h-full items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl"
+                >
+                  {/* Close Button */}
+                  <button
+                    onClick={() => setAdmissionModal(false)}
+                    className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Modal Header */}
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      ভর্তি প্রক্রিয়া
+                    </h2>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                    <div className="space-y-4 text-gray-700 dark:text-gray-300">
+                      <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">
+                          ১. আবেদন প্রক্রিয়া
+                        </h3>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>
+                            অনলাইনে আবেদন করতে হলে ভর্তি কার্যক্রম শুরু হলে
+                            প্রতিষ্ঠানের সাথে একটি ফর্ম লিংক দেওয়া হবে।
+                          </li>
+                          <li>প্রয়োজনীয় তথ্য দিয়ে আবেদন ফর্ম পূরণ করুন</li>
+                          <li>
+                            তারপর সরাসরি প্রতিষ্ঠানের অফিসে গিয়ে প্রয়োজনীয়
+                            কাগজপত্র জমা দিন
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">
+                          ২. প্রয়োজনীয় কাগজপত্র
+                        </h3>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>শিক্ষার্থীর জন্ম নিবন্ধন সনদ</li>
+                          <li>পূর্ববর্তী প্রতিষ্ঠানের সনদপত্র</li>
+                          <li>পাসপোর্ট সাইজ ছবি (২ কপি)</li>
+                          <li>অভিভাবকের জাতীয় পরিচয়পত্র</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">৫. যোগাযোগ</h3>
+                        <p className="mb-2">
+                          ভর্তি সংক্রান্ত যেকোনো প্রশ্নের জন্য যোগাযোগ করুন:
+                        </p>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>ফোন: ০১৮২১-৪০৮৩১৪</li>
+                          <li>ইমেইল: attaleemofficial@gmail.com</li>
+                          <li>
+                            প্রধান কার্যালয়ঃ ৩৭০ বি, বাইতুচ ছালাম ভবন, আল-আমীন
+                            রোড, শুলকবহর, বহদ্দারহাট, চট্টগ্রাম
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setAdmissionModal(false)}
+                      className="w-full px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors"
+                    >
+                      বন্ধ করুন
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

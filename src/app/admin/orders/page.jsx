@@ -24,6 +24,7 @@ import {
 } from "react-icons/fi";
 import SendEmailModal from "@/app/Components/sendEmail";
 import ResponseModal from "@/app/Components/ResponseModal";
+import OrderSkeleton from "@/app/Components/OrderSkeleton";
 
 // Status colors and icons
 const STATUS_COLORS = {
@@ -293,8 +294,49 @@ export default function AdminOrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Order Management
+            </h1>
+            <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-1"></div>
+          </div>
+          <div className="flex gap-3">
+            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+                <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Search and Sort */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex-1 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+          <div className="h-10 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+        </div>
+
+        {/* Orders List */}
+        <div className="space-y-6">
+          <OrderSkeleton count={3} />
+        </div>
       </div>
     );
   }

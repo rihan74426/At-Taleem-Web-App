@@ -2,127 +2,115 @@ import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
 import { buildOrderEmailTemplate } from "@/app/utils/emailTemplates";
 
+// Remove authentication middleware for SSL callback
+export const dynamic = "force-dynamic";
+export const runtime = "edge";
+
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const {
-      tran_id,
-      status,
-      val_id,
-      amount,
-      store_amount,
-      currency,
-      bank_tran_id,
-      card_type,
-      card_no,
-      card_issuer,
-      card_brand,
-      card_issuer_country,
-      card_issuer_country_code,
-      currency_type,
-      currency_amount,
-      currency_rate,
-      base_fair,
-      value_a, // orderId
-    } = body;
-
-    // Connect to database
     await connect();
+    const formData = await req.formData();
+    const tranId = formData.get("tran_id");
+    const valId = formData.get("val_id");
+    const amount = formData.get("amount");
+    const storeAmount = formData.get("store_amount");
+    const currency = formData.get("currency");
+    const bankTranId = formData.get("bank_tran_id");
+    const cardType = formData.get("card_type");
+    const cardNo = formData.get("card_no");
+    const cardIssuer = formData.get("card_issuer");
+    const cardBrand = formData.get("card_brand");
+    const cardSubBrand = formData.get("card_sub_brand");
+    const cardCategory = formData.get("card_category");
+    const cardIssuerCountry = formData.get("card_issuer_country");
+    const cardIssuerCountryCode = formData.get("card_issuer_country_code");
+    const baseFair = formData.get("base_fair");
+    const valueA = formData.get("value_a");
+    const riskLevel = formData.get("risk_level");
+    const riskTitle = formData.get("risk_title");
 
-    // Find and update order
-    const order = await Order.findById(value_a).populate({
-      path: "items.bookId",
-      model: "Book",
-      select: "title coverImage price",
+    // Parse order data from value_a
+    const orderData = JSON.parse(valueA);
+
+    // Create order with payment details
+    const order = await Order.create({
+      ...orderData,
+      amount: parseFloat(amount),
+      paymentStatus: "Paid",
+      paymentDetails: {
+        transactionId: tranId,
+        validationId: valId,
+        amount: parseFloat(amount),
+        paidAt: new Date(),
+        cardType,
+        cardNo,
+        cardIssuer,
+        cardBrand,
+        cardSubBrand,
+        cardCategory,
+        cardIssuerCountry,
+        cardIssuerCountryCode,
+        bankTranId,
+        currency,
+        storeAmount: parseFloat(storeAmount),
+        baseFair: parseFloat(baseFair),
+        riskLevel,
+        riskTitle,
+      },
     });
 
-    if (!order) {
-      return new Response(JSON.stringify({ error: "Order not found" }), {
-        status: 404,
-      });
-    }
-
-    // Update order status
-    order.paymentStatus = "Paid";
-    order.status = "processing";
-    order.paymentDetails = {
-      transactionId: tran_id,
-      validationId: val_id,
-      amount: amount,
-      storeAmount: store_amount,
-      currency: currency,
-      bankTransactionId: bank_tran_id,
-      cardType: card_type,
-      cardNumber: card_no,
-      cardIssuer: card_issuer,
-      cardBrand: card_brand,
-      cardIssuerCountry: card_issuer_country,
-      cardIssuerCountryCode: card_issuer_country_code,
-      currencyType: currency_type,
-      currencyAmount: currency_amount,
-      currencyRate: currency_rate,
-      baseFair: base_fair,
-      paidAt: new Date(),
-    };
-
-    // Add tracking update
-    order.tracking.push({
-      status: "processing",
-      message: "Payment successful. Order is being processed.",
-      timestamp: new Date(),
+    // Send confirmation email to customer
+    const customerEmailTemplate = buildOrderEmailTemplate({
+      orderId: order._id,
+      buyerName: order.buyerName,
+      orderDate: new Date(order.createdAt).toLocaleDateString(),
+      totalAmount: order.amount,
+      paymentStatus: order.paymentStatus,
+      deliveryAddress: order.deliveryAddress,
+      items: order.items,
+      type: "confirmation",
     });
 
-    await order.save();
-
-    // Send payment confirmation email
-    try {
-      const emailTemplate = buildOrderEmailTemplate({
-        orderId: order._id,
-        buyerName: order.buyerName,
-        orderDate: order.createdAt,
-        totalAmount: order.amount,
-        paymentStatus: order.paymentStatus,
-        deliveryAddress: order.deliveryAddress,
-        items: order.items.map((item) => ({
-          title: item.bookId.title,
-          coverImage: item.bookId.coverImage,
-          qty: item.qty,
-          price: item.price,
-        })),
-        type: "confirmation",
-      });
-
-      await fetch(`${process.env.URL}/api/emails`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: order.buyerEmail,
-          subject: emailTemplate.subject,
-          html: emailTemplate.html,
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to send payment confirmation email:", error);
-    }
-
-    // Return success response
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        message: "Payment processed successfully",
-        orderId: order._id,
+    await fetch(`${process.env.URL}/api/emails`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: order.buyerEmail,
+        subject: customerEmailTemplate.subject,
+        html: customerEmailTemplate.html,
       }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  } catch (error) {
-    console.error("Error processing successful payment:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
     });
+
+    // Send notification email to admin
+    const adminEmailTemplate = buildOrderEmailTemplate({
+      orderId: order._id,
+      buyerName: order.buyerName,
+      orderDate: new Date(order.createdAt).toLocaleDateString(),
+      totalAmount: order.amount,
+      paymentStatus: order.paymentStatus,
+      deliveryAddress: order.deliveryAddress,
+      items: order.items,
+      type: "admin_notification",
+    });
+
+    await fetch(`${process.env.URL}/api/emails`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: process.env.ADMIN_EMAIL,
+        subject: adminEmailTemplate.subject,
+        html: adminEmailTemplate.html,
+      }),
+    });
+
+    // Redirect to success page
+    return Response.redirect(`${process.env.URL}/order-success/${order._id}`);
+  } catch (error) {
+    console.error("SSL Success Error:", error);
+    return Response.redirect(
+      `${process.env.URL}/order-failed?error=${encodeURIComponent(
+        "Payment processing failed"
+      )}`
+    );
   }
 }

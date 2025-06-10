@@ -10,6 +10,7 @@ import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import ResponseModal from "@/app/Components/ResponseModal";
+import OrderSkeleton from "@/app/Components/OrderSkeleton";
 
 // Status colors and icons
 const STATUS_COLORS = {
@@ -186,8 +187,24 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">My Orders</h1>
+          <div className="flex gap-4">
+            <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <div className="flex gap-4">
+            <div className="flex-1 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <OrderSkeleton count={3} />
+        </div>
       </div>
     );
   }

@@ -168,9 +168,9 @@ export const buildOrderEmailTemplate = ({
                   </tr>
                   <tr>
                     <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">মোট পরিমাণ:</td>
-                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600; font-size: 14px;">${formatCurrency(
-                      totalAmount
-                    )}</td>
+                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600; font-size: 14px;">
+                      ${formatCurrency(totalAmount)}
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">পেমেন্ট স্ট্যাটাস:</td>

@@ -6,8 +6,6 @@ const publicRoutes = [
   "/api/orders/ssl-fail",
   "/api/orders/ssl-cancel",
   "/api/orders/ssl-ipn",
-  "/api/orders/verify-payment",
-  "/payment-success",
 ];
 
 // Protect specific routes (e.g., dashboard, API routes)
