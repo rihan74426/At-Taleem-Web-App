@@ -13,6 +13,11 @@ const nextConfig = {
         hostname: "images.clerk.dev",
         pathname: "/**", // Allow all images from this domain
       },
+      {
+        protocol: "https",
+        hostname: "media.licdn.com",
+        pathname: "/**", // Allow all images from this domain
+      },
     ],
   },
   webpack: (config) => {

@@ -12,6 +12,11 @@ export default function SendEmailModal({
   defaultFooter,
   recipientEmail,
   onClose,
+  showSenderEmail = true,
+  showHeader = true,
+  showFooter = true,
+  customButtonText = "Send Email",
+  customSuccessMessage = "Email sent successfully!",
 }) {
   // State for modal inputs
   const [logoUrl, setLogoUrl] = useState(
@@ -20,15 +25,42 @@ export default function SendEmailModal({
   const [headline, setHeadline] = useState(defaultHeader);
   const [body, setBody] = useState(defaultBody);
   const [footerText, setFooterText] = useState(defaultFooter);
+  const [senderEmail, setSenderEmail] = useState("");
+  const [senderName, setSenderName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const user = useUser();
+  const { user, isSignedIn } = useUser();
+
+  const validateSubject = () => {
+    if (!isSignedIn) {
+      // Check if the subject contains the default placeholder
+      if (headline.includes("Your Name")) {
+        throw new Error("Please enter your name in the subject line");
+      }
+      // Check if the subject is empty or just whitespace
+      if (!headline.trim()) {
+        throw new Error("Please enter a subject for your email");
+      }
+    }
+  };
+
   const handleSend = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (!user.isSignedIn) return alert("You must login to send emails");
+      // Validate sender email for non-logged in users
+      if (!isSignedIn && !senderEmail) {
+        throw new Error("Please provide your email address");
+      }
+
+      if (!isSignedIn && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      // Validate subject line
+      validateSubject();
+
       // Build the full HTML using the template
       const html = buildEmailTemplate({
         logoUrl,
@@ -36,17 +68,23 @@ export default function SendEmailModal({
         message: body,
         footerText,
       });
-      const method = user.user.publicMetadata.isAdmin ? "POST" : "PUT";
+
+      const method =
+        isSignedIn && user?.publicMetadata?.isAdmin ? "POST" : "PUT";
       const res = await fetch("/api/emails", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: recipientEmail,
           subject: headline || "Your Message from At-Taleem",
-          userEmail: user.user.emailAddresses[0]?.emailAddress,
+          userEmail: isSignedIn
+            ? user.emailAddresses[0]?.emailAddress
+            : senderEmail,
           html,
+          senderName: isSignedIn ? user.fullName : senderEmail.split("@")[0],
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unknown error");
       setSuccess(true);
@@ -60,7 +98,7 @@ export default function SendEmailModal({
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-auto max-w-md h-5/6 w-full p-6 ">
+      <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-auto max-w-md h-5/6 w-full p-6">
         <button
           className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           onClick={onClose}
@@ -72,11 +110,40 @@ export default function SendEmailModal({
           <IoMdMail className="text-blue-500" /> Send Custom Email
         </h2>
         {success ? (
-          <p className="text-green-300">Email sent successfully!</p>
+          <div className="text-center py-8">
+            <p className="text-green-500 text-lg mb-4">
+              {customSuccessMessage}
+            </p>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Close
+            </button>
+          </div>
         ) : (
           <>
+            {/* Sender Email input for non-logged in users */}
+            {showSenderEmail && !isSignedIn && (
+              <div className="space-y-4 mb-4">
+                <label className="block">
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Your Email Address
+                  </span>
+                  <input
+                    type="email"
+                    value={senderEmail}
+                    onChange={(e) => setSenderEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    required
+                  />
+                </label>
+              </div>
+            )}
+
             {/* Headline input */}
-            {user.user.publicMetadata.isAdmin && (
+            {showHeader && (
               <label className="block mb-2">
                 <span className="text-gray-700 dark:text-gray-300">
                   Headline & Subject
@@ -88,8 +155,14 @@ export default function SendEmailModal({
                   placeholder="Email Subject and Header"
                   className="mt-1 block w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
                 />
+                {!isSignedIn && headline.includes("Your Name") && (
+                  <p className="text-red-500 text-sm mt-1">
+                    Please enter your name in the subject line
+                  </p>
+                )}
               </label>
             )}
+
             {/* Message body input */}
             <label className="block mb-2">
               <span className="text-gray-700 dark:text-gray-300">Message</span>
@@ -103,8 +176,9 @@ export default function SendEmailModal({
                 />
               </div>
             </label>
+
             {/* Footer text input */}
-            {user.user.publicMetadata.isAdmin && (
+            {showFooter && (
               <label className="block mb-4">
                 <span className="text-gray-700 dark:text-gray-300">
                   Footer Text
@@ -118,13 +192,40 @@ export default function SendEmailModal({
                 />
               </label>
             )}
-            {error && <p className="text-red-600 mb-2">{error}</p>}
+
+            {error && (
+              <p className="text-red-600 mb-2 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                {error}
+              </p>
+            )}
+
             <button
               onClick={handleSend}
-              disabled={loading || !headline || !body}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              disabled={loading || !body || (!isSignedIn && !senderEmail)}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? "Sending..." : "Send Email"}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Sending...
+                </span>
+              ) : (
+                customButtonText
+              )}
             </button>
           </>
         )}

@@ -95,6 +95,9 @@ export default function FooterCom() {
                 <BsWhatsapp className="w-5 h-5" />
               </Link>
             </div>
+            <p className="text-sm text-gray-400">
+              © {new Date().getFullYear()} At‑Taleem. সর্বস্বত্ব সংরক্ষিত।
+            </p>
           </div>
 
           {/* Quick Links */}
@@ -118,7 +121,7 @@ export default function FooterCom() {
                   className="flex items-center text-gray-400 hover:text-white transition-colors group"
                 >
                   <BsArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
-                  ভিডিও লেকচার
+                  ভিডিও
                 </Link>
               </li>
               <li>
@@ -137,6 +140,15 @@ export default function FooterCom() {
                 >
                   <BsArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
                   প্রতিষ্ঠানসমূহ
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/masalah"
+                  className="flex items-center text-gray-400 hover:text-white transition-colors group"
+                >
+                  <BsArrowRight className="w-4 h-4 mr-2 group-hover:translate-x-1 transition-transform" />
+                  মাসআলা-মাসায়েল
                 </Link>
               </li>
             </ul>
@@ -165,75 +177,53 @@ export default function FooterCom() {
           <div>
             <h3 className="text-lg font-semibold text-white mb-6">ডেভেলপার</h3>
             <div className="space-y-4">
-              <p className="text-sm">এই ওয়েবসাইটটি তৈরি করেছেন</p>
-              <div className="flex items-center space-x-3">
-                <Image
-                  src="/developer.jpg"
-                  alt="Developer"
-                  width={40}
-                  height={40}
-                  className="rounded-full"
-                />
-                <div>
-                  <h4 className="font-medium text-white">
-                    আব্দুল্লাহ আল মামুন
-                  </h4>
-                  <p className="text-sm text-gray-400">Full Stack Developer</p>
+              <p className="text-sm text-gray-400">
+                এই ওয়েবসাইটটি তৈরি করেছেন
+              </p>
+              <div className="bg-gray-800/50 p-5 rounded-lg border border-gray-700 hover:border-teal-500/50 transition-colors duration-300">
+                <div className="flex items-center space-x-4 mb-5">
+                  <div className="relative group">
+                    <a
+                      href="https://github.com/rihan74426"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Image
+                        src="/favicon.png"
+                        alt="At-Taleem Team"
+                        width={52}
+                        height={52}
+                        className="rounded-full ring-2 ring-teal-500 group-hover:ring-orange-500 transition-all duration-300"
+                      />
+                      <div className="absolute -bottom-1 -right-1 bg-teal-500 group-hover:bg-orange-500 rounded-full p-1.5 transition-colors duration-300">
+                        <BsGithub className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </a>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-white text-lg mb-0.5">
+                      Team At-Taleem
+                    </h4>
+                    <p className="text-sm text-gray-400">Development Team</p>
+                  </div>
+                </div>
+                <div className="space-y-3.5">
+                  <Link
+                    href="/call-to-action"
+                    target="blank"
+                    className="flex items-center justify-center gap-2 w-full p-3 bg-gradient-to-r from-blue-500 to-green-600 hover:from-green-600 hover:to-blue-700 rounded-md text-white font-medium transition-all duration-300 shadow-lg hover:shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <BsEnvelope className="w-4 h-4" />
+                    Contact Developer
+                  </Link>
+                  <p className="text-center text-sm text-gray-400 flex items-center justify-center gap-1.5">
+                    Made with{" "}
+                    <span className="text-red-500 animate-pulse">❤</span> by{" "}
+                    <span className="text-teal-400">Team At-Taleem</span>
+                  </p>
                 </div>
               </div>
-              <div className="flex space-x-4">
-                <Link
-                  href="https://github.com/yourusername"
-                  target="_blank"
-                  className="p-2 bg-gray-800 hover:bg-teal-600 rounded-full transition-colors"
-                >
-                  <BsGithub className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="https://linkedin.com/in/yourusername"
-                  target="_blank"
-                  className="p-2 bg-gray-800 hover:bg-teal-600 rounded-full transition-colors"
-                >
-                  <BsLinkedin className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="mailto:your.email@example.com"
-                  className="p-2 bg-gray-800 hover:bg-teal-600 rounded-full transition-colors"
-                >
-                  <BsEnvelope className="w-5 h-5" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-sm text-gray-400">
-              © {new Date().getFullYear()} At‑Taleem. সর্বস্বত্ব সংরক্ষিত।
-            </p>
-            <div className="flex space-x-6">
-              <Link
-                href="/privacy"
-                className="text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                গোপনীয়তা নীতি
-              </Link>
-              <Link
-                href="/terms"
-                className="text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                শর্তাবলী
-              </Link>
-              <Link
-                href="/contact"
-                className="text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                যোগাযোগ
-              </Link>
             </div>
           </div>
         </div>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
-import Loader from "./Loader";
 import ReviewCarousel from "./ReviewCarousel";
 import { formatDistanceToNow } from "date-fns";
 

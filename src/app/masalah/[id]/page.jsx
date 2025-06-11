@@ -16,6 +16,7 @@ import { BsTrash } from "react-icons/bs";
 import TimeAgo from "react-timeago";
 import MasalahForm from "../../Components/MasalahForm";
 import ResponseModal from "../../Components/ResponseModal";
+import { MasalahDetailSkeleton } from "../../Components/MasalahSkeleton";
 
 export default function MasalahDetailPage() {
   const { user, isLoaded } = useUser();
@@ -573,16 +574,7 @@ export default function MasalahDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            মাসআলার বিস্তারিত লোড হচ্ছে...
-          </p>
-        </div>
-      </div>
-    );
+    return <MasalahDetailSkeleton />;
   }
 
   if (!masalah) {

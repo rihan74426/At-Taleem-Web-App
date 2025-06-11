@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { SignInButton, useUser } from "@clerk/nextjs";
 import ResponseModal from "./ResponseModal";
-import Loader from "./Loader";
 import { motion } from "framer-motion";
 
 const Editor = dynamic(() => import("./Editor"), { ssr: false });

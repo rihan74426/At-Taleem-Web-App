@@ -354,11 +354,6 @@ export default function InstitutionsPage() {
                         </p>
                         <button
                           onClick={() => {
-                            if (!user.isSignedIn)
-                              return showModal(
-                                "প্রতিষ্ঠানকে মেসেজ করার জন্য দয়া করে লগিন করুন!",
-                                "error"
-                              );
                             setEmailModal(true);
                           }}
                           className="inline-flex items-center px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-semibold transition-colors"
@@ -452,7 +447,7 @@ export default function InstitutionsPage() {
                               </div>
                             )}
                             {notifyStatus[inst._id] && (
-                              <p className="text-sm text-teal-600 mt-2">
+                              <p className="text-sm text-teal-600 dark:text-red-300 mt-2">
                                 {notifyStatus[inst._id]}
                               </p>
                             )}
@@ -464,7 +459,9 @@ export default function InstitutionsPage() {
                 </div>
                 {emailModal && (
                   <SendEmailModal
-                    defaultHeader={`This is from ${user.user.fullName} from the At-taleem web`}
+                    defaultHeader={`This is ${
+                      user.user?.fullName || "'Your Name'"
+                    } from the At-taleem web`}
                     defaultBody="আস্সালামু আলাইকুম!"
                     defaultFooter="Thank you for your time and consideration."
                     recipientEmail={inst.email}

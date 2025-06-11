@@ -14,7 +14,6 @@ import {
 import { Button, Table } from "flowbite-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import Loader from "./Loader";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useDashboardData } from "../hooks/useDashboardData";
 

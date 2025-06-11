@@ -5,7 +5,6 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { FaSearch, FaFilter, FaSort } from "react-icons/fa";
 import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
-import Loader from "./Loader";
 import SendEmail from "./sendEmail";
 import ResponseModal from "./ResponseModal";
 

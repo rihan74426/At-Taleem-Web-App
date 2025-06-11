@@ -17,6 +17,7 @@ import {
 } from "react-icons/fa";
 import MasalahForm from "../Components/MasalahForm";
 import ResponseModal from "../Components/ResponseModal";
+import MasalahSkeleton from "../Components/MasalahSkeleton";
 
 // Constants
 const ITEMS_PER_PAGE = 10;
@@ -391,12 +392,26 @@ export default function MasalahPage() {
   if (loading && !masalah.length) {
     return (
       <div className="container mx-auto px-4 py-8 min-h-screen">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            মাসআলা লোড হচ্ছে...
-          </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 animate-pulse"></div>
+          </div>
         </div>
+
+        {/* Search and Filter Section Skeleton */}
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="flex-1">
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div className="flex gap-2">
+              <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        <MasalahSkeleton />
       </div>
     );
   }

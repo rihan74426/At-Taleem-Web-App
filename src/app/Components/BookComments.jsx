@@ -142,7 +142,8 @@ export default function BookComments({ bookId }) {
 
   // Delete comment
   const handleDelete = async (commentId) => {
-    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    if (!window.confirm("Are you sure you want to delete this Comment?"))
+      return;
 
     const res = await fetch(`/api/comments/${commentId}`, {
       method: "DELETE",
@@ -166,14 +167,14 @@ export default function BookComments({ bookId }) {
 
   return (
     <div className="mt-10 dark:text-white text-black">
-      <h2 className="text-4xl font-bold mb-6 text-center">Reviews</h2>
+      <h2 className="text-4xl font-bold mb-6 text-center">Comments</h2>
 
       {/* Comment Form */}
       {user ? (
         <div className="mb-6">
           <textarea
             className="w-full border rounded p-3 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Write a review..."
+            placeholder="Write a Comment..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             rows="3"
@@ -188,7 +189,7 @@ export default function BookComments({ bookId }) {
         </div>
       ) : (
         <p className="text-gray-500 text-center mb-6">
-          Please log in to review.{" "}
+          Please log in to Comment.{" "}
           <button className="bg-blue-800 text-white px-4 py-2 rounded">
             <SignInButton />
           </button>

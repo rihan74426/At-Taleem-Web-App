@@ -16,7 +16,6 @@ import { AiOutlineDelete } from "react-icons/ai";
 import QuestionForm from "@/app/Components/QuestionForm";
 import ResponseModal from "@/app/Components/ResponseModal";
 import QuestionComments from "@/app/Components/QuestionComment";
-import Loader from "@/app/Components/Loader";
 import { QuestionDetailSkeleton } from "@/app/Components/Skeleton";
 
 // Dynamically import ReactQuill to avoid SSR issues

@@ -11,6 +11,56 @@ import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { motion, useAnimation } from "framer-motion";
 import { UserButton } from "@clerk/nextjs";
 
+// Review Card Skeleton Component
+export function ReviewCardSkeleton() {
+  return (
+    <div
+      className="relative bg-white dark:bg-gray-800 rounded-[2rem] shadow-lg overflow-hidden animate-pulse"
+      style={{
+        clipPath: "polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%)",
+      }}
+    >
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 dark:bg-teal-500/20 rounded-bl-full" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/10 dark:bg-amber-500/20 rounded-tr-full" />
+
+      <div className="p-6 relative">
+        {/* Header Section Skeleton */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            <div>
+              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          </div>
+        </div>
+
+        {/* Review Content Skeleton */}
+        <div className="relative bg-gradient-to-br from-amber-50 to-amber-100 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-6 mb-4">
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+          </div>
+        </div>
+
+        {/* Footer Section Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+          <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Review Component
 export function ReviewCard({
   review,
@@ -442,8 +492,10 @@ export default function AboutUsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center">
-          <Loader />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((index) => (
+            <ReviewCardSkeleton key={index} />
+          ))}
         </div>
       ) : (
         <>
