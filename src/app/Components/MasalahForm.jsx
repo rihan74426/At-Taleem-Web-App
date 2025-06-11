@@ -191,7 +191,7 @@ export default function MasalahForm({
 
       {/* Category Section */}
       <div className="mb-4 relative">
-        <label className="block mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <label className="block text-md font-medium text-gray-700 dark:text-gray-300">
           ক্যাটাগরি যুক্ত করুন:
         </label>
         <div className="flex flex-wrap gap-2">
@@ -246,7 +246,7 @@ export default function MasalahForm({
           type="button"
           onClick={() => {
             reset();
-            onClose();
+            onClose?.();
           }}
           className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
         >

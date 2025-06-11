@@ -6,7 +6,6 @@ import { useUser } from "@clerk/nextjs";
 
 import DashSidebar from "../Components/DashSidebar";
 import DashProfile from "../Components/DashProfile";
-import DashPosts from "../Components/DashPosts";
 import DashUsers from "../Components/DashUsers";
 import DashboardComp from "../Components/DashboardComp";
 import AdminVideosPage from "./videos/page";
@@ -48,8 +47,6 @@ export default function Dashboard() {
     switch (tab) {
       case "profile":
         return <DashProfile />;
-      case "posts":
-        return isAdmin ? <DashPosts /> : <NotAdmin />;
       case "users":
         return isAdmin ? <DashUsers /> : <NotAdmin />;
       case "addVideo":

@@ -81,17 +81,6 @@ export default function DashSidebar() {
             </Sidebar.Item>
           </Link>
           {user?.publicMetadata?.isAdmin && (
-            <Link href="/dashboard?tab=posts">
-              <Sidebar.Item
-                active={tab === "posts"}
-                icon={HiDocumentText}
-                as="div"
-              >
-                Posts
-              </Sidebar.Item>
-            </Link>
-          )}
-          {user?.publicMetadata?.isAdmin && (
             <Link href="/dashboard?tab=users">
               <Sidebar.Item
                 active={tab === "users"}
