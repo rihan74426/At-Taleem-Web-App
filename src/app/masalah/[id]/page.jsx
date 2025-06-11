@@ -667,7 +667,7 @@ export default function MasalahDetailPage() {
             {masalah.description}
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">তথ্যসূত্র</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">দলীলাদি</h2>
           <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {masalah.references}
           </p>
