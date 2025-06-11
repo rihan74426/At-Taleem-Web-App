@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Masalah from "@/lib/models/masalah";
 import { connect } from "@/lib/mongodb/mongoose";
 import { getAuth } from "@clerk/nextjs/server";
+import "@/lib/models/Category"; // Import to register the model
 
 // GET /api/masalah - Get all masalah with pagination, filtering, and search
 export async function GET(request) {
