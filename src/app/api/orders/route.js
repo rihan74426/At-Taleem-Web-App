@@ -2,7 +2,6 @@
 import { connect } from "@/lib/mongodb/mongoose";
 import Order from "@/lib/models/Order";
 import Book from "@/lib/models/Book";
-import { buildOrderEmailTemplate } from "@/app/utils/emailTemplates";
 
 export async function GET(req) {
   await connect();
