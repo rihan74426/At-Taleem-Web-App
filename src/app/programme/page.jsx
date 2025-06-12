@@ -33,6 +33,26 @@ const SCOPES = [
   { value: "yearly", label: "Yearly" },
 ];
 
+export const metadata = {
+  title: "Islamic Education Programmes - At-Taleem",
+  description:
+    "Explore our comprehensive Islamic education programmes. Learn Quran, Hadith, and Islamic studies through structured courses and educational resources.",
+  alternates: {
+    canonical: "/programme",
+  },
+  openGraph: {
+    title: "Islamic Education Programmes - At-Taleem",
+    description:
+      "Explore our comprehensive Islamic education programmes. Learn Quran, Hadith, and Islamic studies through structured courses and educational resources.",
+    url: "/programme",
+  },
+  twitter: {
+    title: "Islamic Education Programmes - At-Taleem",
+    description:
+      "Explore our comprehensive Islamic education programmes. Learn Quran, Hadith, and Islamic studies through structured courses.",
+  },
+};
+
 export default function ProgrammePage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
