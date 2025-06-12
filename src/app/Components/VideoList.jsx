@@ -118,7 +118,7 @@ export function VideoListItem({ video, onEdit, onDelete, handleLike }) {
             </span>
           </div>
 
-          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+          <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap line-clamp-3">
             {video.description}
           </p>
         </div>

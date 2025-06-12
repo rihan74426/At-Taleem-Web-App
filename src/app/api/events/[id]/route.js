@@ -87,30 +87,45 @@ export async function PUT(req, { params }) {
 export async function PATCH(req, { params }) {
   try {
     await connect();
-    const auth = getAuth(req);
-
     const { id } = await params;
-    const { action } = await req.json();
+    const { action, userId } = await req.json();
 
     const event = await Event.findById(id);
     if (!event) {
       return Response.json({ error: "Event not found" }, { status: 404 });
     }
 
+    let wasCancelled = false;
+    let wasUncancelled = false;
+
     // Handle user actions
     switch (action) {
       case "toggleInterest":
-        handleToggleInterest(event, auth?.userId);
+        handleToggleInterest(event, userId);
         break;
 
       case "toggleNotification":
-        handleToggleNotification(event, auth?.userId);
+        handleToggleNotification(event, userId);
         break;
 
       // Admin-only actions
       case "toggleComplete":
       case "toggleCancel":
       case "toggleFeatured":
+        const user = await clerkClient.users.getUser(userId);
+        if (!user?.publicMetadata?.isAdmin) {
+          return Response.json(
+            { error: "Admin access required" },
+            { status: 403 }
+          );
+        }
+
+        // Track cancellation state changes
+        if (action === "toggleCancel") {
+          wasCancelled = !event.canceled;
+          wasUncancelled = event.canceled;
+        }
+
         handleAdminAction(event, action);
         break;
 
@@ -119,19 +134,40 @@ export async function PATCH(req, { params }) {
     }
 
     await event.save();
+
+    // Send cancellation emails if the event was just cancelled
+    if (wasCancelled) {
+      const allIds = new Set([
+        ...(Array.isArray(event.notificationWants)
+          ? event.notificationWants
+          : []),
+        ...(Array.isArray(event.interestedUsers) ? event.interestedUsers : []),
+      ]);
+
+      if (allIds.size > 0) {
+        const emails = await fetchUserEmails([...allIds]);
+        await sendCancellationEmail(event, emails);
+      }
+    }
+
     revalidatePath("/programme");
     revalidatePath(`/programme/${id}`);
 
     return Response.json({
       event,
       userStatus: {
-        interested: event.interestedUsers.includes(auth?.userId),
-        notified: event.notificationWants.includes(auth?.userId),
+        interested: event.interestedUsers.includes(userId),
+        notified: event.notificationWants.includes(userId),
       },
     });
   } catch (error) {
     console.error("[API] Event PATCH error:", error);
-    return Response.json({ error: "Failed to update event" }, { status: 500 });
+    return Response.json(
+      {
+        error: error.message || "Failed to update event",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -143,17 +179,15 @@ export async function DELETE(req, { params }) {
     await connect();
     const { userId } = await req.json();
     if (!userId) {
-      console.error("[API] DELETE: No userId found in auth:");
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await clerkClient().users.getUser(userId);
+    const user = await clerkClient.users.getUser(userId);
     if (!user?.publicMetadata?.isAdmin) {
-      console.error("[API] DELETE: User is not admin:");
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const deletedEvent = await Event.findByIdAndDelete(id);
 
     if (!deletedEvent) {
@@ -161,10 +195,21 @@ export async function DELETE(req, { params }) {
     }
 
     revalidatePath("/programme");
-    return Response.json({ success: true }, { status: 200 });
+    return Response.json(
+      {
+        success: true,
+        message: "Event deleted successfully",
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("[API] Event DELETE error:", error);
-    return Response.json({ error: "Failed to delete event" }, { status: 500 });
+    return Response.json(
+      {
+        error: error.message || "Failed to delete event",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -198,5 +243,125 @@ function handleAdminAction(event, action) {
     case "toggleFeatured":
       event.featured = !event.featured;
       break;
+  }
+}
+
+// Helper function to fetch user emails
+async function fetchUserEmails(userIds) {
+  if (!userIds?.length) return [];
+  const users = await Promise.all(
+    userIds.map((id) => clerkClient.users.getUser(id).catch(() => null))
+  );
+  return users
+    .filter(Boolean)
+    .flatMap((u) => u.emailAddresses.map((e) => e.emailAddress))
+    .filter(Boolean);
+}
+
+// Helper function to send cancellation email
+async function sendCancellationEmail(event, emails) {
+  if (!emails.length) return;
+
+  const dateStr = new Date(event.startDate).toLocaleDateString("bn-BD", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const scheduledTime = event.scheduledTime || "2025-05-20T13:00:00.729+00:00";
+  const timeStr = new Date(scheduledTime).toLocaleTimeString("bn-BD", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Dhaka",
+  });
+
+  const eventHtml = `<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>মাহফিল বাতিলের বিজ্ঞপ্তি</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+      }
+      .email-content {
+        padding: 20px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #eef2f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; font-size: 16px; line-height: 1.4; color: #333333;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <table role="presentation" class="email-container" width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #dc2626; padding: 30px; text-align: center;">
+              <img src="cid:logo" alt="At-Taleem Logo" width="120" height="auto" style="max-width: 120px; margin-bottom: 15px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #ffffff;">মাহফিল বাতিলের বিজ্ঞপ্তি</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td class="email-content" style="padding: 30px; color: #333333;">
+              <p style="margin: 0 0 20px;">আসসালামু আলাইকুম,</p>
+              <p style="margin: 0 0 20px;">দুঃখিত, আপনাকে জানাতে চাই যে <strong style="color: #dc2626;">${
+                event.title
+              }</strong> টি বাতিল করা হয়েছে।</p>
+              <p style="margin: 0 0 20px;">মাহফিলটি ${dateStr} তারিখ, ${timeStr} টায় অনুষ্ঠিত হওয়ার কথা ছিল।</p>
+              
+              <div style="background-color: #fee2e2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0; color: #dc2626;">
+                  <strong>বাতিলের কারণ:</strong><br>
+                  ${
+                    event.cancelReason ||
+                    "অপ্রত্যাশিত কারণে মাহফিলটি বাতিল করা হয়েছে।"
+                  }
+                </p>
+              </div>
+              
+              <p style="margin: 0 0 20px;">আল্লাহ হাফেজ</p>
+              <p style="margin: 0;">At-Taleem Team</p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #eef2f7; padding: 20px; text-align: center; font-size: 12px; color: #666666;">
+              <p style="margin: 0 0 10px;">© ${new Date().getFullYear()} At-Taleem</p>
+              <p style="margin: 0;">
+                <a href="${
+                  process.env.URL
+                }" style="color: #004d40; text-decoration: none;">আমাদের ওয়েবসাইট দেখুন</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    await fetch(`${process.env.URL}/api/emails`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: emails,
+        subject: `বাতিল: ${event.title}`,
+        html: eventHtml,
+      }),
+    });
+  } catch (error) {
+    console.error("Error sending cancellation email:", error);
   }
 }

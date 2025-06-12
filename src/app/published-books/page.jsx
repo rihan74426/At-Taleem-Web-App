@@ -20,29 +20,6 @@ const BookSkeleton = () => (
   </div>
 );
 
-export const metadata = {
-  title:
-    "Islamic Books & Publications - At-Taleem || ইসলামী বই ও প্রকাশনী - আত-তালীম",
-  description:
-    "Browse our collection of Islamic books and publications. Find books on Quran, Hadith, Islamic history, and contemporary Islamic topics.",
-  alternates: {
-    canonical: "/published-books",
-  },
-  openGraph: {
-    title:
-      "Islamic Books & Publications - At-Taleem || ইসলামী বই ও প্রকাশনী - আত-তালীম",
-    description:
-      "Browse our collection of Islamic books and publications. Find books on Quran, Hadith, Islamic history, and contemporary Islamic topics.",
-    url: "/published-books",
-  },
-  twitter: {
-    title:
-      "Islamic Books & Publications - At-Taleem || ইসলামী বই ও প্রকাশনী - আত-তালীম",
-    description:
-      "Browse our collection of Islamic books and publications. Find books on Quran, Hadith, Islamic history, and contemporary Islamic topics.",
-  },
-};
-
 export default function PublishedBooksPage() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);

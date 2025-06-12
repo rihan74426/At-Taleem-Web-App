@@ -96,29 +96,6 @@ const InstitutionSkeleton = () => (
   </section>
 );
 
-export const metadata = {
-  title:
-    "Islamic Educational Institutions - At-Taleem || মাদ্রাসা শিক্ষাপ্রতিষ্ঠানসমূহ!",
-  description:
-    "Discover Islamic educational institutions and centers. Find information about madrasas, Islamic schools, and educational centers in your area.",
-  alternates: {
-    canonical: "/institutions",
-  },
-  openGraph: {
-    title:
-      "Islamic Educational Institutions - At-Taleem || মাদ্রাসা শিক্ষাপ্রতিষ্ঠানসমূহ!",
-    description:
-      "Discover Islamic educational institutions and centers. Find information about madrasas, Islamic schools, and educational centers in your area.",
-    url: "/institutions",
-  },
-  twitter: {
-    title:
-      "Islamic Educational Institutions - At-Taleem || মাদ্রাসা শিক্ষাপ্রতিষ্ঠানসমূহ!",
-    description:
-      "Discover Islamic educational institutions and centers. Find information about madrasas, Islamic schools, and educational centers.",
-  },
-};
-
 export default function InstitutionsPage() {
   const [institutions, setInstitutions] = useState(null);
   const [loading, setLoading] = useState(true);

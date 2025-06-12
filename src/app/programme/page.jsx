@@ -33,26 +33,6 @@ const SCOPES = [
   { value: "yearly", label: "Yearly" },
 ];
 
-export const metadata = {
-  title: "Islamic Education Programmes - At-Taleem",
-  description:
-    "Explore our comprehensive Islamic education programmes. Learn Quran, Hadith, and Islamic studies through structured courses and educational resources.",
-  alternates: {
-    canonical: "/programme",
-  },
-  openGraph: {
-    title: "Islamic Education Programmes - At-Taleem",
-    description:
-      "Explore our comprehensive Islamic education programmes. Learn Quran, Hadith, and Islamic studies through structured courses and educational resources.",
-    url: "/programme",
-  },
-  twitter: {
-    title: "Islamic Education Programmes - At-Taleem",
-    description:
-      "Explore our comprehensive Islamic education programmes. Learn Quran, Hadith, and Islamic studies through structured courses.",
-  },
-};
-
 export default function ProgrammePage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
@@ -98,7 +78,6 @@ export default function ProgrammePage() {
     limit: 10,
     pages: 1,
   });
-  const [userStatus, setUserStatus] = useState({});
   const [prefs, setPrefs] = useState({
     weekly: false,
     monthly: false,
@@ -173,13 +152,17 @@ export default function ProgrammePage() {
           cache: "no-store",
         });
 
-        if (!res.ok) throw new Error(`HTTP error! ${res.status}`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP error! ${res.status}`);
+        }
+
         const data = await res.json();
 
+        // Atomic state updates
         setEvents(data.events || []);
         const effectiveView = options.view ?? view;
 
-        // Atomic state updates
         setPagination((prev) => ({
           ...prev,
           ...(effectiveView === "calendar"
@@ -206,11 +189,16 @@ export default function ProgrammePage() {
         );
       } catch (err) {
         setError(err.message || "Failed to fetch events");
+        setModal({
+          isOpen: true,
+          message: err.message || "Failed to fetch events",
+          status: "error",
+        });
       } finally {
         setLoading(false);
       }
     },
-    [isLoaded, buildQueryString, view]
+    [isLoaded, buildQueryString, view, currentMonth, currentYear]
   );
 
   // Month navigation handlers
@@ -290,19 +278,6 @@ export default function ProgrammePage() {
     return () => clearTimeout(handler);
   }, [search, filter, isLoaded]);
 
-  // User status fetching
-  const fetchUserEventStatus = useCallback(async () => {
-    if (!isLoaded || !user || !events.length) return;
-    const newStatus = {};
-    events.forEach((event) => {
-      newStatus[event._id] = {
-        interested: event.interestedUsers?.includes(user.id) || false,
-        notified: event.notificationWants?.includes(user.id) || false,
-      };
-    });
-    setUserStatus(newStatus);
-  }, [isLoaded, user, events]);
-
   // User interaction handlers
   const togglePref = (scopeValue) =>
     setPrefs((prev) => ({ ...prev, [scopeValue]: !prev[scopeValue] }));
@@ -322,15 +297,7 @@ export default function ProgrammePage() {
       );
 
       if (hasNewEnabledPrefs) {
-        const permissionGranted = await requestNotificationPermission();
-        if (!permissionGranted) {
-          setModal({
-            isOpen: true,
-            message: "রিমাইন্ডার পেতে ব্রাউজার নোটিফিকেশন অনুমতি দিন।",
-            status: "error",
-          });
-          return;
-        }
+        await requestNotificationPermission();
       }
 
       const res = await fetch("/api/events", {
@@ -357,32 +324,41 @@ export default function ProgrammePage() {
     if (!user)
       return setModal({
         isOpen: true,
-        message: "Please login!",
+        message: "দয়া করে আগে লগইন করুন!",
         status: "error",
       });
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggleInterest" }),
+        body: JSON.stringify({ action: "toggleInterest", userId: user.id }),
       });
-      if (!res.ok) throw new Error("Failed to toggle interest");
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! ${res.status}`);
+      }
+
       const data = await res.json();
+
+      // Update events state with the new event data
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-      setUserStatus((prev) => ({ ...prev, [eventId]: data.userStatus }));
+
+      // Show appropriate message based on the updated event data
+      const isInterested = data.event.interestedUsers?.includes(user.id);
       setModal({
         isOpen: true,
-        message: data.userStatus.interested
-          ? "Set Interested!"
-          : "Set not interested!",
+        message: isInterested
+          ? "আপনি এই মাহফিলে আগ্রহী!"
+          : "আপনি এই মাহফিলে আগ্রহী নন!",
         status: "success",
       });
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Error toggling interest",
+        message: `আগ্রহ প্রকাশ করতে সমস্যা হয়েছে: ${err.message}`,
         status: "error",
       });
     }
@@ -428,33 +404,31 @@ export default function ProgrammePage() {
         status: "error",
       });
     try {
-      // If enabling notifications, request permission first
-      if (!userStatus[eventId]?.notified) {
-        const permissionGranted = await requestNotificationPermission();
-        if (!permissionGranted) {
-          setModal({
-            isOpen: true,
-            message: "রিমাইন্ডার পেতে ব্রাউজার নোটিফিকেশন অনুমতি দিন।",
-            status: "error",
-          });
-          return;
-        }
-      }
+      await requestNotificationPermission();
 
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggleNotification" }),
+        body: JSON.stringify({ action: "toggleNotification", userId: user.id }),
       });
-      if (!res.ok) throw new Error("Failed to toggle notification");
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! ${res.status}`);
+      }
+
       const data = await res.json();
+
+      // Update events state with the new event data
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
-      setUserStatus((prev) => ({ ...prev, [eventId]: data.userStatus }));
+
+      // Show appropriate message based on the updated event data
+      const isNotifying = data.event.notificationWants?.includes(user.id);
       setModal({
         isOpen: true,
-        message: data.userStatus.notified
+        message: isNotifying
           ? "আপনাকে এই মাহফিলের ব্যাপারে ১ ঘন্টা আগে জানানো হবে!"
           : "আপনাকে এই মাহফিলের ব্যাপারে জানানো হবে না!",
         status: "success",
@@ -462,7 +436,7 @@ export default function ProgrammePage() {
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "নোটিফিকেশন সিস্টেম আপডেট করতে একটু সমস্যা হয়েছে!",
+        message: `নোটিফিকেশন সিস্টেম আপডেট করতে একটু সমস্যা হয়েছে: ${err.message}`,
         status: "error",
       });
     }
@@ -475,13 +449,21 @@ export default function ProgrammePage() {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, userId: user.id }),
       });
-      if (!res.ok) throw new Error(`Failed to ${action}`);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to ${action}`);
+      }
+
       const data = await res.json();
+
+      // Update events state with the new event data
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? data.event : e))
       );
+
       setModal({
         isOpen: true,
         message: successMessage(data.event),
@@ -490,7 +472,7 @@ export default function ProgrammePage() {
     } catch (err) {
       setModal({
         isOpen: true,
-        message: `Error ${action}ing event`,
+        message: `Error ${action}ing event: ${err.message}`,
         status: "error",
       });
     }
@@ -505,17 +487,29 @@ export default function ProgrammePage() {
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
         }),
       });
-      if (!res.ok) throw new Error("Failed to delete");
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete");
+      }
+
+      // Remove the deleted event from state
       setEvents((prev) => prev.filter((e) => e._id !== eventId));
-      setModal({ isOpen: true, message: "Event deleted!", status: "success" });
+
+      setModal({
+        isOpen: true,
+        message: "Event deleted successfully!",
+        status: "success",
+      });
     } catch (err) {
       setModal({
         isOpen: true,
-        message: "Error deleting event",
+        message: `Error deleting event: ${err.message}`,
         status: "error",
       });
     }
@@ -562,9 +556,8 @@ export default function ProgrammePage() {
           yearly: false,
         }
       );
-      fetchUserEventStatus();
     }
-  }, [isLoaded, user, events, fetchUserEventStatus]);
+  }, [isLoaded, user]);
 
   // Get month label for display
   const getMonthLabel = () => {
@@ -822,7 +815,7 @@ export default function ProgrammePage() {
               }}
               onMonthChange={handleMonthChange}
               fetchEvents={fetchEvents}
-              userStatus={userStatus}
+              user={user}
               handleToggleInterest={handleToggleInterest}
               handleToggleNotification={handleToggleNotification}
               handleSetViewingEvent={setViewingEvent}
@@ -922,14 +915,14 @@ export default function ProgrammePage() {
                       disabled={event.canceled}
                       className={`flex items-center px-4 py-2 rounded-full transition-all
               ${
-                userStatus[event._id]?.interested
+                user.interestedUsers?.includes(user.id)
                   ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               }`}
                     >
                       <FiStar className="mr-2 w-4 h-4" />
                       <span className="text-sm font-medium">
-                        {userStatus[event._id]?.interested
+                        {user.interestedUsers?.includes(user.id)
                           ? "Interested"
                           : "Show Interest"}
                       </span>
@@ -940,14 +933,14 @@ export default function ProgrammePage() {
                       disabled={event.canceled}
                       className={`flex items-center px-4 py-2 rounded-full transition-all
               ${
-                userStatus[event._id]?.notified
+                user.notificationWants?.includes(user.id)
                   ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               }`}
                     >
                       <FiBell className="mr-2 w-4 h-4" />
                       <span className="text-sm font-medium">
-                        {userStatus[event._id]?.notified
+                        {user.notificationWants?.includes(user.id)
                           ? "Notifying"
                           : "Notify Me"}
                       </span>
@@ -1101,7 +1094,7 @@ export default function ProgrammePage() {
         <EventDetailModal
           event={viewingEvent}
           onClose={() => setViewingEvent(null)}
-          userStatus={userStatus[viewingEvent._id] || {}}
+          userStatus={user}
           onToggleInterest={() => handleToggleInterest(viewingEvent._id)}
           onToggleNotification={() =>
             handleToggleNotification(viewingEvent._id)

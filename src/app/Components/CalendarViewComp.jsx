@@ -32,6 +32,15 @@ const EventStatusTags = ({ event }) => (
   </div>
 );
 
+// Add helper functions for status checks
+const isUserInterested = (event, userId) => {
+  return event?.interestedUsers?.includes(userId) || false;
+};
+
+const isUserNotified = (event, userId) => {
+  return event?.notificationWants?.includes(userId) || false;
+};
+
 const CalendarView = ({
   events = [],
   scope,
@@ -39,7 +48,7 @@ const CalendarView = ({
   setCurrentDate: parentSetCurrentDate,
   onMonthChange,
   fetchEvents,
-  userStatus = {},
+  user,
   handleToggleInterest,
   handleToggleNotification,
   handleSetViewingEvent,
@@ -146,19 +155,27 @@ const CalendarView = ({
     fetchEvents?.();
   }, [setCurrentDate, onMonthChange, fetchEvents]);
 
-  // Memoize event filtering functions
+  // Memoize event dates for efficient filtering
+  const eventDatesMap = useMemo(() => {
+    const map = new Map();
+    events.forEach((event) => {
+      const eventDate = new Date(event.startDate);
+      const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(event);
+    });
+    return map;
+  }, [events]);
+
+  // Optimized event filtering function
   const getEventsForDate = useCallback(
     (date) => {
-      return events.filter((event) => {
-        const eventDate = new Date(event.startDate);
-        return (
-          eventDate.getDate() === date.getDate() &&
-          eventDate.getMonth() === date.getMonth() &&
-          eventDate.getFullYear() === date.getFullYear()
-        );
-      });
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      return eventDatesMap.get(key) || [];
     },
-    [events]
+    [eventDatesMap]
   );
 
   // Memoize event dates lookup
@@ -286,6 +303,93 @@ const CalendarView = ({
     if (event.featured) return "bg-yellow-500";
     return "bg-teal-500";
   };
+
+  // Update the event card buttons
+  const renderEventActions = (event) => (
+    <div className="flex flex-wrap gap-2">
+      <button
+        onClick={() => handleToggleInterestMemo(event._id)}
+        className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
+          isUserInterested(event, user?.id)
+            ? "bg-teal-600 text-white"
+            : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+        }`}
+        disabled={event.canceled}
+        aria-label={
+          isUserInterested(event, user?.id)
+            ? "Remove interest"
+            : "Mark as interested"
+        }
+      >
+        <FiStar size={16} />
+        <span>
+          {isUserInterested(event, user?.id) ? "Interested" : "Interest"}
+        </span>
+      </button>
+      <button
+        onClick={() => handleToggleNotificationMemo(event._id)}
+        className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
+          isUserNotified(event, user?.id)
+            ? "bg-blue-600 text-white"
+            : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+        }`}
+        disabled={event.canceled}
+        aria-label={
+          isUserNotified(event, user?.id)
+            ? "Remove notification"
+            : "Set notification"
+        }
+      >
+        <FiBell size={16} />
+        <span>
+          {isUserNotified(event, user?.id) ? "Notifying" : "Notify Me"}
+        </span>
+      </button>
+      <button
+        onClick={() => handleSetViewingEvent?.(event)}
+        className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+        aria-label="View event details"
+      >
+        <span>Details</span>
+      </button>
+      {isAdmin && (
+        <>
+          <button
+            onClick={() => handleToggleCompleteMemo(event._id)}
+            className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
+            aria-label={
+              event.completed ? "Mark as incomplete" : "Mark as complete"
+            }
+          >
+            {event.completed ? "Mark Incomplete" : "Complete"}
+          </button>
+          <button
+            onClick={() => handleToggleCancelMemo(event._id)}
+            className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+            aria-label={event.canceled ? "Restore event" : "Cancel event"}
+          >
+            {event.canceled ? "Restore" : "Cancel"}
+          </button>
+          <button
+            onClick={() => handleToggleFeaturedMemo(event._id)}
+            className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
+            aria-label={
+              event.featured ? "Remove featured status" : "Feature event"
+            }
+          >
+            {event.featured ? "Unfeature" : "Feature"}
+          </button>
+          <button
+            onClick={() => handleDeleteEventMemo(event._id)}
+            className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
+            aria-label="Delete event"
+          >
+            Delete
+          </button>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="overflow-hidden">
@@ -488,99 +592,7 @@ const CalendarView = ({
                       {event.description}
                     </p>
                   )}
-                  <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => handleToggleInterestMemo(event._id)}
-                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
-                        userStatus[event._id]?.interested
-                          ? "bg-teal-600 text-white"
-                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                      }`}
-                      disabled={event.canceled}
-                      aria-label={
-                        userStatus[event._id]?.interested
-                          ? "Remove interest"
-                          : "Mark as interested"
-                      }
-                    >
-                      <FiStar size={16} />
-                      <span>
-                        {userStatus[event._id]?.interested
-                          ? "Interested"
-                          : "Interest"}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleToggleNotificationMemo(event._id)}
-                      className={`flex items-center space-x-1 px-3 py-1 rounded text-sm ${
-                        userStatus[event._id]?.notified
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                      }`}
-                      disabled={event.canceled}
-                      aria-label={
-                        userStatus[event._id]?.notified
-                          ? "Remove notification"
-                          : "Set notification"
-                      }
-                    >
-                      <FiBell size={16} />
-                      <span>
-                        {userStatus[event._id]?.notified
-                          ? "Notifying"
-                          : "Notify Me"}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleSetViewingEvent?.(event)}
-                      className="flex items-center space-x-1 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
-                      aria-label="View event details"
-                    >
-                      <span>Details</span>
-                    </button>
-                    {isAdmin && (
-                      <>
-                        <button
-                          onClick={() => handleToggleCompleteMemo(event._id)}
-                          className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs"
-                          aria-label={
-                            event.completed
-                              ? "Mark as incomplete"
-                              : "Mark as complete"
-                          }
-                        >
-                          {event.completed ? "Mark Incomplete" : "Complete"}
-                        </button>
-                        <button
-                          onClick={() => handleToggleCancelMemo(event._id)}
-                          className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
-                          aria-label={
-                            event.canceled ? "Restore event" : "Cancel event"
-                          }
-                        >
-                          {event.canceled ? "Restore" : "Cancel"}
-                        </button>
-                        <button
-                          onClick={() => handleToggleFeaturedMemo(event._id)}
-                          className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs"
-                          aria-label={
-                            event.featured
-                              ? "Remove featured status"
-                              : "Feature event"
-                          }
-                        >
-                          {event.featured ? "Unfeature" : "Feature"}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEventMemo(event._id)}
-                          className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded text-xs"
-                          aria-label="Delete event"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {renderEventActions(event)}
                 </div>
               ))}
             </div>
