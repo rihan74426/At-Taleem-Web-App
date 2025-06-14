@@ -7,6 +7,7 @@ import { Anek_Bangla, Mirza } from "next/font/google";
 import ThemeCom from "./Components/ThemeCom";
 import FooterCom from "./Components/Footer";
 import PageLoader from "./Components/PageLoader";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const anekBanglaFont = Anek_Bangla({
   variable: "--font-anek-bangla",
@@ -110,6 +111,7 @@ export default function RootLayout({ children }) {
               <PageLoader />
               <Header />
               {children}
+              <SpeedInsights />
               <FooterCom />
             </ThemeCom>
           </ThemeProvider>
