@@ -268,25 +268,6 @@ export default function CallToAction() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex flex-col items-center gap-8"
           >
-            <div className="flex items-center gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-700">
-              <Image
-                src="https://media.licdn.com/dms/image/v2/D4E03AQGgYs8dM3foKQ/profile-displayphoto-shrink_800_800/B4EZRpjlj4HAAc-/0/1736937727428?e=1755129600&v=beta&t=-9KiGNzmpqJaysY4hib2SNZKLvkcSLoHkDvtqCd1qPo"
-                alt="Developer"
-                width={150}
-                height={150}
-                rel="noopener noreferrer"
-                className="rounded-full ring-4 ring-teal-500"
-              />
-              <div className="text-left">
-                <h3 className="text-xl font-semibold text-white mb-1">
-                  নুরুদ্দীন মোহাম্মদ রায়হান
-                </h3>
-                <p className="text-gray-400">Full Stack Developer</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  আপনার প্রয়োজন ব্যাখ্যা করুন, সমাধান আমরা খুঁজে দেব ইনশাআল্লাহ!
-                </p>
-              </div>
-            </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
                 href="https://wa.me/+8801866042393"
