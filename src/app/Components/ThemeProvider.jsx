@@ -1,21 +1,16 @@
 "use client";
 
-import { Flowbite, useThemeMode } from "flowbite-react";
-import { useEffect, useState } from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 export default function ThemeProvider({ children }) {
-  const { computedMode } = useThemeMode();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true); // Prevents SSR mismatches
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(computedMode);
-  }, [computedMode]);
-
-  if (!mounted) {
-    return <div className="opacity-0">{children}</div>; // Prevent hydration mismatch
-  }
-
-  return <Flowbite>{children}</Flowbite>;
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem={true}
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

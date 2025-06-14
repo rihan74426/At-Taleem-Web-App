@@ -41,7 +41,7 @@ const NAV_ITEMS = {
 
 export default function Header() {
   const path = usePathname();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -74,10 +74,33 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [handleClickOutside]);
 
-  // Handle theme mounting
+  // Handle theme mounting and system preference
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Only set system theme if no theme is stored
+    if (typeof window !== "undefined" && !localStorage.getItem("theme")) {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
+        ? "dark"
+        : "light";
+      setTheme(systemTheme);
+    }
+  }, [setTheme]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleChange = (e) => {
+      // Only update if user hasn't manually set a theme
+      if (!localStorage.getItem("theme")) {
+        setTheme(e.matches ? "dark" : "light");
+      }
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [setTheme]);
 
   const { toggleMode } = useThemeMode();
 
@@ -167,8 +190,11 @@ export default function Header() {
 
   // Memoize theme toggle handler
   const handleThemeToggle = useCallback(() => {
-    toggleMode();
-  }, [toggleMode]);
+    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    // Store the user's preference
+    localStorage.setItem("theme", newTheme);
+  }, [resolvedTheme, setTheme]);
 
   // Memoize mobile menu toggle
   const handleMobileMenuToggle = useCallback(() => {
