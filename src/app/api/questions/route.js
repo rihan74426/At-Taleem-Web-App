@@ -1,5 +1,6 @@
 import Question from "@/lib/models/Question";
 import { connect } from "@/lib/mongodb/mongoose";
+import mongoose from "mongoose";
 // Import your email utility (e.g., using nodemailer) if needed
 // import { sendEmail } from "@/lib/email";
 
@@ -105,8 +106,23 @@ export async function GET(request) {
   const match = {};
   if (status && status !== "all") match.status = status;
   if (category && category !== "all") {
+    // Handle both single category and multiple categories
     const cats = category.split(",");
-    match.category = { $in: cats };
+    // Convert string IDs to ObjectIds for proper MongoDB querying
+    const objectIds = cats
+      .map((cat) => {
+        try {
+          return new mongoose.Types.ObjectId(cat.trim());
+        } catch {
+          console.error("Invalid ObjectId:", cat);
+          return null;
+        }
+      })
+      .filter((id) => id !== null);
+
+    if (objectIds.length > 0) {
+      match.category = { $in: objectIds };
+    }
   }
   if (search) {
     match.$or = [

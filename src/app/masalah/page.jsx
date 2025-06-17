@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +14,7 @@ import {
   FaSort,
   FaBookmark,
   FaRegBookmark,
+  FaTimes,
 } from "react-icons/fa";
 import MasalahForm from "../Components/MasalahForm";
 import ResponseModal from "../Components/ResponseModal";
@@ -21,25 +22,30 @@ import MasalahSkeleton from "../Components/MasalahSkeleton";
 
 // Constants
 const ITEMS_PER_PAGE = 10;
-const DEBOUNCE_DELAY = 500;
+const DEBOUNCE_DELAY = 300;
 
-// Debounce utility
-const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
+// Custom debounce hook
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
     };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
+  }, [value, delay]);
+
+  return debouncedValue;
 };
 
 export default function MasalahPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoaded } = useUser();
+  const searchInputRef = useRef(null);
 
   // State management
   const [masalah, setMasalah] = useState([]);
@@ -58,14 +64,17 @@ export default function MasalahPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [bookmarkedMasalah, setBookmarkedMasalah] = useState(new Set());
 
-  // Filter states from URL params
-  const [filters, setFilters] = useState({
+  // Local filter states (not synced with URL immediately)
+  const [localFilters, setLocalFilters] = useState({
     search: searchParams.get("search") || "",
     category: searchParams.get("category") || "",
     sortBy: searchParams.get("sortBy") || "createdAt",
     sortOrder: searchParams.get("sortOrder") || "desc",
     page: parseInt(searchParams.get("page")) || 1,
   });
+
+  // Debounced search value
+  const debouncedSearch = useDebounce(localFilters.search, DEBOUNCE_DELAY);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -82,28 +91,53 @@ export default function MasalahPage() {
     return map;
   }, [users]);
 
-  // Memoized query parameters
+  // Memoized query parameters (using debounced search)
   const queryParams = useMemo(() => {
     const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value);
+    const effectiveFilters = {
+      ...localFilters,
+      search: debouncedSearch, // Use debounced search value
+    };
+
+    Object.entries(effectiveFilters).forEach(([key, value]) => {
+      if (value && value !== "") params.append(key, value);
     });
     params.append("limit", ITEMS_PER_PAGE);
     return params.toString();
-  }, [filters]);
+  }, [localFilters, debouncedSearch]);
 
-  // Update URL when filters change
+  // Update URL only when debounced search changes or other filters change
   useEffect(() => {
+    const effectiveFilters = {
+      ...localFilters,
+      search: debouncedSearch,
+    };
+
     const url = new URL(window.location.href);
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        url.searchParams.set(key, value);
+    let hasChanges = false;
+
+    Object.entries(effectiveFilters).forEach(([key, value]) => {
+      const currentValue = url.searchParams.get(key);
+      if (value && value !== "") {
+        if (currentValue !== value) {
+          url.searchParams.set(key, value);
+          hasChanges = true;
+        }
       } else {
-        url.searchParams.delete(key);
+        if (currentValue !== null) {
+          url.searchParams.delete(key);
+          hasChanges = true;
+        }
       }
     });
-    router.push(url.pathname + url.search, { scroll: false });
-  }, [filters, router]);
+  }, [
+    debouncedSearch,
+    localFilters.category,
+    localFilters.sortBy,
+    localFilters.sortOrder,
+    localFilters.page,
+    router,
+  ]);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -126,6 +160,7 @@ export default function MasalahPage() {
         categoriesRes.json(),
         usersRes.json(),
       ]);
+
       // Update states
       setMasalah(masalahData.masalah);
       setPagination({
@@ -181,28 +216,33 @@ export default function MasalahPage() {
 
   // Handlers
   const handleFilterChange = useCallback((key, value) => {
-    setFilters((prev) => ({
+    setLocalFilters((prev) => ({
       ...prev,
       [key]: value,
       page: 1, // Reset to first page on filter change
     }));
   }, []);
 
-  const handleSearch = useCallback(
-    debounce((value) => {
-      handleFilterChange("search", value);
-    }, DEBOUNCE_DELAY),
-    [handleFilterChange]
-  );
+  const handleSearchChange = useCallback((value) => {
+    setLocalFilters((prev) => ({
+      ...prev,
+      search: value,
+      page: 1, // Reset to first page on search
+    }));
+  }, []);
 
   const handleResetFilters = useCallback(() => {
-    setFilters({
+    setLocalFilters({
       search: "",
       category: "",
       sortBy: "createdAt",
       sortOrder: "desc",
       page: 1,
     });
+    // Focus search input after reset
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   }, []);
 
   const handleLike = useCallback(
@@ -365,7 +405,7 @@ export default function MasalahPage() {
 
         if (!res.ok) throw new Error("Failed to update issue");
 
-        const updatedMasalah = await res.json();
+        await res.json();
         fetchData();
 
         setModal({
@@ -385,7 +425,7 @@ export default function MasalahPage() {
         setIsSubmitting(false);
       }
     },
-    [editingMasalah, isSubmitting]
+    [editingMasalah, isSubmitting, fetchData]
   );
 
   // Render loading state
@@ -464,26 +504,39 @@ export default function MasalahPage() {
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <div className="flex-1 relative w-full">
             <input
+              ref={searchInputRef}
               type="text"
-              value={filters.search}
-              onChange={(e) => handleSearch(e.target.value)}
+              value={localFilters.search}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="মাসআলা খুঁজুন..."
-              className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-10 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
             <FaSearch className="absolute left-3 top-3 text-gray-400" />
+            {localFilters.search && (
+              <button
+                onClick={() => handleSearchChange("")}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <FaTimes size={14} />
+              </button>
+            )}
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="p-2 border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className={`p-2 border rounded-md transition-colors ${
+                showFilters
+                  ? "bg-indigo-100 dark:bg-indigo-900 border-indigo-300 dark:border-indigo-700"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
               title="Toggle filters"
             >
               <FaFilter />
             </button>
-            {(filters.search ||
-              filters.category ||
-              filters.sortBy !== "createdAt" ||
-              filters.sortOrder !== "desc") && (
+            {(localFilters.search ||
+              localFilters.category ||
+              localFilters.sortBy !== "createdAt" ||
+              localFilters.sortOrder !== "desc") && (
               <button
                 onClick={handleResetFilters}
                 className="p-2 border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
@@ -506,11 +559,11 @@ export default function MasalahPage() {
           <div className="overflow-hidden">
             <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <select
-                value={filters.category}
+                value={localFilters.category}
                 onChange={(e) => handleFilterChange("category", e.target.value)}
                 className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="">ক্যাটাগরি</option>
+                <option value="">সকল ক্যাটাগরি</option>
                 {categories.map((cat) => (
                   <option key={cat._id} value={cat._id}>
                     {cat.name}
@@ -518,7 +571,7 @@ export default function MasalahPage() {
                 ))}
               </select>
               <select
-                value={`${filters.sortBy}-${filters.sortOrder}`}
+                value={`${localFilters.sortBy}-${localFilters.sortOrder}`}
                 onChange={(e) => {
                   const [newSortBy, newSortOrder] = e.target.value.split("-");
                   handleFilterChange("sortBy", newSortBy);
@@ -535,13 +588,36 @@ export default function MasalahPage() {
         </div>
       </div>
 
+      {/* Results Summary */}
+      {!loading && (
+        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+          {pagination.total > 0 ? (
+            <span>
+              {pagination.total} টি মাসআলা পাওয়া গেছে
+              {(localFilters.search || localFilters.category) && (
+                <span className="ml-2">
+                  (ফিল্টার: {localFilters.search && `"${localFilters.search}"`}
+                  {localFilters.search && localFilters.category && " এবং "}
+                  {localFilters.category &&
+                    categories.find((c) => c._id === localFilters.category)
+                      ?.name}
+                  )
+                </span>
+              )}
+            </span>
+          ) : (
+            <span>কোন মাসআলা পাওয়া যায় নি</span>
+          )}
+        </div>
+      )}
+
       {/* Masalah List */}
       {masalah.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-gray-600 dark:text-gray-400 text-lg">
             কোন মাসআলা পাওয়া যায় নি। ফিল্টার পরিবর্তন করে দেখুন!
           </p>
-          {(filters.search || filters.category) && (
+          {(localFilters.search || localFilters.category) && (
             <button
               onClick={handleResetFilters}
               className="mt-4 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
@@ -682,18 +758,18 @@ export default function MasalahPage() {
       {pagination.totalPages > 1 && (
         <div className="mt-8 flex justify-center gap-2">
           <button
-            onClick={() => handleFilterChange("page", filters.page - 1)}
-            disabled={filters.page === 1 || loading}
+            onClick={() => handleFilterChange("page", localFilters.page - 1)}
+            disabled={localFilters.page === 1 || loading}
             className="px-4 py-2 border rounded-md disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
           >
             Previous
           </button>
           <span className="px-4 py-2 text-gray-600 dark:text-gray-300">
-            Page {filters.page} of {pagination.totalPages}
+            Page {localFilters.page} of {pagination.totalPages}
           </span>
           <button
-            onClick={() => handleFilterChange("page", filters.page + 1)}
-            disabled={filters.page === pagination.totalPages || loading}
+            onClick={() => handleFilterChange("page", localFilters.page + 1)}
+            disabled={localFilters.page === pagination.totalPages || loading}
             className="px-4 py-2 border rounded-md disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
           >
             Next

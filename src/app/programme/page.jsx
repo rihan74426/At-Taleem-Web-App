@@ -915,14 +915,14 @@ export default function ProgrammePage() {
                       disabled={event.canceled}
                       className={`flex items-center px-4 py-2 rounded-full transition-all
               ${
-                user.interestedUsers?.includes(user.id)
+                event.interestedUsers?.includes(user.id)
                   ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               }`}
                     >
                       <FiStar className="mr-2 w-4 h-4" />
                       <span className="text-sm font-medium">
-                        {user.interestedUsers?.includes(user.id)
+                        {event.interestedUsers?.includes(user.id)
                           ? "Interested"
                           : "Show Interest"}
                       </span>
@@ -933,14 +933,14 @@ export default function ProgrammePage() {
                       disabled={event.canceled}
                       className={`flex items-center px-4 py-2 rounded-full transition-all
               ${
-                user.notificationWants?.includes(user.id)
+                event.notificationWants?.includes(user.id)
                   ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               }`}
                     >
                       <FiBell className="mr-2 w-4 h-4" />
                       <span className="text-sm font-medium">
-                        {user.notificationWants?.includes(user.id)
+                        {event.notificationWants?.includes(user.id)
                           ? "Notifying"
                           : "Notify Me"}
                       </span>

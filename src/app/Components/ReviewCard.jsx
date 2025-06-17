@@ -226,19 +226,52 @@ export function ReviewCard({
                 {/* Likers Tooltip */}
                 {showLikers && names.length > 0 && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-20"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 z-30"
                   >
-                    <div className="relative">
-                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-8 border-transparent border-t-gray-900"></div>
-                      <p className="font-medium mb-1">পছন্দ করেছেন:</p>
-                      <div className="max-h-32 overflow-y-auto">
-                        {names.map((name, index) => (
-                          <p key={index} className="text-gray-300">
-                            {name}
-                          </p>
-                        ))}
+                    {/* Main Tooltip Container */}
+                    <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 min-w-[280px] max-w-[320px]">
+                      {/* Arrow */}
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-700 rotate-45"></div>
+
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-t-xl">
+                        <div className="flex items-center space-x-2">
+                          <AiFillHeart className="text-red-500" size={16} />
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
+                            পছন্দ করেছেন ({names.length})
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Names List */}
+                      <div className="max-h-48 overflow-y-auto p-2">
+                        <div className="space-y-1">
+                          {names.map((name, index) => (
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                            >
+                              <div className="w-2 h-2 bg-red-400 rounded-full flex-shrink-0"></div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
+                                {name}
+                              </span>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-b-xl border-t border-gray-100 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                          হোভার করে দেখুন
+                        </p>
                       </div>
                     </div>
                   </motion.div>
@@ -480,7 +513,7 @@ export default function AboutUsPage() {
             placeholder="Search reviews..."
             value={searchQuery}
             onChange={handleSearch}
-            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 dark:bg-gray-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             onClick={submitReview}
