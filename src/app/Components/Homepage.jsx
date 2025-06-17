@@ -23,7 +23,7 @@ const LinkButton = memo(function LinkButton({ href, children, icon: Icon }) {
   return (
     <motion.a
       href={href}
-      className="px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center gap-2 shadow-lg hover:shadow-xl"
+      className="px-6 py-3 bg-white text-blue-600 dark:bg-gray-800 dark:text-blue-400 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-600"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
     >
@@ -54,14 +54,13 @@ const NoticeSection = memo(function NoticeSection({
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
           </div>
-        </div>
-        <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
+        </div>{" "}
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
       {isEditing ? (
         <Editor initialData={data} onSave={onSave} onCancel={onCancel} />
       ) : (
@@ -167,77 +166,118 @@ export default function Homepage() {
 
   return (
     <div className="flex flex-col w-full">
-      {/* Hero Section */}
-      <motion.div
-        className="min-h-screen bg-gradient-to-br from-blue-700 to-teal-500 dark:from-gray-950 dark:to-blue-900 flex flex-col justify-center items-center text-center text-white px-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-      >
-        <motion.h1
-          className="text-5xl md:text-7xl font-extrabold drop-shadow-lg"
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5, type: "spring" }}
-        >
-          At‑Taleem Official
-        </motion.h1>
-        <motion.p
-          className="mt-6 max-w-xl text-lg md:text-xl text-justify leading-relaxed"
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1 }}
-        >
-          সরাসরি কুরআন হাদিস থেকে দ্বীনকে অনুধাবন করার জগতে আপনাকে স্বাগতম।
-          এখানে রয়েছে রেকর্ডেড তালিম ও জুমার ভিডিও এবং নিজেদের সমস্যার ব্যাপারে
-          সহজেই প্রশ্ন করা ও উত্তর সরাসরি মেইলে পাওয়ার ব্যবস্থা, আরও রয়েছে
-          ফ্রিতেই আমাদের বই পড়ার সুযোগ। তাছাড়া আছে তালিমের নিয়মিত অনিয়মিত সকল
-          প্রোগ্রামের নোটিফিকেশন ব্যবস্থা।
-        </motion.p>
-        <motion.div
-          className="mt-10 flex flex-wrap justify-center gap-4"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
-          <LinkButton href="/questionnaires" icon={FaQuestion}>
-            প্রশ্ন করুন
-          </LinkButton>
-          <LinkButton href="/taleem-videos" icon={FaVideo}>
-            ভিডিও দেখুন
-          </LinkButton>
-          <LinkButton href="/published-books" icon={FaBook}>
-            বই পড়ুন
-          </LinkButton>
-          {!isSignedIn && (
-            <SignInButton mode="modal">
-              <motion.button
-                className="px-6 py-3 border-2 border-white rounded-lg hover:bg-white hover:text-blue-700 transition shadow-lg hover:shadow-xl"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Sign In
-              </motion.button>
-            </SignInButton>
-          )}
-        </motion.div>
-      </motion.div>
+      {/* Hero Section with Gradient Wave */}
+      <div className="relative min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 dark:from-blue-900 dark:via-blue-800 dark:to-blue-700 flex flex-col justify-center items-center text-center text-white px-4 overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+        </div>
 
-      {/* Under Construction Banner */}
-      <AnimatePresence>
+        {/* Main Content */}
         <motion.div
-          className="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 p-6 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
+          className="relative z-10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
         >
-          <h2 className="text-2xl font-semibold">🚧 Under Construction 🚧</h2>
-          <p>Sign up to get notified when we launch!</p>
+          <motion.h1
+            className="text-5xl md:text-7xl font-extrabold drop-shadow-lg mb-6"
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, type: "spring" }}
+          >
+            At-Taleem Official
+          </motion.h1>
+          <motion.p
+            className="mt-6 max-w-2xl text-lg md:text-xl text-justify leading-relaxed mx-auto"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1 }}
+          >
+            সরাসরি কুরআন হাদিস থেকে দ্বীনকে অনুধাবন করার জগতে আপনাকে স্বাগতম।
+            এখানে রয়েছে রেকর্ডেড তালিম ও জুমার ভিডিও এবং নিজেদের সমস্যার
+            ব্যাপারে সহজেই প্রশ্ন করা ও উত্তর সরাসরি মেইলে পাওয়ার ব্যবস্থা, আরও
+            রয়েছে ফ্রিতেই আমাদের বই পড়ার সুযোগ। তাছাড়া আছে তালিমের নিয়মিত
+            অনিয়মিত সকল প্রোগ্রামের নোটিফিকেশন ব্যবস্থা।
+          </motion.p>
+          <motion.div
+            className="mt-10 flex flex-wrap justify-center gap-4"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 1.5 }}
+          >
+            <LinkButton href="/questionnaires" icon={FaQuestion}>
+              প্রশ্ন করুন
+            </LinkButton>
+            <LinkButton href="/taleem-videos" icon={FaVideo}>
+              ভিডিও দেখুন
+            </LinkButton>
+            <LinkButton href="/published-books" icon={FaBook}>
+              বই পড়ুন
+            </LinkButton>
+            {!isSignedIn && (
+              <SignInButton mode="modal">
+                <motion.button
+                  className="px-6 py-3 border-2 border-white rounded-lg hover:bg-white hover:text-blue-600 dark:hover:text-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl font-semibold"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Sign In
+                </motion.button>
+              </SignInButton>
+            )}
+          </motion.div>
         </motion.div>
-      </AnimatePresence>
+
+        {/* Gradient Wave at Bottom */}
+        <div className="absolute bottom-0 left-0 w-full">
+          <svg
+            className="w-full h-24 md:h-32"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient
+                id="waveGradient"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+              >
+                <stop offset="0%" stopColor="#60A5FA" />
+                <stop offset="50%" stopColor="#3B82F6" />
+                <stop offset="100%" stopColor="#1D4ED8" />
+              </linearGradient>
+              <linearGradient
+                id="waveGradientDark"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+              >
+                <stop offset="0%" stopColor="#1E40AF" />
+                <stop offset="50%" stopColor="#1E3A8A" />
+                <stop offset="100%" stopColor="#1E293B" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,0 C300,120 600,0 900,120 C1050,120 1200,0 1200,0 L1200,120 L0,120 Z"
+              fill="url(#waveGradient)"
+              className="dark:hidden"
+            />
+            <path
+              d="M0,0 C300,120 600,0 900,120 C1050,120 1200,0 1200,0 L1200,120 L0,120 Z"
+              fill="url(#waveGradientDark)"
+              className="hidden dark:block"
+            />
+          </svg>
+        </div>
+      </div>
 
       {/* Notice Section */}
-      <section className="py-16 px-6 bg-gray-50 dark:bg-gray-900">
+      <section className="py-16 px-6 bg-gray-50 dark:bg-gray-900 relative">
         <div className="max-w-4xl mx-auto">
           <NoticeSection
             data={data}

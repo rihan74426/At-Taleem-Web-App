@@ -129,7 +129,7 @@ export default function CallToAction() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <Link
-              href="/contact"
+              href="/"
               className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-500 to-purple-500 rounded-full text-lg font-semibold hover:from-teal-600 hover:to-purple-600 transition-all transform hover:scale-105"
             >
               Get Started
