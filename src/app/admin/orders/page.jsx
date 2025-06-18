@@ -634,7 +634,7 @@ export default function AdminOrdersPage() {
                       {order.paymentStatus}
                     </span>
                     <Link
-                      href={`/admin/orders/${order._id}`}
+                      href={`/orders/${order._id}`}
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       View Details
